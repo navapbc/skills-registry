@@ -6,18 +6,6 @@ resource "aws_cloudfront_origin_access_control" "site" {
   signing_protocol                  = "sigv4"
 }
 
-# KVS stores the JWT secret so the edge function can validate sessions
-# without calling out to SSM on every request
-resource "aws_cloudfront_key_value_store" "auth" {
-  name    = "${var.project_name}-auth-${var.environment}"
-  comment = "JWT secret for edge session validation"
-}
-
-resource "aws_cloudfrontkeyvaluestore_key" "jwt_secret" {
-  key_value_store_arn = aws_cloudfront_key_value_store.auth.arn
-  key                 = "jwt_secret"
-  value               = var.jwt_secret
-}
 
 resource "aws_cloudfront_function" "auth_check" {
   name    = "${var.project_name}-auth-check-${var.environment}"
@@ -25,13 +13,10 @@ resource "aws_cloudfront_function" "auth_check" {
   comment = "Validates __session cookie before serving any content"
   publish = true
 
-  # templatefile injects the KVS ARN so the function can reference it
   code = templatefile("${path.module}/../functions/edge/auth-check.js.tpl", {
-    kvs_arn       = aws_cloudfront_key_value_store.auth.arn
-    login_path    = "/login"
+    jwt_secret = var.jwt_secret
+    login_path = "/login"
   })
-
-  key_value_store_associations = [aws_cloudfront_key_value_store.auth.arn]
 }
 
 resource "aws_cloudfront_distribution" "site" {

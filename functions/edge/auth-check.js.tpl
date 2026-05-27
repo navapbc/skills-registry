@@ -1,17 +1,11 @@
 // CloudFront Function (cloudfront-js-2.0 runtime)
-// Runs on every viewer request BEFORE CloudFront checks the cache.
-// Validates the __session JWT against the KVS-stored secret.
-// Unauthenticated requests are redirected to /login.
-//
-// Template variables injected by Terraform:
-//   ${kvs_arn}    - CloudFront Key Value Store ARN
-//   ${login_path} - Path to redirect unauthenticated users
+// Validates the __session JWT cookie before serving any content.
+// Template variables injected by Terraform: jwt_secret, login_path
 
-import cf from 'cloudfront';
+import crypto from 'crypto';
 
-const KVS_ARN = '${kvs_arn}';
+const JWT_SECRET = '${jwt_secret}';
 const LOGIN_PATH = '${login_path}';
-
 const PUBLIC_PATHS = [LOGIN_PATH, '/favicon.ico', '/robots.txt'];
 
 function isPublicPath(uri) {
@@ -22,8 +16,8 @@ function isPublicPath(uri) {
   return false;
 }
 
-// Astro builds output login/index.html (directory format).
-// S3 won't find /login without the full path, so rewrite before forwarding.
+// Astro builds directory-format output (login/index.html), so rewrite URIs
+// that look like page routes before forwarding to S3.
 function rewriteUri(uri) {
   if (uri === '/') return uri;
   const lastSegment = uri.split('/').pop();
@@ -31,50 +25,29 @@ function rewriteUri(uri) {
   return uri + '/index.html';
 }
 
-async function base64UrlDecode(str) {
-  const padded = str.replace(/-/g, '+').replace(/_/g, '/');
-  const pad = padded.length % 4;
-  let b64 = padded;
-  if (pad === 1) { b64 = padded + '==='; }
-  else if (pad === 2) { b64 = padded + '=='; }
-  else if (pad === 3) { b64 = padded + '='; }
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
-
-async function verifyJWT(token, secret) {
+function verifyJWT(token, secret) {
   const parts = token.split('.');
   if (parts.length !== 3) return false;
 
-  const jwtHeader = parts[0];
-  const jwtPayload = parts[1];
-  const jwtSig = parts[2];
-  const encoder = new TextEncoder();
+  const headerPayload = parts[0] + '.' + parts[1];
+  const sig = parts[2];
 
   try {
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['verify']
-    );
+    const expected = crypto.createHmac('sha256', secret)
+      .update(headerPayload)
+      .digest('base64url');
 
-    const sigBytes = await base64UrlDecode(jwtSig);
-    const data = encoder.encode(jwtHeader + '.' + jwtPayload);
+    // Constant-time comparison to prevent timing attacks
+    if (expected.length !== sig.length) return false;
+    let xor = 0;
+    for (let i = 0; i < expected.length; i++) {
+      xor |= (expected.charCodeAt(i) ^ sig.charCodeAt(i));
+    }
+    if (xor !== 0) return false;
 
-    const valid = await crypto.subtle.verify('HMAC', key, sigBytes, data);
-    if (!valid) return false;
-
-    const payloadBytes = await base64UrlDecode(jwtPayload);
-    const decoded = JSON.parse(new TextDecoder().decode(payloadBytes));
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
     const now = Math.floor(Date.now() / 1000);
-
-    if (decoded.exp && decoded.exp < now) return false;
+    if (payload.exp && payload.exp < now) return false;
 
     return true;
   } catch(e) {
@@ -92,29 +65,19 @@ async function handler(event) {
   }
 
   const sessionCookie = request.cookies['__session'];
-
   if (!sessionCookie || !sessionCookie.value) {
     return redirect(LOGIN_PATH, uri);
   }
 
-  let secret;
-  try {
-    const kvsHandle = cf.kvs(KVS_ARN);
-    secret = await kvsHandle.get('jwt_secret');
-  } catch(e) {
-    return redirect(LOGIN_PATH, uri);
-  }
-
-  const valid = await verifyJWT(sessionCookie.value, secret);
+  const valid = verifyJWT(sessionCookie.value, JWT_SECRET);
 
   if (!valid) {
     return {
       statusCode: 302,
-      headers: {
-        location: { value: LOGIN_PATH },
-        'set-cookie': {
-          value: '__session=; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Path=/'
-        },
+      headers: { location: { value: LOGIN_PATH } },
+      cookies: {
+        '__session': { value: '', attributes: 'HttpOnly; Secure; SameSite=Lax; Max-Age=0; Path=/' },
+        '__user': { value: '', attributes: 'Secure; SameSite=Lax; Max-Age=0; Path=/' },
       },
     };
   }

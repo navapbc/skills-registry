@@ -163,13 +163,21 @@ export const handler = async (event) => {
 
     const destination = returnTo.startsWith('/') ? `${siteUrl}${returnTo}` : siteUrl;
 
+    // Non-HttpOnly cookie for client-side display (name, email, picture).
+    // Access control is handled solely by __session; this carries no auth weight.
+    const userInfo = Buffer.from(JSON.stringify({
+      name: idPayload.name,
+      email,
+      picture: idPayload.picture,
+    })).toString('base64url');
+
     return {
       statusCode: 302,
-      headers: {
-        location: destination,
-        'set-cookie':
-          `__session=${sessionToken}; HttpOnly; Secure; SameSite=Lax; Max-Age=28800; Path=/`,
-      },
+      headers: { location: destination },
+      cookies: [
+        `__session=${sessionToken}; HttpOnly; Secure; SameSite=Lax; Max-Age=28800; Path=/`,
+        `__user=${userInfo}; Secure; SameSite=Lax; Max-Age=28800; Path=/`,
+      ],
       body: '',
     };
   }

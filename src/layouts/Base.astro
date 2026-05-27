@@ -84,8 +84,8 @@ const { title = 'Skills Registry' } = Astro.props;
         <!-- User footer -->
         <div class="px-3 py-3 border-t border-gray-200">
           <div class="flex items-center gap-2">
-            <span class="w-7 h-7 rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0" id="user-avatar">?</span>
-            <span class="text-xs text-gray-500 truncate" id="user-email">Loading...</span>
+            <span class="w-7 h-7 rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0 overflow-hidden" id="user-avatar">?</span>
+            <span class="text-xs text-gray-500 truncate" id="user-email"></span>
           </div>
         </div>
       </aside>
@@ -100,32 +100,35 @@ const { title = 'Skills Registry' } = Astro.props;
 
     <script>
       (function () {
-        function getSessionUser() {
+        function getDisplayUser() {
           const cookie = document.cookie
             .split('; ')
-            .find(r => r.startsWith('__session='));
+            .find(r => r.startsWith('__user='));
           if (!cookie) return null;
           try {
-            const token = cookie.split('=')[1];
-            const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-            return payload;
+            const b64 = cookie.substring('__user='.length).replace(/-/g, '+').replace(/_/g, '/');
+            return JSON.parse(atob(b64));
           } catch {
             return null;
           }
         }
 
-        const user = getSessionUser();
-        if (user) {
-          const initials = (user.name || user.sub || '?')
-            .split(' ')
-            .map((n: string) => n[0])
-            .join('')
-            .slice(0, 2)
-            .toUpperCase();
-          const avatarEl = document.getElementById('user-avatar');
-          const emailEl = document.getElementById('user-email');
-          if (avatarEl) avatarEl.textContent = initials;
-          if (emailEl) emailEl.textContent = user.sub || user.email || '';
+        const user = getDisplayUser();
+        const avatarEl = document.getElementById('user-avatar');
+        const emailEl = document.getElementById('user-email');
+        if (user && avatarEl && emailEl) {
+          if (user.picture) {
+            avatarEl.innerHTML = '<img src="' + user.picture + '" alt="" class="w-full h-full object-cover">';
+          } else {
+            const initials = (user.name || user.email || '?')
+              .split(' ')
+              .map((n: string) => n[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase();
+            avatarEl.textContent = initials;
+          }
+          emailEl.textContent = user.name || user.email || '';
         }
 
         // Highlight active nav link
