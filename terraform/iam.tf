@@ -14,8 +14,10 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 locals {
   oidc_provider_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
-  # Branch that is allowed to deploy to this environment
-  deploy_branch = var.environment == "prod" ? "release" : "main"
+  # GitHub environment name — must match the environment: key in deploy.yml
+  # When a workflow job uses environment:, the OIDC sub claim becomes
+  # "repo:{org}/{repo}:environment:{name}" instead of the branch-based form.
+  github_environment = var.environment == "prod" ? "production" : "staging"
 }
 
 data "aws_caller_identity" "current" {}
@@ -25,7 +27,7 @@ data "aws_caller_identity" "current" {}
 # -------------------------------------------------------------------------
 resource "aws_iam_role" "github_deploy" {
   name        = "${var.project_name}-github-deploy-${var.environment}"
-  description = "Assumed by GitHub Actions on ${local.deploy_branch} -> ${var.environment} deploys"
+  description = "Assumed by GitHub Actions for ${var.environment} deploys"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -37,10 +39,8 @@ resource "aws_iam_role" "github_deploy" {
         Condition = {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          }
-          StringLike = {
-            # Scoped to this repo + this branch only
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/${local.deploy_branch}"
+            # Jobs using environment: emit sub as "repo:{org}/{repo}:environment:{name}"
+            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:environment:${local.github_environment}"
           }
         }
       }
