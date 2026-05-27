@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-21T00:00:00Z",
+  "generated_at": "2026-05-27T20:02:54.606Z",
   "org": "navapbc",
   "plugins": [
     {
@@ -16,7 +16,9 @@
         "referral-generator",
         "document-analyzer"
       ],
-      "agents": ["caseworker-agent"]
+      "agents": [
+        "caseworker-agent"
+      ]
     },
     {
       "slug": "pa-snap",
@@ -40,7 +42,11 @@
       "path": "skills/decision-support-tool/SKILL.md",
       "author": "cory-nava",
       "version": "1.0.0",
-      "compatibility": ["claude-code", "claude-chat", "claude-cowork"],
+      "compatibility": [
+        "claude-code",
+        "claude-chat",
+        "claude-cowork"
+      ],
       "sensitive_data": false,
       "type": "skill",
       "content": "# Decision Support Tool\n\nYou help caseworkers navigate complex benefit eligibility rules...",
@@ -55,7 +61,10 @@
       "path": "skills/form-filling-assistant/SKILL.md",
       "author": "cory-nava",
       "version": "1.1.0",
-      "compatibility": ["claude-code", "claude-cowork"],
+      "compatibility": [
+        "claude-code",
+        "claude-cowork"
+      ],
       "sensitive_data": true,
       "type": "skill",
       "content": "# Form Filling Assistant\n\nYou assist caseworkers in completing government benefits forms...",
@@ -70,7 +79,10 @@
       "path": "skills/referral-generator/SKILL.md",
       "author": "cory-nava",
       "version": "1.0.0",
-      "compatibility": ["claude-chat", "claude-cowork"],
+      "compatibility": [
+        "claude-chat",
+        "claude-cowork"
+      ],
       "sensitive_data": true,
       "type": "skill",
       "content": "# Referral Generator\n\nYou help caseworkers draft referral letters for clients...",
@@ -85,7 +97,11 @@
       "path": "skills/document-analyzer/SKILL.md",
       "author": "cory-nava",
       "version": "2.0.0",
-      "compatibility": ["claude-code", "claude-chat", "claude-cowork"],
+      "compatibility": [
+        "claude-code",
+        "claude-chat",
+        "claude-cowork"
+      ],
       "sensitive_data": true,
       "type": "skill",
       "content": "# Document Analyzer\n\nYou analyze government documents uploaded by caseworkers...",
@@ -100,10 +116,16 @@
       "path": "agents/caseworker/AGENT.md",
       "author": "cory-nava",
       "version": "0.9.0",
-      "compatibility": ["claude-code"],
+      "compatibility": [
+        "claude-code"
+      ],
       "sensitive_data": true,
       "type": "agent",
-      "tools_used": ["decision-support-tool", "document-analyzer", "referral-generator"],
+      "tools_used": [
+        "decision-support-tool",
+        "document-analyzer",
+        "referral-generator"
+      ],
       "human_in_loop": "Caseworker reviews and approves all generated referrals before submission",
       "content": "# Caseworker Agent\n\nThis agent composes the decision support, document analysis, and referral generation skills...",
       "last_updated": "2026-05-18T00:00:00Z"
