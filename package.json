@@ -8,6 +8,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "sync": "node scripts/sync-registry.mjs",
+    "sync:v2": "node scripts/sync-registry-v2.mjs",
     "check": "astro check"
   },
   "dependencies": {

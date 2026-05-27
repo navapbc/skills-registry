@@ -13,10 +13,6 @@ on:
           - staging
           - production
         default: staging
-      limit:
-        description: 'Number of repos to scan (sorted by last push)'
-        required: false
-        default: '365'
       reason:
         description: 'Reason for manual sync'
         required: false
@@ -47,7 +43,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.REGISTRY_SCAN_TOKEN }}
           GITHUB_ORG: navapbc
-        run: pnpm run sync --limit ${{ inputs.limit || '365' }}
+        run: pnpm run sync:v2
 
       - name: Commit updated registry
         run: |
