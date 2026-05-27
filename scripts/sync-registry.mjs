@@ -15,10 +15,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 
 const args = process.argv.slice(2);
-const ORG = args[args.indexOf('--org') + 1] || process.env.GITHUB_ORG || 'navapbc';
-const OUTPUT = args[args.indexOf('--output') + 1] || 'public/registry/index.json';
-const LIMIT = parseInt(args[args.indexOf('--limit') + 1] || '365', 10);
+
+function getArg(flag) {
+  const idx = args.indexOf(flag);
+  return idx !== -1 ? args[idx + 1] : null;
+}
+
+const ORG = getArg('--org') || process.env.GITHUB_ORG || 'navapbc';
+const OUTPUT = getArg('--output') || 'public/registry/index.json';
+const LIMIT = parseInt(getArg('--limit') || '365', 10);
 const SHALLOW = args.includes('--shallow'); // skip directory scans, root files only
+const VERBOSE = args.includes('--verbose');  // print every dir lookup and file check
 
 if (!process.env.GITHUB_TOKEN) {
   console.error('GITHUB_TOKEN environment variable is required');
@@ -109,9 +116,13 @@ async function listDirectory(repo, path) {
       repo: repo.name,
       path,
     });
-    if (Array.isArray(res.data)) return res.data;
+    if (Array.isArray(res.data)) {
+      if (VERBOSE) console.log(`    DIR ${path} → [${res.data.map(e => e.name).join(', ')}]`);
+      return res.data;
+    }
     return [];
-  } catch {
+  } catch (e) {
+    if (VERBOSE) console.log(`    DIR ${path} → ERROR ${e.status}`);
     return [];
   }
 }
@@ -195,6 +206,7 @@ async function scanRepo(repo) {
 
   async function trySkill(path) {
     const content = await searchFile(repo, path);
+    if (VERBOSE) console.log(`    FILE ${path} → ${content ? 'found' : 'miss'}`);
     if (!content) return;
     const { meta, body } = parseFrontmatter(content);
     skills.push(buildSkillRecord(content, path, repo, meta, body));
@@ -202,6 +214,7 @@ async function scanRepo(repo) {
 
   async function tryAgent(path) {
     const content = await searchFile(repo, path);
+    if (VERBOSE) console.log(`    FILE ${path} → ${content ? 'found' : 'miss'}`);
     if (!content) return;
     const { meta, body } = parseFrontmatter(content);
     agents.push(buildAgentRecord(content, path, repo, meta, body));
@@ -231,13 +244,16 @@ async function scanRepo(repo) {
   await tryAgent('.claude/CLAUDE.md');
 
   if (!SHALLOW) {
-    // Skill directories — *.md and *.mdc children, subdirs try standard SKILL.md names
+    // Skill directories — list all *.md/*.mdc files; for subdirs, list their contents too
     for (const dir of SKILL_DIR_LIST) {
       const entries = await listDirectory(repo, dir);
       for (const entry of entries) {
         if (entry.type === 'dir') {
-          for (const name of ['SKILL.md', 'skill.md', 'SKILLS.md', 'skills.md']) {
-            await trySkill(`${entry.path}/${name}`);
+          const subEntries = await listDirectory(repo, entry.path);
+          for (const sub of subEntries) {
+            if (sub.type === 'file' && /\.(md|mdc)$/i.test(sub.name)) {
+              await trySkill(sub.path);
+            }
           }
         } else if (entry.type === 'file' && /\.(md|mdc)$/i.test(entry.name)) {
           await trySkill(entry.path);
@@ -245,13 +261,16 @@ async function scanRepo(repo) {
       }
     }
 
-    // Agent directories — *.md and *.mdc children (includes Cursor .cursor/rules/*.mdc)
+    // Agent directories — list all *.md/*.mdc files; for subdirs, list their contents too
     for (const dir of AGENT_DIR_LIST) {
       const entries = await listDirectory(repo, dir);
       for (const entry of entries) {
         if (entry.type === 'dir') {
-          for (const name of ['AGENT.md', 'agent.md', 'AGENTS.md', 'agents.md']) {
-            await tryAgent(`${entry.path}/${name}`);
+          const subEntries = await listDirectory(repo, entry.path);
+          for (const sub of subEntries) {
+            if (sub.type === 'file' && /\.(md|mdc)$/i.test(sub.name)) {
+              await tryAgent(sub.path);
+            }
           }
         } else if (entry.type === 'file' && /\.(md|mdc)$/i.test(entry.name)) {
           await tryAgent(entry.path);
@@ -277,6 +296,13 @@ async function main() {
   const total = repos.length;
   console.log(`Found ${total} repos to scan\n`);
 
+  const debugRepos = (process.env.DEBUG_REPOS || '').split(',').filter(Boolean);
+  if (debugRepos.length) {
+    const found = repos.filter(r => debugRepos.includes(r.name));
+    console.log(`DEBUG: looking for [${debugRepos.join(', ')}] in repo list`);
+    console.log(`DEBUG: found: [${found.map(r => r.name).join(', ') || 'NONE — outside limit or not in org'}]\n`);
+  }
+
   const allSkills = [];
   const allAgents = [];
   const plugins = [];
@@ -285,6 +311,7 @@ async function main() {
   for (const repo of repos) {
     scanned++;
     process.stdout.write(`\r[${scanned}/${total}] ${repo.name.padEnd(40)}`);
+    if (VERBOSE) process.stdout.write('\n');
     const { skills, agents } = await scanRepo(repo);
 
     if (skills.length === 0 && agents.length === 0) continue;
