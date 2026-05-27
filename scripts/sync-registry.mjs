@@ -17,13 +17,21 @@ const ROOT = join(__dirname, '..');
 const args = process.argv.slice(2);
 const ORG = args[args.indexOf('--org') + 1] || process.env.GITHUB_ORG || 'navapbc';
 const OUTPUT = args[args.indexOf('--output') + 1] || 'public/registry/index.json';
+const LIMIT = parseInt(args[args.indexOf('--limit') + 1] || '365', 10);
+const SHALLOW = args.includes('--shallow'); // skip directory scans, root files only
 
 if (!process.env.GITHUB_TOKEN) {
   console.error('GITHUB_TOKEN environment variable is required');
   process.exit(1);
 }
 
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+const octokit = new Octokit({
+  auth: process.env.GITHUB_TOKEN,
+  log: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} },
+  request: {
+    headers: { 'X-GitHub-Api-Version': '2026-03-10' },
+  },
+});
 
 // --- Frontmatter parser (no dependencies needed) ---
 function parseFrontmatter(content) {
@@ -68,11 +76,14 @@ async function listOrgRepos() {
   for await (const page of octokit.paginate.iterator(octokit.rest.repos.listForOrg, {
     org: ORG,
     type: 'all',
+    sort: 'pushed',
+    direction: 'desc',
     per_page: 100,
   })) {
     repos.push(...page.data.filter(r => !r.archived && !r.disabled));
+    if (repos.length >= LIMIT) break;
   }
-  return repos;
+  return repos.slice(0, LIMIT);
 }
 
 async function searchFile(repo, path) {
@@ -219,30 +230,32 @@ async function scanRepo(repo) {
   // .claude/CLAUDE.md (hidden Claude Code config)
   await tryAgent('.claude/CLAUDE.md');
 
-  // Skill directories — *.md and *.mdc children, subdirs try standard SKILL.md names
-  for (const dir of SKILL_DIR_LIST) {
-    const entries = await listDirectory(repo, dir);
-    for (const entry of entries) {
-      if (entry.type === 'dir') {
-        for (const name of ['SKILL.md', 'skill.md', 'SKILLS.md', 'skills.md']) {
-          await trySkill(`${entry.path}/${name}`);
+  if (!SHALLOW) {
+    // Skill directories — *.md and *.mdc children, subdirs try standard SKILL.md names
+    for (const dir of SKILL_DIR_LIST) {
+      const entries = await listDirectory(repo, dir);
+      for (const entry of entries) {
+        if (entry.type === 'dir') {
+          for (const name of ['SKILL.md', 'skill.md', 'SKILLS.md', 'skills.md']) {
+            await trySkill(`${entry.path}/${name}`);
+          }
+        } else if (entry.type === 'file' && /\.(md|mdc)$/i.test(entry.name)) {
+          await trySkill(entry.path);
         }
-      } else if (entry.type === 'file' && /\.(md|mdc)$/i.test(entry.name)) {
-        await trySkill(entry.path);
       }
     }
-  }
 
-  // Agent directories — *.md and *.mdc children (includes Cursor .cursor/rules/*.mdc)
-  for (const dir of AGENT_DIR_LIST) {
-    const entries = await listDirectory(repo, dir);
-    for (const entry of entries) {
-      if (entry.type === 'dir') {
-        for (const name of ['AGENT.md', 'agent.md', 'AGENTS.md', 'agents.md']) {
-          await tryAgent(`${entry.path}/${name}`);
+    // Agent directories — *.md and *.mdc children (includes Cursor .cursor/rules/*.mdc)
+    for (const dir of AGENT_DIR_LIST) {
+      const entries = await listDirectory(repo, dir);
+      for (const entry of entries) {
+        if (entry.type === 'dir') {
+          for (const name of ['AGENT.md', 'agent.md', 'AGENTS.md', 'agents.md']) {
+            await tryAgent(`${entry.path}/${name}`);
+          }
+        } else if (entry.type === 'file' && /\.(md|mdc)$/i.test(entry.name)) {
+          await tryAgent(entry.path);
         }
-      } else if (entry.type === 'file' && /\.(md|mdc)$/i.test(entry.name)) {
-        await tryAgent(entry.path);
       }
     }
   }
@@ -257,42 +270,43 @@ async function scanRepo(repo) {
 }
 
 async function main() {
-  console.log(`Scanning ${ORG} org...`);
+  const mode = SHALLOW ? 'shallow (root files only)' : 'deep (root + directories)';
+  console.log(`Scanning ${ORG} org — ${mode}, limit ${LIMIT} repos by last push...`);
 
   const repos = await listOrgRepos();
-  console.log(`Found ${repos.length} active repos`);
+  const total = repos.length;
+  console.log(`Found ${total} repos to scan\n`);
 
   const allSkills = [];
   const allAgents = [];
   const plugins = [];
+  let scanned = 0;
 
   for (const repo of repos) {
-    process.stdout.write(`  Scanning ${repo.name}...`);
+    scanned++;
+    process.stdout.write(`\r[${scanned}/${total}] ${repo.name.padEnd(40)}`);
     const { skills, agents } = await scanRepo(repo);
 
-    if (skills.length === 0 && agents.length === 0) {
-      console.log(' skip');
-      continue;
-    }
+    if (skills.length === 0 && agents.length === 0) continue;
 
-    console.log(` ${skills.length} skill(s), ${agents.length} agent(s)`);
+    process.stdout.write('\n');
+    console.log(`  ✓ ${repo.name}`);
+    for (const s of skills) console.log(`      skill  ${s.path}`);
+    for (const a of agents) console.log(`      agent  ${a.path}`);
 
     allSkills.push(...skills);
     allAgents.push(...agents);
-
-    if (skills.length > 0 || agents.length > 0) {
-      plugins.push({
-        slug: slugify(repo.name),
-        name: repo.name,
-        description: repo.description || '',
-        repo: `${ORG}/${repo.name}`,
-        author: repo.owner?.login || ORG,
-        skill_count: skills.length,
-        agent_count: agents.length,
-        skills: skills.map(s => s.slug),
-        agents: agents.map(a => a.slug),
-      });
-    }
+    plugins.push({
+      slug: slugify(repo.name),
+      name: repo.name,
+      description: repo.description || '',
+      repo: `${ORG}/${repo.name}`,
+      author: repo.owner?.login || ORG,
+      skill_count: skills.length,
+      agent_count: agents.length,
+      skills: skills.map(s => s.slug),
+      agents: agents.map(a => a.slug),
+    });
   }
 
   const registry = {
@@ -304,7 +318,9 @@ async function main() {
 
   const outputPath = join(ROOT, OUTPUT);
   writeFileSync(outputPath, JSON.stringify(registry, null, 2));
-  console.log(`\nWrote ${plugins.length} plugins, ${allSkills.length} skills, ${allAgents.length} agents to ${OUTPUT}`);
+  process.stdout.write('\n');
+  console.log(`\nScanned ${scanned} repos → ${plugins.length} plugins, ${allSkills.length} skills, ${allAgents.length} agents`);
+  console.log(`Wrote ${outputPath}`);
 }
 
 main().catch(err => {
