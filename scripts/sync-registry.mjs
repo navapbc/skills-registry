@@ -16,7 +16,7 @@ const ROOT = join(__dirname, '..');
 
 const args = process.argv.slice(2);
 const ORG = args[args.indexOf('--org') + 1] || process.env.GITHUB_ORG || 'navapbc';
-const OUTPUT = args[args.indexOf('--output') + 1] || 'registry/index.json';
+const OUTPUT = args[args.indexOf('--output') + 1] || 'public/registry/index.json';
 
 if (!process.env.GITHUB_TOKEN) {
   console.error('GITHUB_TOKEN environment variable is required');

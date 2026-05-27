@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-import registryData from '../../../registry/index.json';
+import registryData from '../../../public/registry/index.json';
 
 export function getStaticPaths() {
   return registryData.skills.map(skill => ({
