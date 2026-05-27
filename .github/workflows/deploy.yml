@@ -15,6 +15,9 @@ on:
           - staging
           - prod
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     name: Deploy to ${{ github.ref_name == 'release' && 'prod' || 'staging' }}
