@@ -11,10 +11,8 @@ export function getStaticPaths() {
 }
 
 const { plugin } = Astro.props;
-const pluginSkills = registryData.skills.filter(s => plugin.skills.includes(s.slug));
-const pluginAgents = registryData.skills.filter(
-  s => s.type === 'agent' && plugin.agents?.includes(s.slug)
-);
+const pluginSkills = registryData.skills.filter(s => s.type === 'skill' && s.plugin === plugin.slug);
+const pluginAgents = registryData.skills.filter(s => s.type === 'agent' && s.plugin === plugin.slug);
 const initial = plugin.author.slice(0, 1).toUpperCase();
 ---
 
@@ -52,11 +50,11 @@ const initial = plugin.author.slice(0, 1).toUpperCase();
   <!-- Tabs -->
   <div class="flex items-center gap-0 border-b border-gray-200 mb-6">
     <button class="px-4 py-2 text-sm font-medium text-plum-700 border-b-2 border-plum-600 -mb-px bg-transparent cursor-pointer" data-tab="skills">
-      Skills ({plugin.skill_count})
+      Skills ({pluginSkills.length})
     </button>
     {pluginAgents.length > 0 && (
       <button class="px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent -mb-px bg-transparent cursor-pointer hover:text-gray-700" data-tab="agents">
-        Agents ({plugin.agent_count})
+        Agents ({pluginAgents.length})
       </button>
     )}
     <button class="px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent -mb-px bg-transparent cursor-pointer hover:text-gray-700" data-tab="history">
@@ -66,7 +64,7 @@ const initial = plugin.author.slice(0, 1).toUpperCase();
 
   <!-- Skills tab -->
   <div id="tab-skills">
-    <p class="text-sm text-gray-500 mb-4">Skills ({plugin.skill_count})</p>
+    <p class="text-sm text-gray-500 mb-4">Skills ({pluginSkills.length})</p>
     <div class="grid grid-cols-3 gap-3">
       {pluginSkills.map(skill => (
         <SkillCard skill={skill} showPlugin={false} />
