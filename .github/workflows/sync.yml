@@ -5,6 +5,14 @@ on:
     - cron: '0 */4 * * *'  # every 4 hours
   workflow_dispatch:
     inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
       reason:
         description: 'Reason for manual sync'
         required: false
@@ -13,14 +21,13 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    environment: production  # requires approved reviewer to trigger manually
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        # reads version from packageManager field in package.json
 
       - uses: actions/setup-node@v4
         with:
