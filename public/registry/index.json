@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-27T20:02:54.606Z",
+  "generated_at": "2026-05-27T20:13:29.050Z",
   "org": "navapbc",
   "plugins": [
     {
@@ -30,6 +30,89 @@
       "agent_count": 0,
       "skills": [],
       "agents": []
+    },
+    {
+      "slug": "lockpicks-xlator-plugin",
+      "name": "lockpicks-xlator-plugin",
+      "description": "",
+      "repo": "navapbc/lockpicks-xlator-plugin",
+      "author": "navapbc",
+      "skill_count": 0,
+      "agent_count": 1,
+      "skills": [],
+      "agents": [
+        "lockpicks-xlator-plugin"
+      ]
+    },
+    {
+      "slug": "poc-case-management",
+      "name": "poc-case-management",
+      "description": "",
+      "repo": "navapbc/poc-case-management",
+      "author": "navapbc",
+      "skill_count": 0,
+      "agent_count": 4,
+      "skills": [],
+      "agents": [
+        "poc-case-management",
+        "poc-case-management",
+        "github",
+        "rules"
+      ]
+    },
+    {
+      "slug": "autofac",
+      "name": "autofac",
+      "description": "Prototype of a local LLM agent that can monitor Jira queues and fix the bugs that get placed there.",
+      "repo": "navapbc/autofac",
+      "author": "navapbc",
+      "skill_count": 0,
+      "agent_count": 1,
+      "skills": [],
+      "agents": [
+        "autofac"
+      ]
+    },
+    {
+      "slug": "labs-mcp-typescript-sdk",
+      "name": "labs-mcp-typescript-sdk",
+      "description": "Nava Labs opinionated TypeScript SDK for Model Context Protocol servers and clients",
+      "repo": "navapbc/labs-mcp-typescript-sdk",
+      "author": "navapbc",
+      "skill_count": 0,
+      "agent_count": 1,
+      "skills": [],
+      "agents": [
+        "labs-mcp-typescript-sdk"
+      ]
+    },
+    {
+      "slug": "devopsmetrics",
+      "name": "DevOpsMetrics",
+      "description": "These tools are meant to pair with the Framework for Measuring the Effectiveness of Nava Engineering and currently address the Lead Time for Changes/Code Cycle Time metric.",
+      "repo": "navapbc/DevOpsMetrics",
+      "author": "navapbc",
+      "skill_count": 0,
+      "agent_count": 1,
+      "skills": [],
+      "agents": [
+        "github"
+      ]
+    },
+    {
+      "slug": "labs-tir-prototyping",
+      "name": "labs-tir-prototyping",
+      "description": "",
+      "repo": "navapbc/labs-tir-prototyping",
+      "author": "navapbc",
+      "skill_count": 1,
+      "agent_count": 1,
+      "skills": [
+        "nava-labs-style"
+      ],
+      "agents": [
+        "labs-tir-prototyping"
+      ]
     }
   ],
   "skills": [
@@ -129,6 +212,174 @@
       "human_in_loop": "Caseworker reviews and approves all generated referrals before submission",
       "content": "# Caseworker Agent\n\nThis agent composes the decision support, document analysis, and referral generation skills...",
       "last_updated": "2026-05-18T00:00:00Z"
+    },
+    {
+      "slug": "nava-labs-style",
+      "name": "nava-labs-style",
+      "description": "Nava Labs writing style guide for AI-assisted content creation. Use this skill whenever writing, drafting, editing, or reviewing ANY content for Nava Labs — including case studies, toolkits, articles, op-eds, newsletters, conference proposals, one-pagers, social posts, blog posts, or internal comms. Also trigger when the user mentions Nava Labs voice, Labs style, write like Nava, style guide, or asks to draft, edit, or review any Nava Labs content. If the user is working on writing of any kind related to Nava Labs, use this skill. Even if the user just says write a case study or draft a blog post or help me with this article, trigger this skill since the user works at Nava Labs.",
+      "plugin": "labs-tir-prototyping",
+      "repo": "navapbc/labs-tir-prototyping",
+      "path": "skills/nava-labs-style/SKILL.md",
+      "author": "navapbc",
+      "version": "1.0.0",
+      "compatibility": [],
+      "sensitive_data": false,
+      "type": "skill",
+      "content": "---\nname: nava-labs-style\ndescription: \"Nava Labs writing style guide for AI-assisted content creation. Use this skill whenever writing, drafting, editing, or reviewing ANY content for Nava Labs — including case studies, toolkits, articles, op-eds, newsletters, conference proposals, one-pagers, social posts, blog posts, or internal comms. Also trigger when the user mentions 'Nava Labs voice,' 'Labs style,' 'write like Nava,' 'style guide,' or asks to draft, edit, or review any Nava Labs content. If the user is working on writing of any kind related to Nava Labs, use this skill. Even if the user just says 'write a case study' or 'draft a blog post' or 'help me with this article,' trigger this skill since the user works at Nava Labs.\"\n---\n\n# Nava Labs Style Guide Skill\n\nThis skill ensures all AI-generated content matches the Nava Labs voice, tone, and editorial standards. Built from direct analysis of five Confluence pages ([Editorial guidelines](https://navasage.atlassian.net/wiki/spaces/NH/pages/450233086/Editorial+guidelines), [Grammar, usage, and style](https://navasage.atlassian.net/wiki/spaces/NH/pages/453739064/Grammar+usage+and+style), [Nava's brand strategy](https://navasage.atlassian.net/wiki/spaces/NH/pages/449708334/Nava+s+brand+strategy), [Writing for Nava's website](https://navasage.atlassian.net/wiki/spaces/NH/pages/1657634839/Writing+for+Nava+s+website), [Benefit Navigator Chatbot Style Guide](https://navasage.atlassian.net/wiki/spaces/NL/pages/2050883637/Benefit+Navigator+Chatbot+Style+Guide)), published Nava Labs case studies, Google Drive templates, Slack discussions, and the Nava comms team's editorial strategy.\n\n## When to use\n\n- **Drafting:** User asks to write any Nava Labs content (case study, toolkit, insight/article, social post, conference proposal, newsletter, one-pager, op-ed)\n- **Editing:** User asks to review, revise, or polish existing content for Nava Labs\n- **Style checking:** User wants to catch AI-isms or align a draft with Nava Labs voice\n\n## First step: Read the full guide\n\nBefore writing or editing any content, read `references/full-style-guide.md`. It contains the complete voice rules, positive/negative examples, audience segments, the full Nava word list, and the post-draft editing checklist. The quick reference below is a summary — the full guide is the source of truth.\n\n## Quick voice reference\n\n**Brand personality** (from [Nava's brand strategy](https://navasage.atlassian.net/wiki/spaces/NH/pages/449708334/Nava+s+brand+strategy)): Trusted, Human-centered, Responsible, Decisive, Adaptable.\n\n**Voice:** Conversational but professional. Confident but honest. Accessible first, technical when needed. \"Real talk, no BS.\"\n\n**Do:**\n- Lead with people and problems, not technology\n- Use specific names, numbers, places, and quotes\n- Show the messy middle (process, missteps, learnings)\n- Use contractions naturally (\"we're,\" \"don't,\" \"can't\")\n- Use plain language and active voice\n- Back every claim with evidence\n- Use \"we\" when describing Nava Labs' work\n- Refer to people by role (case managers, navigators) not \"users\"\n- Frame outcomes as partner success (\"Nava helped fix...\" not \"Nava fixed...\")\n- Keep sentences to 15-25 words\n\n**Don't:**\n- Use more than one em-dash per piece (this is a known AI writing trope)\n- Use \"innovative,\" \"cutting-edge,\" \"groundbreaking,\" \"transformative\"\n- Use \"leverage,\" \"utilize,\" \"facilitate,\" \"stakeholders\"\n- Start with \"In today's rapidly evolving...\" or any throat-clearing\n- Write symmetrical sentence pairs (\"By combining X with Y...\")\n- Overuse the rule of three (\"scalable, sustainable, and transformative\")\n- Use negative parallelisms (\"It's not just about... it's about...\")\n- Anthropomorphize AI (no \"thinks,\" \"understands,\" \"knows\")\n- Overclaim — if we can't prove it, soften it or cut it\n- Use title case for headings (use sentence case)\n- Be derisive about legacy technology or systems\n\n## Content-type structures\n\n### Case study\nFive-section arc: **Summary** (what did we accomplish?) **-> Approach** (how we tackled it) **-> Outcomes** (metrics and results) **-> Process** (detailed how, with screenshots) **-> Conclusion** (restate + links to GitHub, contact info).\n\nOpen with a concrete scene grounding the reader in the problem space. Title = shortest possible version of the primary outcome.\n\n### Toolkit\nPractical, how-to content that stewards human-centered design and agile best practices. Written in second person (\"you\"). Focus on the most important actions. Audience: government partners and peers. ([Writing for Nava's website](https://navasage.atlassian.net/wiki/spaces/NH/pages/1657634839/Writing+for+Nava+s+website))\n\n### Insight (op-ed / article)\nEvidence-based argument about designing and building government digital services. Distinct from a toolkit (practical how-to) and a case study (work description). Target: 800-1,300 words. Open with a provocative framing or specific moment. Build an argument grounded in delivery experience. End with a forward-looking takeaway. ([Writing for Nava's website](https://navasage.atlassian.net/wiki/spaces/NH/pages/1657634839/Writing+for+Nava+s+website))\n\n### Conference proposal\nLead with audience value proposition. Active, specific language. Frame around what attendees will learn.\n\n### Newsletter / social post\nConversational, concise, link-forward. Tease the insight, don't summarize the whole piece.\n\n## Key editorial mechanics\n\nThese come from [Nava's editorial guidelines](https://navasage.atlassian.net/wiki/spaces/NH/pages/450233086/Editorial+guidelines) and [Grammar, usage, and style](https://navasage.atlassian.net/wiki/spaces/NH/pages/453739064/Grammar+usage+and+style) (see full guide for the complete word list):\n\n- **Capitalization:** Sentence case for headings (max 75 chars, ideal <60). Don't capitalize job titles in running text. \"Federal\"/\"state\" lowercase unless part of a proper noun. \"Veteran\" is capitalized. \"Black\" is capitalized in racial/ethnic/cultural sense.\n- **Numbers:** Spell out one through nine. Numerals for 10+. Use \"%\" with numerals (not \"percent\"). En dashes for ranges with no space (5–8). Years are always numerals, even starting a sentence.\n- **Punctuation:** Spell out \"and\" (no ampersands unless official names like Centers for Medicare & Medicaid Services). Oxford comma always. Em dashes sparingly with spaces on either side. Ellipses without spaces on either side.\n- **Naming:** \"Nava Public Benefit Corporation\" or \"Nava PBC\" on first mention, then \"Nava.\" Never all-caps NAVA. \"VA,\" \"CDC,\" \"CMS\" never preceded by \"the.\" \"Participants\" for WIC (per FNS), \"beneficiaries\" for Medicare/Medicaid. \"Health care\" is two words. \"Open source\" is never hyphenated. \"Public benefits\" (not \"safety net benefits\"). Use \"people\" not \"Americans\" or \"citizens\" by default.\n- **Links:** Descriptive text, never \"click here.\" Use \"learn more\" not \"read more.\" Don't include punctuation in the link.\n- **Formatting:** Bold only with definitions, never for emphasis. Curved smart quotes. Titles under 75 chars. URL slugs: 4-5 keywords, lowercase, hyphens.\n\n## Editing workflow\n\nAfter generating any content, run this checklist:\n\n1. **Em-dash count** — More than one? Replace with commas, periods, or parentheses.\n2. **Opening sentence** — Does it start with a person or scene? Not \"In today's...\" or \"As organizations increasingly...\"\n3. **Superlatives** — Search for \"innovative,\" \"cutting-edge,\" \"groundbreaking.\" Replace with specifics or cut.\n4. **Hedge words** — Search for \"certainly,\" \"of course,\" \"it's worth noting.\" Usually deletable.\n5. **Passive voice** — Search for \"was developed,\" \"was determined.\" Rewrite with a subject.\n6. **Rule of three** — More than one triple construction? Vary the rhythm.\n7. **Negative parallelisms** — \"It's not just about...\" Cut or replace with specifics.\n8. **Generic placeholders** — \"Key stakeholders\" instead of naming them? Fix it.\n9. **Quote accuracy** — Cross-reference every quote against source material.\n10. **Fact check** — Verify all numbers, dates, program names, and titles.\n11. **Press release test** — Read the opening aloud. Does it sound like something a human would say to a colleague?\n12. **Partner framing** — Are outcomes framed as partner achievements, not Nava's alone?\n\n## For complete details\n\nRead `references/full-style-guide.md` for:\n- Complete positive and negative examples with explanations\n- Nava boilerplate text and brand personality breakdown\n- Full Nava word list (40+ terms) from Confluence\n- Government partner segments (Ambitious & Eager, Risk-conscious, Mission-driven, Trailblazers, Trust Builders)\n- Additional audience guidance (funders, civic tech peers, researchers, public)\n- AI-specific writing rules (don't anthropomorphize, name specific tech, human in the loop)\n- Full publishing and formatting standards (alt text, captions, URL slugs, meta descriptions)\n- AI drafting workflow with prompt templates\n- Complete source citations with Confluence page links and last-updated dates\n",
+      "last_updated": "2026-05-21T20:13:50Z"
+    },
+    {
+      "slug": "lockpicks-xlator-plugin",
+      "name": "lockpicks-xlator-plugin",
+      "description": "When working with Catala code, always use Catala semantics and syntax — never Rego. Double-check that generated tests, transpiler output, and examples use Catala conventions (e.g., `Using` not `Include`, correct module/entity prefixes).",
+      "plugin": "lockpicks-xlator-plugin",
+      "repo": "navapbc/lockpicks-xlator-plugin",
+      "path": "CLAUDE.md",
+      "author": "navapbc",
+      "version": "1.0.0",
+      "compatibility": [],
+      "sensitive_data": false,
+      "type": "agent",
+      "tools_used": [],
+      "human_in_loop": "",
+      "content": "## Catala Conventions\nWhen working with Catala code, always use Catala semantics and syntax — never Rego. Double-check that generated tests, transpiler output, and examples use Catala conventions (e.g., `Using` not `Include`, correct module/entity prefixes).\n\n## Shell Commands\n\nOn macOS, do not use `grep -P` (PCRE). Use `grep -E` (extended regex) or `perl -ne` instead.\n\n## Shell scripts\n\nWhen writing or modifying shell scripts, ensure commands are portable such that they work on MacOS and Linux.\nUse bash-specific built-in commands and features, rather than `sed`, `grep`, and `awk`.\n\n## Testing\n\nWhen fixing transpiler bugs, always run the full test suite (all domains/programs) after each fix — not just the specific failing test. Transpiler changes frequently cause regressions in other modules.\n\n## Project Terminology\n\nFor brainstorm and plan documents, use the project's exact terminology: 'ruleset module' (not 'sub-ruleset', not 'submodule'), 'ruleset group' (not 'workflow stage'), 'CIVIL' for the DSL name. Ask for clarification if domain terminology is ambiguous rather than guessing.\n\n## Git\n\nNever commit to the `main` branch.\n\n## CIVIL DSL versioning\n\nWhen the CIVIL DSL is updated, bump the version number and in `README-dev.md` \"Architecture Notes\" section, append a bullet describing the new version.\n\n## Xlator plugin versioning\n\nIncrement the version number in `xl-plugin/.claude-plugin/plugin.json` when a PR is created using Semantic Versioning guidelines:\n* increment the MAJOR version number for new features that break backwards compatibility\n* increment the MINOR version number for new features that do not break backwards compatibility\n* increment the PATCH version number for all other changes in behavior\n* Do not increment version numbers if documentation or formatting is changed.\n",
+      "last_updated": "2026-05-26T15:05:55Z"
+    },
+    {
+      "slug": "poc-case-management",
+      "name": "poc-case-management",
+      "description": "This project uses **trekker** for issue tracking. Run `trekker quickstart` to get started.",
+      "plugin": "poc-case-management",
+      "repo": "navapbc/poc-case-management",
+      "path": "AGENTS.md",
+      "author": "navapbc",
+      "version": "1.0.0",
+      "compatibility": [],
+      "sensitive_data": false,
+      "type": "agent",
+      "tools_used": [],
+      "human_in_loop": "",
+      "content": "# Agent Instructions\n\nThis project uses **trekker** for issue tracking. Run `trekker quickstart` to get started.\n\n## Quick Reference\n\n```bash\ntrekker ready  # Find available work\ntrekker task show TREK-1          # View task details\ntrekker task update TREK-1 -s in_progress  # Claim work\ntrekker comment add TREK-1 -a \"agent\" -c \"Summary: ...\"  # Add completion comment\ntrekker task update TREK-1 -s completed    # Complete work\n```\n\n## Non-Interactive Shell Commands\n\n**ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.\n\nShell commands like `cp`, `mv`, and `rm` may be aliased to include `-i` (interactive) mode on some systems, causing the agent to hang indefinitely waiting for y/n input.\n\n**Use these forms instead:**\n```bash\n# Force overwrite without prompting\ncp -f source dest           # NOT: cp source dest\nmv -f source dest           # NOT: mv source dest\nrm -f file                  # NOT: rm file\n\n# For recursive operations\nrm -rf directory            # NOT: rm -r directory\ncp -rf source dest          # NOT: cp -r source dest\n```\n\n**Other commands that may prompt:**\n- `scp` - use `-o BatchMode=yes` for non-interactive\n- `ssh` - use `-o BatchMode=yes` to fail instead of prompting\n- `apt-get` - use `-y` flag\n- `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var\n\n## Server Process Cleanup\n\n**ALWAYS kill any server processes you start once you are done using them.** Do not leave background servers running after testing.\n\n```bash\n# Kill all tsx server processes when done testing\npkill -f \"tsx.*server\" 2>/dev/null\n```\n\nIf you start a server (e.g., `PORT=4001 npx tsx apps/pfml-reference-server/src/server.ts &`) to test or verify changes, you **must** kill it before finishing your work or moving on to an unrelated task.\n\n<!-- BEGIN TREKKER INTEGRATION -->\n## Issue Tracking with trekker\n\n**IMPORTANT**: This project uses **trekker** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods.\n\n### Why trekker?\n\n- Dependency-aware: Track blockers and relationships between tasks\n- Local-only SQLite DB: No server required, stored in `.trekker/trekker.db`\n- Agent-optimized: Token-efficient output with `--toon` flag\n- Epics, tasks, subtasks, comments, and full-text search\n\n### Quick Start\n\n**Check for ready work:**\n\n```bash\ntrekker ready\n```\n\n**Create new tasks:**\n\n```bash\ntrekker task create -t \"Task title\" -d \"Detailed context\" -p 0-5 -e EPIC-1\ntrekker task create -t \"Found bug\" -d \"Details about what was found\" -p 1 -e EPIC-1\n```\n\n**Claim a task:**\n\n```bash\ntrekker task update TREK-1 -s in_progress\n```\n\n**Complete work (comment + status update):**\n\n```bash\ntrekker comment add TREK-1 -a \"agent\" -c \"Summary: implemented X in files A, B\"\ntrekker task update TREK-1 -s completed\n```\n\n### Task Types (via tags)\n\nUse tags to categorize tasks: `--tags \"bug\"`, `--tags \"feature\"`, `--tags \"task\"`, `--tags \"chore\"`\n\n### Priorities\n\n- `0` - Critical (security, data loss, broken builds)\n- `1` - High (major features, important bugs)\n- `2` - Medium (default, nice-to-have)\n- `3` - Low (polish, optimization)\n- `4` - Backlog (future ideas)\n- `5` - Someday\n\n### Workflow for AI Agents\n\n1. **Check ready work**: `trekker ready` shows available tasks\n2. **Claim your task**: `trekker task update TREK-1 -s in_progress`\n3. **Work on it**: Implement, test, document\n4. **Discover new work?** Create linked task:\n   - `trekker task create -t \"Found bug\" -d \"Details\" -p 1 -e EPIC-1`\n   - `trekker dep add TREK-new TREK-parent`\n5. **Complete**: Add summary comment then mark completed:\n   - `trekker comment add TREK-1 -a \"agent\" -c \"Summary: what was done\"`\n   - `trekker task update TREK-1 -s completed`\n\n### Important Rules\n\n- ✅ Use trekker for ALL task tracking\n- ✅ Use `--toon` flag for token-efficient output\n- ✅ Add a summary comment before marking tasks complete\n- ✅ Check `trekker ready` before asking \"what should I work on?\"\n- ❌ Do NOT create markdown TODO lists\n- ❌ Do NOT use external issue trackers\n- ❌ Do NOT duplicate tracking systems\n\nFor full workflow details, run `trekker quickstart`.\n\n## Landing the Plane (Session Completion)\n\n**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.\n\n**MANDATORY WORKFLOW:**\n\n1. **File issues for remaining work** - Create trekker tasks for anything that needs follow-up\n2. **Run quality gates** (if code changed) - Tests, linters, builds\n3. **Update task status** - Complete finished work, update in-progress items\n4. **PUSH TO REMOTE** - This is MANDATORY:\n   ```bash\n   git add -A\n   git pull --rebase\n   git push\n   git status  # MUST show \"up to date with origin\"\n   ```\n5. **Clean up** - Clear stashes, prune remote branches\n6. **Verify** - All changes committed AND pushed\n7. **Hand off** - Provide context for next session\n\n**CRITICAL RULES:**\n- Work is NOT complete until `git push` succeeds\n- NEVER stop before pushing - that leaves work stranded locally\n- NEVER say \"ready to push when you are\" - YOU must push\n- If push fails, resolve and retry until it succeeds\n\n<!-- END TREKKER INTEGRATION -->\n\n## ERAS HTMX Fragment Convention\n\nThe ERAS app (`apps/eras`) uses HTMX OOB (out-of-band) swaps to update panels dynamically. Each partial in `apps/eras/src/views/partials/` may have a corresponding HTMX fragment in `apps/eras/src/views/_htmx-fragments/`.\n\n**When you change a partial, you MUST also update the matching HTMX fragment.**\n\n### Why this matters\n\n- HTMX fragments are rendered server-side and swapped into the DOM via `hx-swap-oob=\"outerHTML\"`.\n- If the fragment markup diverges from the partial, the swapped content will be unstyled or broken.\n- Styles must NOT live inside elements that get OOB-swapped — they belong in the parent page (e.g., `case-detail.ejs`) so they persist across swaps.\n\n### Checklist when editing a partial\n\n1. Update the HTMX fragment with matching markup/class changes\n2. Ensure styles are in the parent page's `<style>` block, not inside the swappable element\n3. Verify the `id` attribute used for OOB targeting still matches\n",
+      "last_updated": "2026-05-22T19:04:30Z"
+    },
+    {
+      "slug": "poc-case-management",
+      "name": "poc-case-management",
+      "description": "When creating plans in plan mode, include an appendix that includes a transcript of the prompts that generated the plan.",
+      "plugin": "poc-case-management",
+      "repo": "navapbc/poc-case-management",
+      "path": "CLAUDE.md",
+      "author": "navapbc",
+      "version": "1.0.0",
+      "compatibility": [],
+      "sensitive_data": false,
+      "type": "agent",
+      "tools_used": [],
+      "human_in_loop": "",
+      "content": "# Claude Code Instructions\n\n## Planning Requirement\n\nWhen creating plans in plan mode, include an appendix that includes a transcript of the prompts that generated the plan.\n",
+      "last_updated": "2026-05-22T19:04:30Z"
+    },
+    {
+      "slug": "github",
+      "name": ".github",
+      "description": "When creating plans in plan mode, include an appendix that includes a transcript of the prompts that generated the plan.",
+      "plugin": "poc-case-management",
+      "repo": "navapbc/poc-case-management",
+      "path": ".github/copilot-instructions.md",
+      "author": "navapbc",
+      "version": "1.0.0",
+      "compatibility": [],
+      "sensitive_data": false,
+      "type": "agent",
+      "tools_used": [],
+      "human_in_loop": "",
+      "content": "# GitHub Copilot Instructions\n\nWhen creating plans in plan mode, include an appendix that includes a transcript of the prompts that generated the plan.\n",
+      "last_updated": "2026-05-22T19:04:30Z"
+    },
+    {
+      "slug": "rules",
+      "name": "rules",
+      "description": "Require prompt transcript appendix in plan mode",
+      "plugin": "poc-case-management",
+      "repo": "navapbc/poc-case-management",
+      "path": ".cursor/rules/plan-mode-prompt-transcript.mdc",
+      "author": "navapbc",
+      "version": "1.0.0",
+      "compatibility": [],
+      "sensitive_data": false,
+      "type": "agent",
+      "tools_used": [],
+      "human_in_loop": "",
+      "content": "---\ndescription: Require prompt transcript appendix in plan mode\nalwaysApply: true\n---\n\n# Plan Mode Prompt Transcript Appendix\n\nWhen creating plans in plan mode, include an appendix that includes a transcript of the prompts that generated the plan.\n",
+      "last_updated": "2026-05-22T19:04:30Z"
+    },
+    {
+      "slug": "autofac",
+      "name": "autofac",
+      "description": "Autonomous bug-fixing agent pipeline for Jira + GitHub projects.",
+      "plugin": "autofac",
+      "repo": "navapbc/autofac",
+      "path": "CLAUDE.md",
+      "author": "navapbc",
+      "version": "1.0.0",
+      "compatibility": [],
+      "sensitive_data": false,
+      "type": "agent",
+      "tools_used": [],
+      "human_in_loop": "",
+      "content": "# autofac\n\nAutonomous bug-fixing agent pipeline for Jira + GitHub projects.\n\n## What This Is\n\nA Ruby daemon that monitors a Jira sprint for unassigned bug tickets, claims them, creates a git worktree per ticket, runs Claude Code (with the superpowers plugin) to attempt a fix, opens a GitHub PR, runs a code review agent, and posts the review as a PR comment. Fully configured via environment variables — designed to work with any project (not just Emmy).\n\n## Status\n\nDesign spec complete. Next step: write the implementation plan.\n\n**To resume:** open this repo in Claude Code and run:\n```\n/using-superpowers please write an implementation plan for the design spec at docs/superpowers/specs/2026-05-19-autonomous-bug-agent-design.md\n```\n\n## Key Design Decisions\n\n- **Language:** Ruby (no extra runtime; matches target project stack)\n- **Deployment:** Local Mac via launchd, polling Jira every 5 minutes\n- **Concurrency:** Thread pool with `AGENT_CONCURRENCY` (default: 1)\n- **State:** Jira status transitions — no separate database\n- **LLM-neutral seam:** `run_agent.sh` and `run_reviewer.sh` are one-liners; swap LLMs by changing one line\n- **Claim-then-process:** All visible tickets are claimed in a single pass before processing begins\n\n## Design Spec\n\n`docs/superpowers/specs/2026-05-19-autonomous-bug-agent-design.md`\n\n## File Layout (planned)\n\n```\nautofac/\n├── agent/\n│   ├── orchestrate.rb       # entry point, polling loop + thread pool\n│   ├── pipeline.rb          # per-ticket end-to-end orchestration\n│   ├── jira_client.rb       # Jira REST API wrapper\n│   ├── config.rb            # env var loader\n│   ├── run_agent.sh         # LLM-neutral seam: runs Claude Code\n│   ├── run_reviewer.sh      # LLM-neutral seam: runs code review\n│   ├── .env.example         # template for required env vars\n│   └── test/\n│       ├── jira_client_test.rb\n│       └── pipeline_test.rb\n└── logs/\n    └── <ticket-id>.log\n```\n\n## Environment Variables\n\n| Variable | Description |\n|---|---|\n| `JIRA_BASE_URL` | Jira instance URL |\n| `JIRA_EMAIL` | Your Jira login email |\n| `JIRA_API_TOKEN` | Jira API token |\n| `JIRA_PROJECT` | Jira project key (e.g. `CBV`) |\n| `JIRA_ASSIGNEE` | Your Jira username (e.g. `MYSW`) |\n| `JIRA_SPRINT_NAME` | Sprint name to monitor |\n| `JIRA_STATUS_OPEN` | Status to poll for (e.g. `To Do`) |\n| `JIRA_STATUS_IN_PROGRESS` | Status when claiming (e.g. `In Progress`) |\n| `JIRA_STATUS_IN_REVIEW` | Status when PR opened (e.g. `In Review`) |\n| `REPO_DIR` | Absolute path to target bare git repo |\n| `GITHUB_REPO` | GitHub repo as `owner/name` |\n| `AGENT_CONCURRENCY` | Max parallel agents (default: `1`) |\n| `AGENT_TIMEOUT_MINUTES` | Per-ticket timeout (default: `60`) |\n",
+      "last_updated": "2026-05-22T18:10:19Z"
+    },
+    {
+      "slug": "labs-mcp-typescript-sdk",
+      "name": "labs-mcp-typescript-sdk",
+      "description": "This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.",
+      "plugin": "labs-mcp-typescript-sdk",
+      "repo": "navapbc/labs-mcp-typescript-sdk",
+      "path": "CLAUDE.md",
+      "author": "navapbc",
+      "version": "1.0.0",
+      "compatibility": [],
+      "sensitive_data": false,
+      "type": "agent",
+      "tools_used": [],
+      "human_in_loop": "",
+      "content": "# CLAUDE.md\n\nThis file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.\n\n## Build & Test Commands\n\n```sh\npnpm install         # Install all workspace dependencies\n\npnpm build:all       # Build all packages\npnpm lint:all        # Run ESLint + Prettier checks across all packages\npnpm lint:fix:all    # Auto-fix lint and formatting issues across all packages\npnpm typecheck:all   # Type-check all packages\npnpm test:all        # Run all tests (vitest) across all packages\npnpm check:all       # typecheck + lint across all packages\n\n# Run a single package script (examples)\n# Run a single package script from the repo root with pnpm filter\npnpm --filter @modelcontextprotocol/core test                # vitest run (core)\npnpm --filter @modelcontextprotocol/core test:watch          # vitest (watch)\npnpm --filter @modelcontextprotocol/core test -- path/to/file.test.ts\npnpm --filter @modelcontextprotocol/core test -- -t \"test name\"\n```\n\n## Breaking Changes\n\nWhen making breaking changes, document them in **both**:\n\n- `docs/migration.md` — human-readable guide with before/after code examples\n- `docs/migration-SKILL.md` — LLM-optimized mapping tables for mechanical migration\n\nInclude what changed, why, and how to migrate. Search for related sections and group related changes together rather than adding new standalone sections.\n\n## Code Style Guidelines\n\n- **TypeScript**: Strict type checking, ES modules, explicit return types\n- **Naming**: PascalCase for classes/types, camelCase for functions/variables\n- **Files**: Lowercase with hyphens, test files with `.test.ts` suffix\n- **Imports**: ES module style, include `.js` extension, group imports logically\n- **Formatting**: 2-space indentation, semicolons required, single quotes preferred\n- **Testing**: Place tests under each package's `test/` directory (vitest only includes `test/**/*.test.ts`), use descriptive test names\n- **Comments**: JSDoc for public APIs, inline comments for complex logic\n\n### JSDoc `@example` Code Snippets\n\nJSDoc `@example` tags should pull type-checked code from companion `.examples.ts` files (e.g., `client.ts` → `client.examples.ts`). Use `` ```ts source=\"./file.examples.ts#regionName\" `` fences referencing `//#region regionName` blocks; region names follow `exportedName_variant` or `ClassName_methodName_variant` pattern (e.g., `applyMiddlewares_basicUsage`, `Client_connect_basicUsage`). For whole-file inclusion (any file type), omit the `#regionName`.\n\nRun `pnpm sync:snippets` to sync example content into JSDoc comments and markdown files.\n\n## Architecture Overview\n\n### Core Layers\n\nThe SDK is organized into three main layers:\n\n1. **Types Layer** (`packages/core/src/types/types.ts`) - Protocol types generated from the MCP specification. All JSON-RPC message types, schemas, and protocol constants are defined here using Zod v4.\n\n2. **Protocol Layer** (`packages/core/src/shared/protocol.ts`) - The abstract `Protocol` class that handles JSON-RPC message routing, request/response correlation, capability negotiation, and transport management. Both `Client` and `Server` extend this class.\n\n3. **High-Level APIs**:\n    - `Client` (`packages/client/src/client/client.ts`) - Client implementation extending Protocol with typed methods for MCP operations\n    - `Server` (`packages/server/src/server/server.ts`) - Server implementation extending Protocol with request handler registration\n    - `McpServer` (`packages/server/src/server/mcp.ts`) - High-level server API with simplified resource/tool/prompt registration\n\n### Public API Exports\n\nThe SDK has a two-layer export structure to separate internal code from the public API:\n\n- **`@modelcontextprotocol/core`** (main entry, `packages/core/src/index.ts`) — Internal barrel. Exports everything (including Zod schemas, Protocol class, stdio utils). Only consumed by sibling packages within the monorepo (`private: true`).\n- **`@modelcontextprotocol/core/public`** (`packages/core/src/exports/public/index.ts`) — Curated public API. Exports only TypeScript types, error classes, constants, and guards. Re-exported by client and server packages.\n- **`@modelcontextprotocol/client`** and **`@modelcontextprotocol/server`** (`packages/*/src/index.ts`) — Final public surface. Package-specific exports (named explicitly) plus re-exports from `core/public`.\n\nWhen modifying exports:\n- Use explicit named exports, not `export *`, in package `index.ts` files and `core/public`.\n- Adding a symbol to a package `index.ts` makes it public API — do so intentionally.\n- Internal helpers should stay in the core internal barrel and not be added to `core/public` or package index files.\n- The package root entry must stay runtime-neutral so browser and Cloudflare Workers bundlers can consume it. Exports whose module graph transitively touches unpolyfillable Node builtins (`node:child_process`, `node:net`, `cross-spawn`, etc.) must live at a named subpath export (e.g. `./stdio`) and be covered by a `barrelClean` test in that package.\n\n### Transport System\n\nTransports (`packages/core/src/shared/transport.ts`) provide the communication layer:\n\n- **Streamable HTTP** (`packages/server/src/server/streamableHttp.ts`, `packages/client/src/client/streamableHttp.ts`) - Recommended transport for remote servers, supports SSE for streaming\n- **SSE** (`packages/server/src/server/sse.ts`, `packages/client/src/client/sse.ts`) - Legacy HTTP+SSE transport for backwards compatibility\n- **stdio** (`packages/server/src/server/stdio.ts`, `packages/client/src/client/stdio.ts`) - For local process-spawned integrations\n\n### Server-Side Features\n\n- **Tools/Resources/Prompts**: Registered via `McpServer.tool()`, `.resource()`, `.prompt()` methods\n- **OAuth/Auth**: Full OAuth 2.0 server implementation in `packages/server/src/server/auth/`\n- **Completions**: Auto-completion support via `packages/server/src/server/completable.ts`\n\n### Client-Side Features\n\n- **Auth**: OAuth client support in `packages/client/src/client/auth.ts` and `packages/client/src/client/auth-extensions.ts`\n- **Client middleware**: Request middleware in `packages/client/src/client/middleware.ts` (unrelated to the framework adapter packages below)\n- **Sampling**: Clients can handle `sampling/createMessage` requests from servers (LLM completions)\n- **Elicitation**: Clients can handle `elicitation/create` requests for user input (form or URL mode)\n- **Roots**: Clients can expose filesystem roots to servers via `roots/list`\n\n### Middleware packages (framework/runtime adapters)\n\nThe repo also ships “middleware” packages under `packages/middleware/` (e.g. `@modelcontextprotocol/express`, `@modelcontextprotocol/hono`, `@modelcontextprotocol/node`). These are thin integration layers for specific frameworks/runtimes and should not add new MCP functionality.\n\n### Experimental Features\n\nLocated in `packages/*/src/experimental/`:\n\n- **Tasks**: Long-running task support with polling/resumption (`packages/core/src/experimental/tasks/`)\n\n### Zod Schemas\n\nThe SDK uses `zod/v4` internally. Schema utilities live in:\n\n- `packages/core/src/util/schema.ts` - AnySchema alias and helpers for inspecting Zod objects\n\n### Validation\n\nPluggable JSON Schema validation (`packages/core/src/validators/`):\n\n- `ajvProvider.ts` - Default Ajv-based validator\n- `cfWorkerProvider.ts` - Cloudflare Workers-compatible alternative\n\n### Examples\n\nRunnable examples in `examples/`:\n\n- `examples/server/src/` - Various server configurations (stateful, stateless, OAuth, etc.)\n- `examples/client/src/` - Client examples (basic, OAuth, parallel calls, etc.)\n- `examples/shared/src/` - Shared utilities (OAuth demo provider, etc.)\n\n## Message Flow (Bidirectional Protocol)\n\nMCP is bidirectional: both client and server can send requests. Understanding this flow is essential when implementing new request types.\n\n### Class Hierarchy\n\n```\nProtocol (abstract base)\n├── Client (packages/client/src/client/client.ts)     - can send requests TO server, handle requests FROM server\n└── Server (packages/server/src/server/server.ts)     - can send requests TO client, handle requests FROM client\n    └── McpServer (packages/server/src/server/mcp.ts) - high-level wrapper around Server\n```\n\n### Outbound Flow: Sending Requests\n\nWhen code calls `client.callTool()` or `server.createMessage()`:\n\n1. **High-level method** (e.g., `Client.callTool()`) calls `this.request()`\n2. **`Protocol.request()`**:\n    - Assigns unique message ID\n    - Checks capabilities via `assertCapabilityForMethod()` (abstract, implemented by Client/Server)\n    - Creates response handler promise\n    - Calls `transport.send()` with JSON-RPC request\n    - Waits for response handler to resolve\n3. **Transport** serializes and sends over wire (HTTP, stdio, etc.)\n4. **`Protocol._onresponse()`** resolves the promise when response arrives\n\n### Inbound Flow: Handling Requests\n\nWhen a request arrives from the remote side:\n\n1. **Transport** receives message, calls `transport.onmessage()`\n2. **`Protocol.connect()`** routes to `_onrequest()`, `_onresponse()`, or `_onnotification()`\n3. **`Protocol._onrequest()`**:\n    - Looks up handler in `_requestHandlers` map (keyed by method name)\n    - Creates `BaseContext` with `signal`, `sessionId`, `sendNotification`, `sendRequest`, etc.\n    - Calls `buildContext()` to let subclasses enrich the context (e.g., Server adds HTTP request info)\n    - Invokes handler, sends JSON-RPC response back via transport\n4. **Handler** was registered via `setRequestHandler('method', handler)`\n\n### Handler Registration\n\n```typescript\n// In Client (for server→client requests like sampling, elicitation)\nclient.setRequestHandler('sampling/createMessage', async (request, ctx) => {\n  // Handle sampling request from server\n  return { role: \"assistant\", content: {...}, model: \"...\" };\n});\n\n// In Server (for client→server requests like tools/call)\nserver.setRequestHandler('tools/call', async (request, ctx) => {\n  // Handle tool call from client\n  return { content: [...] };\n});\n```\n\n### Request Handler Context\n\nThe `ctx` parameter in handlers provides a structured context:\n\n**`BaseContext`** (common to both Server and Client), fields organized into nested groups:\n\n- `sessionId?`: Transport session identifier\n- `mcpReq`: Request-level concerns\n  - `id`: JSON-RPC message ID\n  - `method`: Request method string (e.g., 'tools/call')\n  - `_meta?`: Request metadata\n  - `signal`: AbortSignal for cancellation\n  - `send(request, schema, options?)`: Send related request (for bidirectional flows)\n  - `notify(notification)`: Send related notification back\n- `http?`: HTTP transport info (undefined for stdio)\n  - `authInfo?`: Validated auth token info\n- `task?`: Task context (`{ id?, store, requestedTtl? }`) when task storage is configured\n\n**`ServerContext`** extends `BaseContext.mcpReq` and `BaseContext.http?` via type intersection:\n\n- `mcpReq` adds: `log(level, data, logger?)`, `elicitInput(params, options?)`, `requestSampling(params, options?)`\n- `http?` adds: `req?` (HTTP request info), `closeSSE?`, `closeStandaloneSSE?`\n\n**`ClientContext`** is currently identical to `BaseContext`.\n\n### Capability Checking\n\nBoth sides declare capabilities during initialization. The SDK enforces these:\n\n- **Client→Server**: `Client.assertCapabilityForMethod()` checks `_serverCapabilities`\n- **Server→Client**: `Server.assertCapabilityForMethod()` checks `_clientCapabilities`\n- **Handler registration**: `assertRequestHandlerCapability()` validates local capabilities\n\n### Adding a New Request Type\n\n1. **Define schema** in `src/types.ts` (request params, result schema)\n2. **Add capability** to `ClientCapabilities` or `ServerCapabilities` in types\n3. **Implement sender** method in Client or Server class\n4. **Add capability check** in the appropriate `assertCapabilityForMethod()`\n5. **Register handler** on the receiving side with `setRequestHandler()`\n6. **For McpServer**: Add high-level wrapper method if needed\n\n### Server-Initiated Requests (Sampling, Elicitation)\n\nServer can request actions from client (requires client capability):\n\n```typescript\n// Server sends sampling request to client\nconst result = await server.createMessage({\n  messages: [...],\n  maxTokens: 100\n});\n\n// Client must have registered handler:\nclient.setRequestHandler('sampling/createMessage', async (request, extra) => {\n  // Client-side LLM call\n  return { role: \"assistant\", content: {...} };\n});\n```\n\n## Key Patterns\n\n### Request Handler Registration (Low-Level Server)\n\n```typescript\nserver.setRequestHandler('tools/call', async (request, extra) => {\n    // extra contains sessionId, authInfo, sendNotification, etc.\n    return {\n        /* result */\n    };\n});\n```\n\n### Tool Registration (High-Level McpServer)\n\n```typescript\nmcpServer.tool('tool-name', { param: z.string() }, async ({ param }, extra) => {\n    return { content: [{ type: 'text', text: 'result' }] };\n});\n```\n\n### Transport Connection\n\n```typescript\n// Server\n// (Node.js IncomingMessage/ServerResponse wrapper; exported by @modelcontextprotocol/node)\nconst transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: () => randomUUID() });\nawait server.connect(transport);\n\n// Client\nconst transport = new StreamableHTTPClientTransport(new URL('http://localhost:3000/mcp'));\nawait client.connect(transport);\n```\n",
+      "last_updated": "2026-05-22T17:04:06Z"
+    },
+    {
+      "slug": "github",
+      "name": ".github",
+      "description": "DevOpsMetrics is a Python tool for measuring [DORA metrics](https://dora.dev/), specifically **code cycle time** (lead time for changes), by analyzing GitHub pull request data. It extracts PR data from the GitHub API, stores it in PostgreSQL, and computes lifecycle statistics.",
+      "plugin": "devopsmetrics",
+      "repo": "navapbc/DevOpsMetrics",
+      "path": ".github/copilot-instructions.md",
+      "author": "navapbc",
+      "version": "1.0.0",
+      "compatibility": [],
+      "sensitive_data": false,
+      "type": "agent",
+      "tools_used": [],
+      "human_in_loop": "",
+      "content": "# Copilot Code Review Instructions\n\n## Project Overview\n\nDevOpsMetrics is a Python tool for measuring [DORA metrics](https://dora.dev/), specifically **code cycle time** (lead time for changes), by analyzing GitHub pull request data. It extracts PR data from the GitHub API, stores it in PostgreSQL, and computes lifecycle statistics.\n\n### Domain Context\n\n- **Cycle time (open-to-merged):** Duration from when a PR is ready for review to when it is merged.\n- **Open-to-approved:** Duration from ready-for-review to first approval.\n- **First-commit-to-merged:** Duration from first commit to merge.\n- **Elapsed weekdays:** Business days only (excludes weekends). This is a core computation used across metrics.\n\n## Architecture\n\nThe codebase has a layered architecture with strict boundaries:\n\n```\npull_request_data.py        # Data extraction (GitHub API)\npull_request_life_cycle_stats.py  # Metrics computation and statistics\netl/                        # ETL orchestration\nstores/                     # Database persistence (PostgreSQL)\ntest/                       # Tests\n```\n\n### Layer Rules\n\n- **Data extraction** (`pull_request_data.py`): Depends on GitHub API (PyGithub). Should not import from `stores/` or `etl/`.\n- **Metrics computation** (`pull_request_life_cycle_stats.py`): Pure computation and statistics. Should not import from `stores/` or `etl/`.\n- **ETL** (`etl/`): Orchestrates extraction, transformation, and loading. May import from data extraction and stores.\n- **Stores** (`stores/`): Database access only. Should not import from `etl/` or data extraction modules.\n\nFlag any imports that violate these boundaries.\n\n## Policies\n\n- **All new features and bug fixes must include tests.**\n- **Never commit credentials, tokens, passwords, or API keys.**\n\n## High-Risk Areas\n\nApply extra scrutiny to changes in these areas:\n\n- **ETL pipeline and database writes** (`etl/`, `stores/`): Data corruption or loss is the primary risk.\n- **GitHub API data parsing** (`pull_request_data.py`): The PR event parsing logic is fragile and has many edge cases.\n\n## CI/CD\n\n- CI runs `make check` (lint + type-check + unit tests) and `make test-integration` on every PR.\n- All checks must pass before merge.\n- Run `make check` locally before opening a PR.\n",
+      "last_updated": "2026-05-22T16:39:46Z"
+    },
+    {
+      "slug": "labs-tir-prototyping",
+      "name": "labs-tir-prototyping",
+      "description": "- TiR means Technologist in Residence.",
+      "plugin": "labs-tir-prototyping",
+      "repo": "navapbc/labs-tir-prototyping",
+      "path": "AGENTS.md",
+      "author": "navapbc",
+      "version": "1.0.0",
+      "compatibility": [],
+      "sensitive_data": false,
+      "type": "agent",
+      "tools_used": [],
+      "human_in_loop": "",
+      "content": "# Agent Instructions\n\n## Project Context\n\n- TiR means Technologist in Residence.\n- This repo is the landing spot for TiR prototyping work, coordination notes, and links to related experiment repositories.\n- Favor lightweight tracking: use GitHub issues and projects for backlog, priorities, decisions, and follow-up tasks.\n- Assume the TiR team is balancing roughly 80% external prototyping and delivery with 20% internal collaboration, teaching, and community sharing.\n\n## Working Norms\n\n- Keep repo copy audience-facing. Do not include process notes, design rationale, implementation commentary, placeholder explanations, or meta language inside public artifacts.\n- Treat GitHub issues, issue comments, README/docs content, prototypes, and public project-board copy as public-facing by default. Do not include internal-sensitive details such as budget amounts, individual full names, email addresses, Slack-derived personnel details, private channel/thread references, internal role mappings, or other context that would not belong in public content unless the user explicitly asks for private/internal notes.\n- Prefer small, clear documents that can become GitHub issues or project board items.\n- Preserve the distinction between experiments, prototypes ready for funding or piloting, and production-ready delivery work.\n- Treat risk, liability, privacy, PII, benefits submission, and open-source disclaimers as explicit checkpoints before publishing or connecting prototypes to real systems.\n- When documenting TiR work, include the intended audience, maturity stage, validation need, owner if known, and next action.\n\n## Source Memory\n\n- See `docs/memory/tir.md` for durable TiR context.\n- See `docs/tasks/2026-04-28-tir-planning-issue-inventory.md` for the issue and task inventory extracted from the April 28, 2026 planning notes.\n\n## Repo Skills\n\n- Use `skills/nava-labs-style/SKILL.md` when writing, editing, or reviewing Nava Labs content.\n",
+      "last_updated": "2026-05-21T20:13:50Z"
     }
   ]
 }
