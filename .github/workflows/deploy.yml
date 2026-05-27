@@ -1,0 +1,82 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main      # → staging
+      - release   # → prod
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - prod
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.ref_name == 'release' && 'prod' || 'staging' }}
+    runs-on: ubuntu-latest
+
+    # Maps branch → GitHub environment (each has its own scoped secrets + reviewers)
+    environment: ${{ github.ref_name == 'release' && 'production' || 'staging' }}
+
+    permissions:
+      id-token: write   # required for OIDC role assumption
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Build site
+        env:
+          PUBLIC_LOGIN_URL: ${{ secrets.AUTH_LAMBDA_URL }}
+        run: npm run build
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Deploy static site to S3
+        run: |
+          # Hashed assets — long cache (1 year), immutable
+          aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET_NAME }} \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "*.html" \
+            --exclude "registry/*"
+
+          # HTML + registry JSON — no cache (always revalidate)
+          aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET_NAME }} \
+            --delete \
+            --cache-control "no-cache" \
+            --exclude "*" \
+            --include "*.html" \
+            --include "registry/*"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*.html" "/registry/*"
+
+      - name: Deploy auth Lambda
+        run: |
+          cd functions/auth
+          npm ci --omit=dev
+          zip -r ../../auth.zip .
+          cd ../..
+          aws lambda update-function-code \
+            --function-name ${{ secrets.AWS_AUTH_LAMBDA_FUNCTION_NAME }} \
+            --zip-file fileb://auth.zip

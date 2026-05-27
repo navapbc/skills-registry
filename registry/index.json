@@ -1,0 +1,112 @@
+{
+  "generated_at": "2026-05-21T00:00:00Z",
+  "org": "navapbc",
+  "plugins": [
+    {
+      "slug": "nava-labs-ai-tools",
+      "name": "nava-labs-ai-tools",
+      "description": "Caseworker AI tools from Nava Labs — decision support, form filling, referrals, and document analysis",
+      "repo": "navapbc/nava-labs-ai-tools",
+      "author": "cory-nava",
+      "skill_count": 4,
+      "agent_count": 1,
+      "skills": [
+        "decision-support-tool",
+        "form-filling-assistant",
+        "referral-generator",
+        "document-analyzer"
+      ],
+      "agents": ["caseworker-agent"]
+    },
+    {
+      "slug": "pa-snap",
+      "name": "pa-snap",
+      "description": "Skills for Pennsylvania SNAP Status Tracker development and operations",
+      "repo": "navapbc/pa-snap-status-tracker",
+      "author": "cory-nava",
+      "skill_count": 0,
+      "agent_count": 0,
+      "skills": [],
+      "agents": []
+    }
+  ],
+  "skills": [
+    {
+      "slug": "decision-support-tool",
+      "name": "decision-support-tool",
+      "description": "When the user needs help determining eligibility, checking policy, or navigating CFR rules for SNAP or related benefit programs",
+      "plugin": "nava-labs-ai-tools",
+      "repo": "navapbc/nava-labs-ai-tools",
+      "path": "skills/decision-support-tool/SKILL.md",
+      "author": "cory-nava",
+      "version": "1.0.0",
+      "compatibility": ["claude-code", "claude-chat", "claude-cowork"],
+      "sensitive_data": false,
+      "type": "skill",
+      "content": "# Decision Support Tool\n\nYou help caseworkers navigate complex benefit eligibility rules...",
+      "last_updated": "2026-05-01T00:00:00Z"
+    },
+    {
+      "slug": "form-filling-assistant",
+      "name": "form-filling-assistant",
+      "description": "When the user wants to pre-fill, review, or submit a government benefits form on behalf of a client",
+      "plugin": "nava-labs-ai-tools",
+      "repo": "navapbc/nava-labs-ai-tools",
+      "path": "skills/form-filling-assistant/SKILL.md",
+      "author": "cory-nava",
+      "version": "1.1.0",
+      "compatibility": ["claude-code", "claude-cowork"],
+      "sensitive_data": true,
+      "type": "skill",
+      "content": "# Form Filling Assistant\n\nYou assist caseworkers in completing government benefits forms...",
+      "last_updated": "2026-05-10T00:00:00Z"
+    },
+    {
+      "slug": "referral-generator",
+      "name": "referral-generator",
+      "description": "When the user needs to generate a referral letter or program referral for a client based on their situation",
+      "plugin": "nava-labs-ai-tools",
+      "repo": "navapbc/nava-labs-ai-tools",
+      "path": "skills/referral-generator/SKILL.md",
+      "author": "cory-nava",
+      "version": "1.0.0",
+      "compatibility": ["claude-chat", "claude-cowork"],
+      "sensitive_data": true,
+      "type": "skill",
+      "content": "# Referral Generator\n\nYou help caseworkers draft referral letters for clients...",
+      "last_updated": "2026-04-20T00:00:00Z"
+    },
+    {
+      "slug": "document-analyzer",
+      "name": "document-analyzer",
+      "description": "When the user uploads or pastes a government document and needs it summarized, classified, or checked for completeness",
+      "plugin": "nava-labs-ai-tools",
+      "repo": "navapbc/nava-labs-ai-tools",
+      "path": "skills/document-analyzer/SKILL.md",
+      "author": "cory-nava",
+      "version": "2.0.0",
+      "compatibility": ["claude-code", "claude-chat", "claude-cowork"],
+      "sensitive_data": true,
+      "type": "skill",
+      "content": "# Document Analyzer\n\nYou analyze government documents uploaded by caseworkers...",
+      "last_updated": "2026-05-15T00:00:00Z"
+    },
+    {
+      "slug": "caseworker-agent",
+      "name": "caseworker-agent",
+      "description": "Agentic loop that composes decision support, document analysis, and referral generation with explicit human review checkpoints",
+      "plugin": "nava-labs-ai-tools",
+      "repo": "navapbc/nava-labs-ai-tools",
+      "path": "agents/caseworker/AGENT.md",
+      "author": "cory-nava",
+      "version": "0.9.0",
+      "compatibility": ["claude-code"],
+      "sensitive_data": true,
+      "type": "agent",
+      "tools_used": ["decision-support-tool", "document-analyzer", "referral-generator"],
+      "human_in_loop": "Caseworker reviews and approves all generated referrals before submission",
+      "content": "# Caseworker Agent\n\nThis agent composes the decision support, document analysis, and referral generation skills...",
+      "last_updated": "2026-05-18T00:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "skills-registry-auth",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Google OAuth handler for skills registry",
+  "main": "index.mjs",
+  "dependencies": {
+    "@aws-sdk/client-ssm": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
