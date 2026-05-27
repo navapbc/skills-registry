@@ -12,24 +12,32 @@ import cf from 'cloudfront';
 const KVS_ARN = '${kvs_arn}';
 const LOGIN_PATH = '${login_path}';
 
-// Paths that never require authentication
-const PUBLIC_PATHS = new Set([
-  LOGIN_PATH,
-  '/favicon.ico',
-  '/robots.txt',
-]);
+const PUBLIC_PATHS = [LOGIN_PATH, '/favicon.ico', '/robots.txt'];
 
 function isPublicPath(uri) {
-  if (PUBLIC_PATHS.has(uri)) return true;
-  // Static Astro build assets are public so the login page can load its CSS/JS
-  if (uri.startsWith('/_astro/')) return true;
+  for (let i = 0; i < PUBLIC_PATHS.length; i++) {
+    if (PUBLIC_PATHS[i] === uri) return true;
+  }
+  if (uri.indexOf('/_astro/') === 0) return true;
   return false;
+}
+
+// Astro builds output login/index.html (directory format).
+// S3 won't find /login without the full path, so rewrite before forwarding.
+function rewriteUri(uri) {
+  if (uri === '/') return uri;
+  const lastSegment = uri.split('/').pop();
+  if (lastSegment.indexOf('.') !== -1) return uri;
+  return uri + '/index.html';
 }
 
 async function base64UrlDecode(str) {
   const padded = str.replace(/-/g, '+').replace(/_/g, '/');
   const pad = padded.length % 4;
-  const b64 = pad ? padded + '='.repeat(4 - pad) : padded;
+  let b64 = padded;
+  if (pad === 1) { b64 = padded + '==='; }
+  else if (pad === 2) { b64 = padded + '=='; }
+  else if (pad === 3) { b64 = padded + '='; }
   const binary = atob(b64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
@@ -42,7 +50,9 @@ async function verifyJWT(token, secret) {
   const parts = token.split('.');
   if (parts.length !== 3) return false;
 
-  const [header, payload, signature] = parts;
+  const jwtHeader = parts[0];
+  const jwtPayload = parts[1];
+  const jwtSig = parts[2];
   const encoder = new TextEncoder();
 
   try {
@@ -54,21 +64,20 @@ async function verifyJWT(token, secret) {
       ['verify']
     );
 
-    const sigBytes = await base64UrlDecode(signature);
-    const data = encoder.encode(`$${header}.$${payload}`);
+    const sigBytes = await base64UrlDecode(jwtSig);
+    const data = encoder.encode(jwtHeader + '.' + jwtPayload);
 
     const valid = await crypto.subtle.verify('HMAC', key, sigBytes, data);
     if (!valid) return false;
 
-    // Decode payload and check expiry
-    const payloadBytes = await base64UrlDecode(payload);
+    const payloadBytes = await base64UrlDecode(jwtPayload);
     const decoded = JSON.parse(new TextDecoder().decode(payloadBytes));
     const now = Math.floor(Date.now() / 1000);
 
     if (decoded.exp && decoded.exp < now) return false;
 
     return true;
-  } catch {
+  } catch(e) {
     return false;
   }
 }
@@ -78,12 +87,13 @@ async function handler(event) {
   const uri = request.uri;
 
   if (isPublicPath(uri)) {
+    request.uri = rewriteUri(uri);
     return request;
   }
 
   const sessionCookie = request.cookies['__session'];
 
-  if (!sessionCookie?.value) {
+  if (!sessionCookie || !sessionCookie.value) {
     return redirect(LOGIN_PATH, uri);
   }
 
@@ -91,8 +101,7 @@ async function handler(event) {
   try {
     const kvsHandle = cf.kvs(KVS_ARN);
     secret = await kvsHandle.get('jwt_secret');
-  } catch {
-    // KVS unavailable - fail closed
+  } catch(e) {
     return redirect(LOGIN_PATH, uri);
   }
 
@@ -110,12 +119,13 @@ async function handler(event) {
     };
   }
 
+  request.uri = rewriteUri(uri);
   return request;
 }
 
 function redirect(path, returnTo) {
   const dest = returnTo && returnTo !== LOGIN_PATH
-    ? `$${path}?return_to=$${encodeURIComponent(returnTo)}`
+    ? path + '?return_to=' + encodeURIComponent(returnTo)
     : path;
   return {
     statusCode: 302,

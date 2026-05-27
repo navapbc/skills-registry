@@ -64,10 +64,10 @@ export const handler = async (event) => {
   const allowedDomain = process.env.ALLOWED_EMAIL_DOMAIN;
   const siteUrl = process.env.SITE_URL;
 
-  // Compute callback URL from the incoming request host so there's no
-  // chicken-and-egg dependency on the Lambda URL in Terraform
-  const host = event.headers?.host || event.requestContext?.domainName;
-  const callbackUrl = `https://${host}/auth/callback`;
+  // Always use SITE_URL for the callback so it resolves to the CloudFront domain.
+  // Requests now arrive via CloudFront (/auth/* behavior), so the cookie set in
+  // the callback response lands on the CloudFront domain, not the Lambda URL domain.
+  const callbackUrl = siteUrl + '/auth/callback';
 
   // ----------------------------------------------------------------
   // /auth/login  →  redirect to Google OAuth consent screen

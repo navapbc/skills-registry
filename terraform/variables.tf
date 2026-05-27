@@ -74,3 +74,9 @@ variable "create_oidc_provider" {
   type        = bool
   default     = true
 }
+
+variable "site_url" {
+  description = "Full URL of the CloudFront distribution (e.g. https://abc123.cloudfront.net). Required to break the circular dependency between Lambda and CloudFront."
+  type        = string
+  default     = ""
+}

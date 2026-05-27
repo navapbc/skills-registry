@@ -71,11 +71,8 @@ resource "aws_lambda_function" "auth" {
       GOOGLE_CLIENT_ID_PARAM     = aws_ssm_parameter.google_client_id.name
       GOOGLE_CLIENT_SECRET_PARAM = aws_ssm_parameter.google_client_secret.name
       JWT_SECRET_PARAM           = aws_ssm_parameter.jwt_secret_lambda.name
-      ALLOWED_EMAIL_DOMAIN       = var.allowed_email_domain
-      # SITE_URL is set after first apply once CF domain is known
-      SITE_URL = "https://${aws_cloudfront_distribution.site.domain_name}"
-      # CALLBACK_URL is computed dynamically from the request host in the Lambda handler
-      # so there's no circular dependency here
+      ALLOWED_EMAIL_DOMAIN = var.allowed_email_domain
+      SITE_URL             = var.site_url
     }
   }
 }
@@ -86,7 +83,7 @@ resource "aws_lambda_function_url" "auth" {
   authorization_type = "NONE"
 
   cors {
-    allow_origins = ["https://${aws_cloudfront_distribution.site.domain_name}"]
+    allow_origins = [var.site_url]
     allow_methods = ["GET"]
   }
 }
