@@ -182,5 +182,20 @@ export const handler = async (event) => {
     };
   }
 
+  // ----------------------------------------------------------------
+  // /auth/logout  →  clear session cookies and redirect to login
+  // ----------------------------------------------------------------
+  if (path === '/auth/logout') {
+    return {
+      statusCode: 302,
+      headers: { location: siteUrl + '/login' },
+      cookies: [
+        `__session=; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Path=/`,
+        `__user=; Secure; SameSite=Lax; Max-Age=0; Path=/`,
+      ],
+      body: '',
+    };
+  }
+
   return htmlResponse(404, 'Not Found', 'Not found.');
 };
