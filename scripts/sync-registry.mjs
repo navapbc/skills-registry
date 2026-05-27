@@ -336,17 +336,34 @@ async function main() {
     });
   }
 
+  // Load existing registry and merge — new scan results win, but entries
+  // outside the current scan window (limit, inaccessible repos) are preserved.
+  const outputPath = join(ROOT, OUTPUT);
+  let existing = { plugins: [], skills: [] };
+  try {
+    existing = JSON.parse(readFileSync(outputPath, 'utf8'));
+  } catch { /* first run or missing file — start fresh */ }
+
+  // Upsert by repo+path for skills/agents, by repo for plugins
+  const skillMap = new Map(existing.skills.map(s => [`${s.repo}::${s.path}`, s]));
+  const pluginMap = new Map(existing.plugins.map(p => [p.repo, p]));
+
+  for (const s of [...allSkills, ...allAgents]) skillMap.set(`${s.repo}::${s.path}`, s);
+  for (const p of plugins) pluginMap.set(p.repo, p);
+
   const registry = {
     generated_at: new Date().toISOString(),
     org: ORG,
-    plugins,
-    skills: [...allSkills, ...allAgents],
+    plugins: [...pluginMap.values()],
+    skills: [...skillMap.values()],
   };
 
-  const outputPath = join(ROOT, OUTPUT);
   writeFileSync(outputPath, JSON.stringify(registry, null, 2));
   process.stdout.write('\n');
-  console.log(`\nScanned ${scanned} repos → ${plugins.length} plugins, ${allSkills.length} skills, ${allAgents.length} agents`);
+  const newSkills = allSkills.length + allAgents.length;
+  const totalSkills = registry.skills.length;
+  console.log(`\nScanned ${scanned} repos → ${plugins.length} new/updated plugins, ${newSkills} new/updated skills`);
+  console.log(`Registry total: ${registry.plugins.length} plugins, ${totalSkills} skills`);
   console.log(`Wrote ${outputPath}`);
 }
 
