@@ -60,7 +60,10 @@ aws s3api put-bucket-versioning \
 
 ---
 
-### 3. ACM certificate (manual — one-time per environment)
+### 3. ACM certificate (manual — one-time per environment, can skip for initial demo)
+
+> **Skip this step if you want to demo immediately.** Leave `site_domain` and `acm_certificate_arn` blank in your tfvars and use the CloudFront URL that Terraform outputs. Add the custom domain later by filling in these values and re-running `terraform apply` — no downtime.
+
 
 CloudFront requires SSL certificates to be in `us-east-1`.
 
@@ -82,14 +85,16 @@ After requesting, AWS will give you CNAME records to add to your DNS for validat
 
 ---
 
-### 4. Google OAuth app (manual — one-time)
+### 4. Google OAuth app (manual — one-time, shared across both environments)
+
+One OAuth app covers both staging and prod — you'll add both redirect URIs to the same client after Terraform apply.
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials
 2. Create Project (or use existing Nava project)
 3. **Create OAuth Client ID** → Web application
 4. Name it `Nava Skills Registry`
-5. Leave **Authorized Redirect URIs** blank for now — you'll add it after the first Terraform apply (step 6)
-6. Copy the **Client ID** and **Client Secret** — you'll need them in step 5
+5. Leave **Authorized Redirect URIs** blank for now — you'll add them after Terraform apply (steps 6 & 8)
+6. Copy the **Client ID** and **Client Secret** — you'll use the same values in both staging and prod tfvars
 
 ---
 
@@ -133,10 +138,11 @@ openssl rand -hex 32  # run twice — one for staging, one for prod
 
 ### 6. Terraform apply — staging (automated infrastructure)
 
+All Terraform commands must be run from the `terraform/` directory:
+
 ```bash
 cd terraform
 
-# Staging
 terraform init \
   -backend-config="bucket=navapbc-skills-registry-tf-state" \
   -backend-config="key=skills-registry/staging.tfstate" \
@@ -172,8 +178,9 @@ You'll get:
 
 ### 8. Terraform apply — prod (automated infrastructure)
 
+From the `terraform/` directory:
+
 ```bash
-# Switch to prod workspace
 terraform init \
   -backend-config="bucket=navapbc-skills-registry-tf-state" \
   -backend-config="key=skills-registry/prod.tfstate" \

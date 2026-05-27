@@ -13,7 +13,7 @@ resource "aws_cloudfront_key_value_store" "auth" {
   comment = "JWT secret for edge session validation"
 }
 
-resource "aws_cloudfront_key_value_store_key" "jwt_secret" {
+resource "aws_cloudfrontkeyvaluestore_key" "jwt_secret" {
   key_value_store_arn = aws_cloudfront_key_value_store.auth.arn
   key                 = "jwt_secret"
   value               = var.jwt_secret
@@ -31,9 +31,7 @@ resource "aws_cloudfront_function" "auth_check" {
     login_path    = "/login"
   })
 
-  key_value_store_associations {
-    key_value_store_arn = aws_cloudfront_key_value_store.auth.arn
-  }
+  key_value_store_associations = [aws_cloudfront_key_value_store.auth.arn]
 }
 
 resource "aws_cloudfront_distribution" "site" {

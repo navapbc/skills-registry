@@ -25,7 +25,7 @@ data "aws_caller_identity" "current" {}
 # -------------------------------------------------------------------------
 resource "aws_iam_role" "github_deploy" {
   name        = "${var.project_name}-github-deploy-${var.environment}"
-  description = "Assumed by GitHub Actions on ${local.deploy_branch} → ${var.environment} deploys"
+  description = "Assumed by GitHub Actions on ${local.deploy_branch} -> ${var.environment} deploys"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

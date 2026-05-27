@@ -55,7 +55,7 @@ async function verifyJWT(token, secret) {
     );
 
     const sigBytes = await base64UrlDecode(signature);
-    const data = encoder.encode(`${header}.${payload}`);
+    const data = encoder.encode(`$${header}.$${payload}`);
 
     const valid = await crypto.subtle.verify('HMAC', key, sigBytes, data);
     if (!valid) return false;
@@ -115,7 +115,7 @@ async function handler(event) {
 
 function redirect(path, returnTo) {
   const dest = returnTo && returnTo !== LOGIN_PATH
-    ? `${path}?return_to=${encodeURIComponent(returnTo)}`
+    ? `$${path}?return_to=$${encodeURIComponent(returnTo)}`
     : path;
   return {
     statusCode: 302,

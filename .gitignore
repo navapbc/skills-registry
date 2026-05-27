@@ -30,6 +30,7 @@ terraform/*.tfstate
 terraform/*.tfstate.backup
 terraform/.terraform/
 terraform/.terraform.lock.hcl
+terraform/*.zip
 
 # Inspiration screenshots (local only)
 inspo/
