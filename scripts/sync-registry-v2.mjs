@@ -65,7 +65,7 @@ function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-function buildRecord(content, path, repo, meta, body, type) {
+function buildRecord(content, path, repo, meta, body, type, committer) {
   const dirName = path.split('/').slice(-2, -1)[0] || '';
   const name = meta.name || (dirName && dirName !== repo.name ? dirName : repo.name);
   const record = {
@@ -76,13 +76,14 @@ function buildRecord(content, path, repo, meta, body, type) {
     repo: `${ORG}/${repo.name}`,
     path,
     author: meta.author || repo.owner?.login || ORG,
+    committer: committer || null,
     version: meta.version || '1.0.0',
     compatibility: Array.isArray(meta.compatibility) ? meta.compatibility
       : meta.compatibility ? [meta.compatibility] : [],
     sensitive_data: meta.sensitive_data === true || meta.sensitive_data === 'true',
     type,
     content,
-    last_updated: repo.pushed_at || null,
+    last_updated: repo.pushed_at || committer?.date || null,
   };
   if (type === 'agent') {
     record.tools_used = Array.isArray(meta.tools_used) ? meta.tools_used
@@ -103,6 +104,22 @@ async function fetchContent(repoName, path) {
       return Buffer.from(res.data.content, 'base64').toString('utf8');
     }
     return null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchLastCommitter(repoName, path) {
+  try {
+    const { data } = await octokit.rest.repos.listCommits({ owner: ORG, repo: repoName, path, per_page: 1 });
+    if (!data.length) return null;
+    const c = data[0];
+    return {
+      login: c.author?.login || null,
+      name: c.commit.author.name,
+      avatar_url: c.author?.avatar_url || null,
+      date: c.commit.author.date || null,
+    };
   } catch {
     return null;
   }
@@ -200,7 +217,8 @@ async function main() {
     if (!content) return;
 
     const { meta, body } = parseFrontmatter(content);
-    const record = buildRecord(content, path, repo, meta, body, type);
+    const committer = await fetchLastCommitter(repo.name, path);
+    const record = buildRecord(content, path, repo, meta, body, type, committer);
     skillMap.set(`${ORG}/${repo.name}::${path}`, record);
 
     const pluginKey = `${ORG}/${repo.name}`;

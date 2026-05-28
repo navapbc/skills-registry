@@ -14,8 +14,17 @@ const plugin = registryData.plugins.find(p => p.slug === skill.plugin);
 const hasClaudeCode = skill.compatibility.includes('claude-code');
 const hasClaudeChat = skill.compatibility.includes('claude-chat') || skill.compatibility.includes('claude-cowork');
 const claudeCodeCommand = `claude mcp add ${skill.slug} --from-github ${skill.repo}`;
-const initial = skill.author.slice(0, 1).toUpperCase();
-const addedDate = new Date(skill.last_updated).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+const committer = (skill as any).committer as { login: string | null; name: string; avatar_url: string | null } | null;
+const displayName = committer?.login || committer?.name || skill.author;
+const avatarUrl = committer?.avatar_url || null;
+const githubUrl = committer?.login ? `https://github.com/${committer.login}` : null;
+const initial = displayName.slice(0, 1).toUpperCase();
+function formatDate(value: string | null | undefined) {
+  if (!value) return null;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+const addedDate = formatDate(skill.last_updated);
 ---
 
 <Base title={skill.name}>
@@ -38,14 +47,14 @@ const addedDate = new Date(skill.last_updated).toLocaleDateString('en-US', { yea
       )}
     </div>
     <div class="flex items-center gap-2 text-sm text-gray-400">
-      <span
-        class="w-6 h-6 rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center"
-        aria-label={skill.author}
-      >
-        {initial}
-      </span>
-      <span class="text-gray-300">·</span>
-      <span>Added {addedDate}</span>
+      {avatarUrl ? (
+        <img src={avatarUrl} alt={displayName} class="w-6 h-6 rounded-full flex-shrink-0" />
+      ) : (
+        <span class="w-6 h-6 rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center">
+          {initial}
+        </span>
+      )}
+      {addedDate && <><span class="text-gray-300">·</span><span>Added {addedDate}</span></>}
       <span class="text-gray-300">·</span>
       <a
         href={`https://github.com/${skill.repo}/blob/main/${skill.path}`}
@@ -149,23 +158,29 @@ const addedDate = new Date(skill.last_updated).toLocaleDateString('en-US', { yea
         </div>
       )}
 
-      <!-- Author -->
+      <!-- Last Committer -->
       <div class="bg-white border border-gray-200 rounded-lg p-4">
-        <h3 class="text-sm font-semibold text-gray-900 mb-3">Author</h3>
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Last Committer</h3>
         <div class="flex items-center gap-3">
-          <span class="w-8 h-8 rounded-full bg-plum-100 text-plum-700 text-sm font-semibold flex items-center justify-center flex-shrink-0">
-            {initial}
-          </span>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={displayName} class="w-8 h-8 rounded-full flex-shrink-0" />
+          ) : (
+            <span class="w-8 h-8 rounded-full bg-plum-100 text-plum-700 text-sm font-semibold flex items-center justify-center flex-shrink-0">
+              {initial}
+            </span>
+          )}
           <div class="min-w-0">
-            <p class="text-sm font-medium text-gray-900 m-0">{skill.author}</p>
-            <a
-              href={`https://github.com/${skill.author}`}
-              target="_blank"
-              rel="noopener"
-              class="text-xs text-plum-600 hover:text-plum-700 no-underline"
-            >
-              @{skill.author}
-            </a>
+            <p class="text-sm font-medium text-gray-900 m-0">{committer?.name || displayName}</p>
+            {githubUrl && (
+              <a
+                href={githubUrl}
+                target="_blank"
+                rel="noopener"
+                class="text-xs text-plum-600 hover:text-plum-700 no-underline"
+              >
+                @{committer?.login}
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -174,10 +189,12 @@ const addedDate = new Date(skill.last_updated).toLocaleDateString('en-US', { yea
       <div class="bg-white border border-gray-200 rounded-lg p-4">
         <h3 class="text-sm font-semibold text-gray-900 mb-3">Details</h3>
         <dl class="space-y-2 m-0">
-          <div class="flex justify-between gap-2">
-            <dt class="text-xs text-gray-400">Added</dt>
-            <dd class="text-xs text-gray-700 m-0">{addedDate}</dd>
-          </div>
+          {addedDate && (
+            <div class="flex justify-between gap-2">
+              <dt class="text-xs text-gray-400">Added</dt>
+              <dd class="text-xs text-gray-700 m-0">{addedDate}</dd>
+            </div>
+          )}
           <div class="flex justify-between gap-2">
             <dt class="text-xs text-gray-400">Repo</dt>
             <dd class="text-xs m-0">

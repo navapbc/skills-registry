@@ -48,13 +48,11 @@ const { title = 'Skills Registry' } = Astro.props;
                   <span class="text-gray-400 text-xs">★</span> What's New
                 </a>
               </li>
-            </ul>
-          </div>
-
-          <div>
-            <p class="px-2 mb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Plugins</p>
-            <ul class="space-y-0.5 list-none p-0 m-0" id="team-nav">
-              <!-- Populated by JS -->
+              <li>
+                <a href="/contribute" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors" id="nav-contribute">
+                  <span class="text-gray-400 text-xs">+</span> Add a Skill
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -144,6 +142,7 @@ const { title = 'Skills Registry' } = Astro.props;
           '/': 'nav-marketplace',
           '/my-skills': 'nav-my-skills',
           '/whats-new': 'nav-whats-new',
+          '/contribute': 'nav-contribute',
         };
         const activeId = navMap[path];
         if (activeId) {
@@ -154,26 +153,6 @@ const { title = 'Skills Registry' } = Astro.props;
           }
         }
 
-        fetch('/registry/index.json')
-          .then(r => r.json())
-          .then((data: { plugins?: Array<{ slug: string; name: string }> }) => {
-            const nav = document.getElementById('team-nav');
-            if (!nav || !data.plugins) return;
-            nav.innerHTML = data.plugins.map(p => `
-              <li>
-                <a href="/plugins/${p.slug}" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
-                  <span class="text-gray-400 text-xs">▤</span> ${p.name}
-                </a>
-              </li>
-            `).join('');
-
-            const active = nav.querySelector(`a[href="${path}"]`);
-            if (active) {
-              active.classList.add('bg-plum-50', 'text-plum-700', 'font-medium');
-              active.classList.remove('text-gray-600');
-            }
-          })
-          .catch(() => {});
       })();
     </script>
   </body>

@@ -31,17 +31,43 @@ const allAgents = skills.filter(s => s.type === 'agent');
 
   <!-- Plugins -->
   <section class="mb-10">
-    <h2 class="text-base font-semibold text-gray-700 mb-3">Plugins</h2>
-    <div class="grid grid-cols-3 gap-3">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-1.5">
+        <h2 class="text-base font-semibold text-gray-700 m-0">Plugins</h2>
+        <span class="relative group/tip cursor-help text-gray-400 text-xs hover:text-gray-600">?
+          <span class="pointer-events-none absolute left-0 top-5 z-20 w-56 rounded bg-gray-900 px-2.5 py-1.5 text-xs text-white opacity-0 group-hover/tip:opacity-100 transition-opacity shadow-lg">
+            A Plugin is a GitHub repo that contains Skills and Agents — the organizational unit, like a package.
+          </span>
+        </span>
+      </div>
+      <div class="relative">
+        <input
+          type="search"
+          id="plugin-search"
+          placeholder="Search plugins..."
+          autocomplete="off"
+          class="pl-3 pr-3 py-1 text-sm border border-gray-200 rounded bg-white focus:outline-none focus:ring-2 focus:ring-plum-300 focus:border-plum-400 placeholder:text-gray-400 w-44"
+        />
+      </div>
+    </div>
+    <div class="grid grid-cols-3 gap-3" id="plugins-grid">
       {plugins.map(plugin => (
         <PluginCard plugin={plugin} />
       ))}
     </div>
+    <p class="text-sm text-gray-400 italic mt-3 hidden" id="plugins-empty">No plugins match your search.</p>
   </section>
 
   <!-- Skills -->
   <section class="mb-10">
-    <h2 class="text-base font-semibold text-gray-700 mb-3">Skills</h2>
+    <div class="flex items-center gap-1.5 mb-3">
+      <h2 class="text-base font-semibold text-gray-700 m-0">Skills</h2>
+      <span class="relative group/tip cursor-help text-gray-400 text-xs hover:text-gray-600">?
+        <span class="pointer-events-none absolute left-0 top-5 z-20 w-64 rounded bg-gray-900 px-2.5 py-1.5 text-xs text-white opacity-0 group-hover/tip:opacity-100 transition-opacity shadow-lg">
+          A Skill is a reusable prompt workflow (SKILL.md) that guides an AI through a specific task — like "debug", "write tests", or "plan implementation". You invoke it deliberately.
+        </span>
+      </span>
+    </div>
 
     <!-- Toolbar -->
     <div class="flex items-center gap-3 mb-3">
@@ -82,7 +108,14 @@ const allAgents = skills.filter(s => s.type === 'agent');
 
   {allAgents.length > 0 && (
     <section class="mb-10">
-      <h2 class="text-base font-semibold text-gray-700 mb-3">Agents</h2>
+      <div class="flex items-center gap-1.5 mb-3">
+        <h2 class="text-base font-semibold text-gray-700 m-0">Agents</h2>
+        <span class="relative group/tip cursor-help text-gray-400 text-xs hover:text-gray-600">?
+          <span class="pointer-events-none absolute left-0 top-5 z-20 w-64 rounded bg-gray-900 px-2.5 py-1.5 text-xs text-white opacity-0 group-hover/tip:opacity-100 transition-opacity shadow-lg">
+            An Agent is a project-level AI config file (CLAUDE.md, .cursorrules, copilot-instructions.md) that sets baseline behavior across a whole project — more like a system prompt than a task.
+          </span>
+        </span>
+      </div>
       <div class="grid grid-cols-3 gap-3">
         {allAgents.map(agent => (
           <SkillCard skill={agent} />
@@ -93,6 +126,27 @@ const allAgents = skills.filter(s => s.type === 'agent');
 </Base>
 
 <script>
+  // Plugin search
+  const pluginSearchInput = document.getElementById('plugin-search') as HTMLInputElement;
+  const pluginsGrid = document.getElementById('plugins-grid');
+  const pluginsEmpty = document.getElementById('plugins-empty');
+  if (pluginSearchInput && pluginsGrid && pluginsEmpty) {
+    const pluginCards = Array.from(pluginsGrid.querySelectorAll('a')) as HTMLElement[];
+    pluginSearchInput.addEventListener('input', () => {
+      const q = pluginSearchInput.value.toLowerCase();
+      let visible = 0;
+      pluginCards.forEach(card => {
+        const name = card.querySelector('.font-semibold')?.textContent?.toLowerCase() || '';
+        const desc = card.querySelector('.text-gray-500')?.textContent?.toLowerCase() || '';
+        const matches = !q || name.includes(q) || desc.includes(q);
+        card.style.display = matches ? '' : 'none';
+        if (matches) visible++;
+      });
+      pluginsEmpty.classList.toggle('hidden', visible > 0);
+    });
+  }
+
+  // Skill search
   const searchInput = document.getElementById('skill-search') as HTMLInputElement;
   const sortSelect = document.getElementById('skill-sort') as HTMLSelectElement;
   const filterTagsEl = document.getElementById('filter-tags');

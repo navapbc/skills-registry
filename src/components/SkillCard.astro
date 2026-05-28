@@ -6,6 +6,7 @@ export interface Props {
     description: string;
     plugin: string;
     author: string;
+    committer?: { login: string | null; name: string; avatar_url: string | null } | null;
     type: string;
     sensitive_data: boolean;
     compatibility: string[];
@@ -14,7 +15,11 @@ export interface Props {
   showPlugin?: boolean;
 }
 const { skill, showPlugin = true } = Astro.props;
-const initial = skill.author.slice(0, 1).toUpperCase();
+const committer = skill.committer;
+const displayName = committer?.login || committer?.name || skill.author;
+const avatarUrl = committer?.avatar_url || null;
+const initial = displayName.slice(0, 1).toUpperCase();
+const githubUrl = committer?.login ? `https://github.com/${committer.login}` : null;
 const preview = skill.description.length > 110
   ? skill.description.slice(0, 110) + '...'
   : skill.description;
@@ -56,10 +61,18 @@ const preview = skill.description.length > 110
 
   <div class="flex items-center justify-between mt-auto pt-1">
     <span
-      class="w-5 h-5 rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0"
-      aria-label={skill.author}
+      class="flex items-center gap-1.5 cursor-pointer"
+      data-github-url={githubUrl || ''}
+      title={githubUrl ? `@${displayName}` : displayName}
     >
-      {initial}
+      {avatarUrl ? (
+        <img src={avatarUrl} alt={displayName} class="w-5 h-5 rounded-full flex-shrink-0" />
+      ) : (
+        <span class="w-5 h-5 rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0">
+          {initial}
+        </span>
+      )}
+      <span class="text-xs text-gray-400">{displayName}</span>
     </span>
     <span class="text-xs text-gray-400 truncate ml-2">
       {skill.compatibility.slice(0, 2).join(', ')}
@@ -67,3 +80,16 @@ const preview = skill.description.length > 110
     </span>
   </div>
 </a>
+
+<script>
+  document.querySelectorAll('[data-github-url]').forEach(el => {
+    el.addEventListener('click', e => {
+      const url = (el as HTMLElement).dataset.githubUrl;
+      if (url) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(url, '_blank', 'noopener');
+      }
+    });
+  });
+</script>
