@@ -1,0 +1,31 @@
+---
+export interface Props {
+  committer: { login: string | null; name: string; avatar_url: string | null } | null;
+  author: string;
+}
+const { committer, author } = Astro.props;
+const displayName = committer?.login || committer?.name || author;
+const avatarUrl = committer?.avatar_url || null;
+const githubUrl = committer?.login ? `https://github.com/${committer.login}` : null;
+const initial = displayName.slice(0, 1).toUpperCase();
+---
+<div class="bg-white border border-gray-200 rounded-lg p-4">
+  <h3 class="text-sm font-semibold text-gray-900 mb-3">Last Committer</h3>
+  <div class="flex items-center gap-3">
+    {avatarUrl ? (
+      <img src={avatarUrl} alt={displayName} class="w-8 h-8 rounded-full flex-shrink-0" />
+    ) : (
+      <span class="w-8 h-8 rounded-full bg-plum-100 text-plum-700 text-sm font-semibold flex items-center justify-center flex-shrink-0">
+        {initial}
+      </span>
+    )}
+    <div class="min-w-0">
+      <p class="text-sm font-medium text-gray-900 m-0">{committer?.name || displayName}</p>
+      {githubUrl && (
+        <a href={githubUrl} target="_blank" rel="noopener" class="text-xs text-plum-600 hover:text-plum-700 no-underline">
+          @{committer?.login}
+        </a>
+      )}
+    </div>
+  </div>
+</div>

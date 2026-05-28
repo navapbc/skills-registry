@@ -10,6 +10,7 @@ import { Octokit } from '@octokit/rest';
 import { readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { parseFrontmatter, getDescription, slugify } from './utils.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -35,39 +36,23 @@ const octokit = new Octokit({
   request: { headers: { 'X-GitHub-Api-Version': '2026-03-10' } },
 });
 
-function parseFrontmatter(content) {
-  const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
-  if (!match) return { meta: {}, body: content };
-  const meta = {};
-  for (const line of match[1].split('\n')) {
-    const colonIdx = line.indexOf(':');
-    if (colonIdx === -1) continue;
-    const key = line.slice(0, colonIdx).trim();
-    let value = line.slice(colonIdx + 1).trim();
-    if (value.startsWith('[') && value.endsWith(']')) {
-      value = value.slice(1, -1).split(',').map(v => v.trim().replace(/["']/g, ''));
-    } else {
-      value = value.replace(/["']/g, '');
-      if (value === 'true') value = true;
-      if (value === 'false') value = false;
-    }
-    meta[key] = value;
-  }
-  return { meta, body: content.slice(match[0].length).trim() };
-}
 
-function getDescription(body) {
-  const lines = body.split('\n').filter(l => l.trim() && !l.startsWith('#'));
-  return lines[0]?.trim() || '';
-}
-
-function slugify(str) {
-  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
+// Filenames that are generic containers — use parent directory name as the skill name instead.
+const GENERIC_FILENAMES = new Set([
+  'SKILL.md', 'skill.md', 'CLAUDE.md', 'claude.md',
+  'AGENTS.md', 'agents.md', 'AGENT.md', 'agent.md',
+  'GEMINI.md', 'gemini.md', 'APPEND_SYSTEM.md', 'append_system.md',
+]);
 
 function buildRecord(content, path, repo, meta, body, type, committer) {
-  const dirName = path.split('/').slice(-2, -1)[0] || '';
-  const name = meta.name || (dirName && dirName !== repo.name ? dirName : repo.name);
+  const parts = path.split('/');
+  const filename = parts[parts.length - 1];
+  const dirName = parts.slice(-2, -1)[0] || '';
+  // For generic filenames use the parent dir; for specific filenames (e.g. reference.md) use the stem.
+  const stem = (GENERIC_FILENAMES.has(filename) || filename.startsWith('.'))
+    ? dirName
+    : filename.replace(/\.[^.]+$/, '');
+  const name = meta.name || (stem && stem !== repo.name ? stem : repo.name);
   const record = {
     slug: slugify(name),
     name,

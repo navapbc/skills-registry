@@ -1,0 +1,66 @@
+---
+import UserFooter from './UserFooter.astro';
+---
+<aside class="w-56 flex-shrink-0 flex flex-col bg-white border-r border-gray-200 overflow-y-auto">
+
+  <!-- Logo -->
+  <div class="px-4 py-4 border-b border-gray-200">
+    <a href="/" class="flex items-center gap-2 no-underline text-gray-900 hover:text-plum-700">
+      <span class="text-plum-600 font-bold text-base leading-none">✦</span>
+      <span class="font-semibold text-sm">Nava Skills</span>
+    </a>
+  </div>
+
+  <!-- Nav -->
+  <nav class="flex-1 px-2 py-3 space-y-4">
+    <div>
+      <p class="px-2 mb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Navigation</p>
+      <ul class="space-y-0.5 list-none p-0 m-0">
+        <li>
+          <a href="/" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors" id="nav-marketplace">
+            <span class="text-gray-400 text-xs">⊞</span> Marketplace
+          </a>
+        </li>
+        <li>
+          <a href="/my-skills" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors" id="nav-my-skills">
+            <span class="text-gray-400 text-xs">◈</span> My Skills
+          </a>
+        </li>
+        <li>
+          <a href="/whats-new" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors" id="nav-whats-new">
+            <span class="text-gray-400 text-xs">★</span> What's New
+          </a>
+        </li>
+        <li>
+          <a href="/contribute" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors" id="nav-contribute">
+            <span class="text-gray-400 text-xs">+</span> Add a Skill
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Resources -->
+    <div>
+      <p class="px-2 mb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Resources</p>
+      <ul class="space-y-0.5 list-none p-0 m-0">
+        <li>
+          <a href="https://navasage.atlassian.net/wiki/spaces/NH/pages/3137536013/FAQ+Claude+Skills" target="_blank" rel="noopener" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
+            <span class="text-gray-400 text-xs">?</span> FAQ: Claude Skills
+          </a>
+        </li>
+        <li>
+          <a href="https://docs.google.com/document/d/11oOUFyQi5XF9_XGHpJwhU3SLWTULqgW-rFPqbLcBlRc/edit?tab=t.0#heading=h.5t6aswo651ah" target="_blank" rel="noopener" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
+            <span class="text-gray-400 text-xs">◎</span> Community of Practice
+          </a>
+        </li>
+        <li>
+          <a href="https://navasage.atlassian.net/wiki/spaces/NH/pages/3140136126/AI+Office+Hours" target="_blank" rel="noopener" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
+            <span class="text-gray-400 text-xs">◷</span> AI Office Hours
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <UserFooter />
+</aside>

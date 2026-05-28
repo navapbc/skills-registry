@@ -5,6 +5,9 @@ node_modules/
 dist/
 .astro/
 
+# Test coverage
+coverage/
+
 # Environment variables
 .env
 .env.local

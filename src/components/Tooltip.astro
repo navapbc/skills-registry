@@ -1,0 +1,12 @@
+---
+export interface Props {
+  text: string;
+  width?: string;
+}
+const { text, width = 'w-56' } = Astro.props;
+---
+<span class="relative group/tip cursor-help text-gray-400 text-xs hover:text-gray-600">?
+  <span class={`pointer-events-none absolute left-0 top-5 z-20 ${width} rounded bg-gray-900 px-2.5 py-1.5 text-xs text-white opacity-0 group-hover/tip:opacity-100 transition-opacity shadow-lg`}>
+    {text}
+  </span>
+</span>

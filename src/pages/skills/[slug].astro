@@ -1,5 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
+import CommitterCard from '../../components/CommitterCard.astro';
+import InstallCard from '../../components/InstallCard.astro';
 import registryData from '../../../public/registry/index.json';
 
 export function getStaticPaths() {
@@ -17,7 +19,6 @@ const claudeCodeCommand = `claude mcp add ${skill.slug} --from-github ${skill.re
 const committer = (skill as any).committer as { login: string | null; name: string; avatar_url: string | null } | null;
 const displayName = committer?.login || committer?.name || skill.author;
 const avatarUrl = committer?.avatar_url || null;
-const githubUrl = committer?.login ? `https://github.com/${committer.login}` : null;
 const initial = displayName.slice(0, 1).toUpperCase();
 function formatDate(value: string | null | undefined) {
   if (!value) return null;
@@ -132,58 +133,9 @@ const addedDate = formatDate(skill.last_updated);
     <!-- Sidebar -->
     <aside class="w-64 flex-shrink-0 space-y-4">
 
-      <!-- Install: Claude Code -->
-      {hasClaudeCode && (
-        <div class="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 class="text-sm font-semibold text-gray-900 mb-1">Install in Claude Code</h3>
-          <p class="text-xs text-gray-500 mb-3 m-0">Run this command in your terminal</p>
-          <div class="bg-gray-50 border border-gray-200 rounded p-2 flex items-start justify-between gap-2">
-            <code id="install-cmd" class="text-xs text-gray-700 break-all leading-relaxed">{claudeCodeCommand}</code>
-            <button
-              class="flex-shrink-0 px-2 py-1 text-xs font-medium bg-white border border-gray-200 rounded hover:bg-gray-50 cursor-pointer transition-colors"
-              data-copy={claudeCodeCommand}
-              aria-label="Copy install command"
-            >
-              Copy
-            </button>
-          </div>
-        </div>
-      )}
-
-      <!-- Install: Claude Chat / Cowork -->
-      {hasClaudeChat && (
-        <div class="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 class="text-sm font-semibold text-gray-900 mb-1">Install in Claude Chat / Cowork</h3>
-          <p class="text-xs text-gray-500 mb-0 m-0">Open Claude, then go to <strong class="text-gray-700">Customize → Skills</strong> in the sidebar and add this skill from there.</p>
-        </div>
-      )}
-
-      <!-- Last Committer -->
-      <div class="bg-white border border-gray-200 rounded-lg p-4">
-        <h3 class="text-sm font-semibold text-gray-900 mb-3">Last Committer</h3>
-        <div class="flex items-center gap-3">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt={displayName} class="w-8 h-8 rounded-full flex-shrink-0" />
-          ) : (
-            <span class="w-8 h-8 rounded-full bg-plum-100 text-plum-700 text-sm font-semibold flex items-center justify-center flex-shrink-0">
-              {initial}
-            </span>
-          )}
-          <div class="min-w-0">
-            <p class="text-sm font-medium text-gray-900 m-0">{committer?.name || displayName}</p>
-            {githubUrl && (
-              <a
-                href={githubUrl}
-                target="_blank"
-                rel="noopener"
-                class="text-xs text-plum-600 hover:text-plum-700 no-underline"
-              >
-                @{committer?.login}
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
+      {hasClaudeCode && <InstallCard platform="claude-code" command={claudeCodeCommand} />}
+      {hasClaudeChat && <InstallCard platform="claude-chat" />}
+      <CommitterCard committer={committer} author={skill.author} />
 
       <!-- Details -->
       <div class="bg-white border border-gray-200 rounded-lg p-4">

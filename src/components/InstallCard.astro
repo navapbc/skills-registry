@@ -1,0 +1,29 @@
+---
+export interface Props {
+  platform: 'claude-code' | 'claude-chat';
+  command?: string;
+}
+const { platform, command } = Astro.props;
+---
+{platform === 'claude-code' && command && (
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <h3 class="text-sm font-semibold text-gray-900 mb-1">Install in Claude Code</h3>
+    <p class="text-xs text-gray-500 mb-3 m-0">Run this command in your terminal</p>
+    <div class="bg-gray-50 border border-gray-200 rounded p-2 flex items-start justify-between gap-2">
+      <code class="text-xs text-gray-700 break-all leading-relaxed">{command}</code>
+      <button
+        class="flex-shrink-0 px-2 py-1 text-xs font-medium bg-white border border-gray-200 rounded hover:bg-gray-50 cursor-pointer transition-colors"
+        data-copy={command}
+        aria-label="Copy install command"
+      >
+        Copy
+      </button>
+    </div>
+  </div>
+)}
+{platform === 'claude-chat' && (
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <h3 class="text-sm font-semibold text-gray-900 mb-1">Install in Claude Chat / Cowork</h3>
+    <p class="text-xs text-gray-500 mb-0 m-0">Open Claude, then go to <strong class="text-gray-700">Customize → Skills</strong> in the sidebar and add this skill from there.</p>
+  </div>
+)}
