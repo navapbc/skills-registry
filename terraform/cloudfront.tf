@@ -25,10 +25,10 @@ resource "aws_cloudfront_function" "auth_check" {
 # on cache MISS the origin request policy forwards cookies so Lambda still validates JWT.
 resource "aws_cloudfront_cache_policy" "api_read" {
   name        = "${var.project_name}-api-read-${var.environment}"
-  comment     = "60s TTL for read-only API list/detail endpoints"
-  default_ttl = 60
+  comment     = "5m default / 1hr max TTL for read-only API endpoints"
+  default_ttl = 300
   min_ttl     = 0
-  max_ttl     = 300
+  max_ttl     = 3600
 
   parameters_in_cache_key_and_forwarded_to_origin {
     enable_accept_encoding_gzip   = true
