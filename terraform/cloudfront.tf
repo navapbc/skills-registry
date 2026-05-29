@@ -148,6 +148,33 @@ resource "aws_cloudfront_distribution" "site" {
     origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
   }
 
+  # /api/skills/:slug and /api/plugins/:slug — 60s cache for detail pages.
+  # All HTTP methods must be allowed so POST /approve and PUT still reach the Lambda;
+  # only GET responses are stored in cache.
+  ordered_cache_behavior {
+    path_pattern           = "/api/skills/*"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "api-gateway"
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = true
+
+    cache_policy_id          = aws_cloudfront_cache_policy.api_read.id
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/api/plugins/*"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "api-gateway"
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = true
+
+    cache_policy_id          = aws_cloudfront_cache_policy.api_read.id
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+  }
+
   # /api/* → API Gateway — no caching, forwards cookies for JWT auth
   ordered_cache_behavior {
     path_pattern           = "/api/*"
