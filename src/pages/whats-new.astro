@@ -1,31 +1,5 @@
 ---
 import Base from '../layouts/Base.astro';
-import registryData from '../../public/registry/index.json';
-
-// Sort all skills by last_updated descending
-const allSkills = [...registryData.skills].sort(
-  (a, b) => new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime()
-);
-
-// Use the newest date as the anchor so groups stay stable after a static build
-const newestDate = new Date(allSkills[0]?.last_updated ?? Date.now());
-
-const oneWeekAgo = new Date(newestDate);
-oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-const oneMonthAgo = new Date(newestDate);
-oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-
-const thisWeek = allSkills.filter(s => new Date(s.last_updated) >= oneWeekAgo);
-const thisMonth = allSkills.filter(s => {
-  const d = new Date(s.last_updated);
-  return d < oneWeekAgo && d >= oneMonthAgo;
-});
-const earlier = allSkills.filter(s => new Date(s.last_updated) < oneMonthAgo);
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 ---
 
 <Base title="What's New">
@@ -34,122 +8,26 @@ function formatDate(iso: string) {
     <p class="text-sm text-gray-500 mt-1 m-0">Recently added and updated skills</p>
   </div>
 
-  {thisWeek.length > 0 && (
-    <section class="mb-8">
-      <div class="flex items-center gap-3 mb-4">
-        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">This week</span>
-        <div class="flex-1 border-t border-gray-200"></div>
-      </div>
-      <div class="space-y-2">
-        {thisWeek.map(skill => {
-          const initial = skill.author.slice(0, 1).toUpperCase();
-          return (
-            <a
-              href={`/skills/${skill.slug}`}
-              class="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-gray-300 transition-all no-underline"
-            >
-              <span class="w-8 h-8 rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
-                {initial}
-              </span>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap mb-1">
-                  <span class="font-semibold text-sm text-gray-900">{skill.name}</span>
-                  {skill.type === 'agent'
-                    ? <span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>
-                    : <span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">skill</span>
-                  }
-                  {skill.sensitive_data && (
-                    <span class="px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 rounded">⚠ sensitive</span>
-                  )}
-                </div>
-                <p class="text-xs text-gray-500 m-0 leading-relaxed">{skill.description}</p>
-                <p class="text-xs text-gray-400 mt-1.5 m-0">{skill.plugin} · Added {formatDate(skill.last_updated)}</p>
-              </div>
-            </a>
-          );
-        })}
-      </div>
-    </section>
-  )}
-
-  {thisMonth.length > 0 && (
-    <section class="mb-8">
-      <div class="flex items-center gap-3 mb-4">
-        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">This month</span>
-        <div class="flex-1 border-t border-gray-200"></div>
-      </div>
-      <div class="space-y-2">
-        {thisMonth.map(skill => {
-          const initial = skill.author.slice(0, 1).toUpperCase();
-          return (
-            <a
-              href={`/skills/${skill.slug}`}
-              class="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-gray-300 transition-all no-underline"
-            >
-              <span class="w-8 h-8 rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
-                {initial}
-              </span>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap mb-1">
-                  <span class="font-semibold text-sm text-gray-900">{skill.name}</span>
-                  {skill.type === 'agent'
-                    ? <span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>
-                    : <span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">skill</span>
-                  }
-                  {skill.sensitive_data && (
-                    <span class="px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 rounded">⚠ sensitive</span>
-                  )}
-                </div>
-                <p class="text-xs text-gray-500 m-0 leading-relaxed">{skill.description}</p>
-                <p class="text-xs text-gray-400 mt-1.5 m-0">{skill.plugin} · Added {formatDate(skill.last_updated)}</p>
-              </div>
-            </a>
-          );
-        })}
-      </div>
-    </section>
-  )}
-
-  {earlier.length > 0 && (
-    <section class="mb-8">
-      <div class="flex items-center gap-3 mb-4">
-        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Earlier</span>
-        <div class="flex-1 border-t border-gray-200"></div>
-      </div>
-      <div class="space-y-2">
-        {earlier.map(skill => {
-          const initial = skill.author.slice(0, 1).toUpperCase();
-          return (
-            <a
-              href={`/skills/${skill.slug}`}
-              class="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-gray-300 transition-all no-underline"
-            >
-              <span class="w-8 h-8 rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
-                {initial}
-              </span>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap mb-1">
-                  <span class="font-semibold text-sm text-gray-900">{skill.name}</span>
-                  {skill.type === 'agent'
-                    ? <span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>
-                    : <span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">skill</span>
-                  }
-                </div>
-                <p class="text-xs text-gray-500 m-0 leading-relaxed">{skill.description}</p>
-                <p class="text-xs text-gray-400 mt-1.5 m-0">{skill.plugin} · Added {formatDate(skill.last_updated)}</p>
-              </div>
-            </a>
-          );
-        })}
-      </div>
-    </section>
-  )}
-
-  {allSkills.length === 0 && (
-    <div class="flex flex-col items-center justify-center py-20 text-center">
-      <span class="text-3xl text-plum-300 mb-4">★</span>
-      <p class="font-semibold text-gray-800 m-0">No skills in the registry yet</p>
-      <p class="text-sm text-gray-500 mt-2 m-0">Check back after the next sync.</p>
+  <div id="whats-new-content">
+    <div class="flex items-center justify-center py-20">
+      <span class="text-sm text-gray-400">Loading...</span>
     </div>
-  )}
+  </div>
 </Base>
+
+<script>
+import { fetchApi } from '../lib/api.mjs';
+import { renderWhatsNewGroups } from '../lib/render.mjs';
+
+const container = document.getElementById('whats-new-content');
+
+fetchApi('/skills')
+  .then(({ skills }) => {
+    container.innerHTML = renderWhatsNewGroups(skills);
+  })
+  .catch(err => {
+    if (!err.message.startsWith('Unauthorized')) {
+      container.innerHTML = '<p class="text-sm text-red-500">Failed to load. Please try again.</p>';
+    }
+  });
+</script>
