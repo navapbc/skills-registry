@@ -15,7 +15,7 @@ export default defineConfig({
     include: ['tests/**/*.test.mjs'],
     coverage: {
       provider: 'v8',
-      include: ['scripts/utils.mjs', 'src/lib/**/*.mjs'],
+      include: ['scripts/utils.mjs', 'src/lib/**/*.mjs', 'functions/api/**/*.mjs'],
       reporter: ['text', 'html'],
       thresholds: {
         lines: 80,

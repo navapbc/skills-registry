@@ -107,3 +107,13 @@ jobs:
           aws lambda update-function-code \
             --function-name ${{ secrets.AWS_AUTH_LAMBDA_FUNCTION_NAME }} \
             --zip-file fileb://auth.zip
+
+      - name: Deploy API Lambda
+        run: |
+          cd functions/api
+          pnpm install --prod
+          zip -r ../../api.zip .
+          cd ../..
+          aws lambda update-function-code \
+            --function-name ${{ secrets.AWS_API_LAMBDA_FUNCTION_NAME }} \
+            --zip-file fileb://api.zip
