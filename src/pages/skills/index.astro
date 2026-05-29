@@ -1,0 +1,73 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="Skill">
+  <div id="skill-content">
+    <div class="flex items-center justify-center py-20">
+      <span class="text-sm text-gray-400">Loading skill...</span>
+    </div>
+  </div>
+</Base>
+
+<script>
+import { fetchApi } from '../../lib/api.mjs';
+import { renderSkillDetail } from '../../lib/render.mjs';
+
+const STORAGE_KEY = 'nava_installed_skills';
+const container = document.getElementById('skill-content');
+
+// Extract slug from /skills/<slug>
+const slug = window.location.pathname.replace(/^\/skills\//, '').replace(/\/$/, '');
+
+if (!slug) {
+  container.innerHTML = '<p class="text-sm text-gray-400">No skill specified.</p>';
+} else {
+  fetchApi('/skills/' + slug)
+    .then(skill => {
+      container.innerHTML = renderSkillDetail(skill);
+      document.title = skill.name + ' · Skills Hub';
+      initCopyButtons(skill);
+      initGithubLinks();
+    })
+    .catch(err => {
+      if (err.message.startsWith('API 404')) {
+        container.innerHTML = '<p class="text-sm text-gray-500">Skill not found. <a href="/" class="text-plum-600 hover:text-plum-700">Back to marketplace</a></p>';
+      } else if (!err.message.startsWith('Unauthorized')) {
+        container.innerHTML = '<p class="text-sm text-red-500">Failed to load skill. Please try again.</p>';
+      }
+    });
+}
+
+function initCopyButtons(skill) {
+  document.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const text = btn.dataset.copy || '';
+      navigator.clipboard.writeText(text).then(() => {
+        saveToMySkills(skill, text);
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+  });
+}
+
+function saveToMySkills(skill, cmd) {
+  try {
+    const installed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (!installed.find(s => s.slug === skill.slug)) {
+      installed.unshift({ slug: skill.slug, name: skill.name, plugin: skill.plugin, description: skill.description, compatibility: skill.compatibility, type: skill.type, installedAt: Date.now(), installCommand: cmd });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(installed));
+    }
+  } catch {}
+}
+
+function initGithubLinks() {
+  document.querySelectorAll('[data-github-url]').forEach(el => {
+    el.addEventListener('click', e => {
+      const url = el.dataset.githubUrl;
+      if (url) { e.preventDefault(); e.stopPropagation(); window.open(url, '_blank', 'noopener'); }
+    });
+  });
+}
+</script>
