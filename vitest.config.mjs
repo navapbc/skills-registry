@@ -1,6 +1,16 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
+
+const apiNodeModules = path.resolve('./functions/api/node_modules');
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@aws-sdk/client-ssm': path.join(apiNodeModules, '@aws-sdk/client-ssm'),
+      '@aws-sdk/client-dynamodb': path.join(apiNodeModules, '@aws-sdk/client-dynamodb'),
+      '@aws-sdk/lib-dynamodb': path.join(apiNodeModules, '@aws-sdk/lib-dynamodb'),
+    },
+  },
   test: {
     include: ['tests/**/*.test.mjs'],
     coverage: {
