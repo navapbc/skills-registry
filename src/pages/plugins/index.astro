@@ -1,0 +1,71 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="Plugin">
+  <div id="plugin-content">
+    <div class="flex items-center justify-center py-20">
+      <span class="text-sm text-gray-400">Loading plugin...</span>
+    </div>
+  </div>
+</Base>
+
+<script>
+import { fetchApi } from '../../lib/api.mjs';
+import { renderPluginDetail } from '../../lib/render.mjs';
+
+const container = document.getElementById('plugin-content');
+const slug = window.location.pathname.replace(/^\/plugins\//, '').replace(/\/$/, '');
+
+if (!slug) {
+  container.innerHTML = '<p class="text-sm text-gray-400">No plugin specified.</p>';
+} else {
+  Promise.all([
+    fetchApi('/plugins/' + slug),
+    fetchApi('/skills?plugin=' + slug),
+  ])
+    .then(([plugin, { skills }]) => {
+      const skillItems = skills.filter(s => s.type === 'skill');
+      const agentItems = skills.filter(s => s.type === 'agent');
+      container.innerHTML = renderPluginDetail(plugin, skillItems, agentItems);
+      document.title = plugin.name + ' · Skills Hub';
+      initTabs();
+      initGithubLinks();
+    })
+    .catch(err => {
+      if (err.message.startsWith('API 404')) {
+        container.innerHTML = '<p class="text-sm text-gray-500">Plugin not found. <a href="/" class="text-plum-600 hover:text-plum-700">Back to marketplace</a></p>';
+      } else if (!err.message.startsWith('Unauthorized')) {
+        container.innerHTML = '<p class="text-sm text-red-500">Failed to load plugin. Please try again.</p>';
+      }
+    });
+}
+
+function initTabs() {
+  const tabs = document.querySelectorAll('[data-tab]');
+  const activeClass = ['text-plum-700', 'border-plum-600'];
+  const inactiveClass = ['text-gray-500', 'border-transparent'];
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      tabs.forEach(t => { t.classList.remove(...activeClass); t.classList.add(...inactiveClass); });
+      tab.classList.add(...activeClass);
+      tab.classList.remove(...inactiveClass);
+      ['skills', 'agents', 'history'].forEach(name => {
+        const panel = document.getElementById('tab-' + name);
+        if (panel) panel.classList.toggle('hidden', name !== target);
+      });
+    });
+  });
+}
+
+function initGithubLinks() {
+  document.querySelectorAll('[data-github-url]').forEach(el => {
+    el.addEventListener('click', e => {
+      const url = el.dataset.githubUrl;
+      if (url) { e.preventDefault(); e.stopPropagation(); window.open(url, '_blank', 'noopener'); }
+    });
+  });
+}
+</script>
