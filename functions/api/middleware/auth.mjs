@@ -1,7 +1,7 @@
 import { createHmac } from 'crypto';
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { getCookie } from 'hono/cookie';
-import { upsertUser } from '../lib/dynamo.mjs';
+import { getOrCreateUser } from '../lib/dynamo.mjs';
 
 const ssm = new SSMClient({ region: process.env.AWS_REGION ?? 'us-east-1' });
 const paramCache = {};
@@ -52,7 +52,7 @@ export async function authMiddleware(c, next) {
   const payload = verifyJWT(token, jwtSecret);
   if (!payload) return c.json({ error: 'Unauthorized' }, 401);
 
-  const user = await upsertUser({
+  const user = await getOrCreateUser({
     user_id: payload.sub,
     email: payload.sub,
     name: payload.name ?? payload.sub,

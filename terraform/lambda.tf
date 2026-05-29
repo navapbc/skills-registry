@@ -161,6 +161,7 @@ resource "aws_lambda_function" "api" {
   handler          = "index.handler"
   runtime          = "nodejs20.x"
   timeout          = 30
+  memory_size      = 512
   filename         = data.archive_file.api_placeholder.output_path
   source_code_hash = data.archive_file.api_placeholder.output_base64sha256
 

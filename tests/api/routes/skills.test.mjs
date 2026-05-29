@@ -56,7 +56,7 @@ describe('GET /api/skills', () => {
 
   it('returns approved public skills and filters private ones from other users', async () => {
     mockSend
-      .mockResolvedValueOnce({ Attributes: USER_RECORD })
+      .mockResolvedValueOnce({ Item: USER_RECORD })
       .mockResolvedValueOnce({
         Items: [
           { slug: 'test-skill', name: 'Test', status: 'approved', visibility: 'public',  created_by: 'system' },
@@ -75,7 +75,7 @@ describe('GET /api/skills', () => {
 describe('POST /api/skills', () => {
   it('creates skill with status=pending for regular user', async () => {
     mockSend
-      .mockResolvedValueOnce({ Attributes: USER_RECORD })
+      .mockResolvedValueOnce({ Item: USER_RECORD })
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({});
 
@@ -98,7 +98,7 @@ describe('POST /api/skills', () => {
 
   it('creates skill with status=approved for admin', async () => {
     mockSend
-      .mockResolvedValueOnce({ Attributes: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({});
 
@@ -118,7 +118,7 @@ describe('POST /api/skills', () => {
   });
 
   it('returns 400 for missing required fields', async () => {
-    mockSend.mockResolvedValueOnce({ Attributes: USER_RECORD });
+    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
 
     const res = await app.request('/api/skills', {
       method: 'POST',
@@ -133,7 +133,7 @@ describe('POST /api/skills', () => {
 describe('DELETE /api/skills/:slug', () => {
   it('allows user to delete their own skill', async () => {
     mockSend
-      .mockResolvedValueOnce({ Attributes: USER_RECORD })
+      .mockResolvedValueOnce({ Item: USER_RECORD })
       .mockResolvedValueOnce({ Item: { slug: 'my-skill', created_by: 'user@navapbc.com', status: 'pending' } })
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({});
@@ -147,7 +147,7 @@ describe('DELETE /api/skills/:slug', () => {
 
   it('returns 403 when user tries to delete another user skill', async () => {
     mockSend
-      .mockResolvedValueOnce({ Attributes: USER_RECORD })
+      .mockResolvedValueOnce({ Item: USER_RECORD })
       .mockResolvedValueOnce({ Item: { slug: 'other-skill', created_by: 'other@navapbc.com', status: 'approved' } });
 
     const res = await app.request('/api/skills/other-skill', {
@@ -160,7 +160,7 @@ describe('DELETE /api/skills/:slug', () => {
 
 describe('POST /api/skills/:slug/approve', () => {
   it('returns 403 for non-admin', async () => {
-    mockSend.mockResolvedValueOnce({ Attributes: USER_RECORD });
+    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
 
     const res = await app.request('/api/skills/some-skill/approve', {
       method: 'POST',
@@ -171,7 +171,7 @@ describe('POST /api/skills/:slug/approve', () => {
 
   it('approves skill for admin', async () => {
     mockSend
-      .mockResolvedValueOnce({ Attributes: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
       .mockResolvedValueOnce({ Item: { slug: 'some-skill', status: 'pending', created_by: 'user@navapbc.com' } })
       .mockResolvedValueOnce({ Attributes: { slug: 'some-skill', status: 'approved' } })
       .mockResolvedValueOnce({});

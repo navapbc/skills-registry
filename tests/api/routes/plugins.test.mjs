@@ -41,7 +41,7 @@ beforeEach(() => mockSend.mockReset());
 describe('GET /api/plugins', () => {
   it('returns plugin list for authenticated user', async () => {
     mockSend
-      .mockResolvedValueOnce({ Attributes: USER_RECORD })
+      .mockResolvedValueOnce({ Item: USER_RECORD })
       .mockResolvedValueOnce({ Items: [{ slug: 'my-plugin', name: 'My Plugin', visibility: 'public', status: 'approved' }] });
 
     const res = await app.request('/api/plugins', { headers: { Cookie: makeSessionCookie() } });
@@ -53,7 +53,7 @@ describe('GET /api/plugins', () => {
 
 describe('POST /api/plugins', () => {
   it('returns 403 for non-admin', async () => {
-    mockSend.mockResolvedValueOnce({ Attributes: USER_RECORD });
+    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
     const res = await app.request('/api/plugins', {
       method: 'POST',
       headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
@@ -64,7 +64,7 @@ describe('POST /api/plugins', () => {
 
   it('allows admin to create a plugin', async () => {
     mockSend
-      .mockResolvedValueOnce({ Attributes: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({});
 

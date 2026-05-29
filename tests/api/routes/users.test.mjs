@@ -40,7 +40,7 @@ beforeEach(() => mockSend.mockReset());
 
 describe('GET /api/users/me', () => {
   it('returns current user from context', async () => {
-    mockSend.mockResolvedValueOnce({ Attributes: USER_RECORD });
+    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
 
     const res = await app.request('/api/users/me', { headers: { Cookie: makeSessionCookie() } });
     expect(res.status).toBe(200);
@@ -52,14 +52,14 @@ describe('GET /api/users/me', () => {
 
 describe('GET /api/users', () => {
   it('returns 403 for non-admin', async () => {
-    mockSend.mockResolvedValueOnce({ Attributes: USER_RECORD });
+    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
     const res = await app.request('/api/users', { headers: { Cookie: makeSessionCookie() } });
     expect(res.status).toBe(403);
   });
 
   it('returns user list for admin', async () => {
     mockSend
-      .mockResolvedValueOnce({ Attributes: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
       .mockResolvedValueOnce({ Items: [USER_RECORD, ADMIN_RECORD] });
 
     const res = await app.request('/api/users', { headers: { Cookie: makeSessionCookie('admin@navapbc.com') } });
@@ -71,7 +71,7 @@ describe('GET /api/users', () => {
 
 describe('PUT /api/users/:id/role', () => {
   it('returns 403 for non-admin', async () => {
-    mockSend.mockResolvedValueOnce({ Attributes: USER_RECORD });
+    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
     const res = await app.request('/api/users/user@navapbc.com/role', {
       method: 'PUT',
       headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
@@ -82,7 +82,7 @@ describe('PUT /api/users/:id/role', () => {
 
   it('allows admin to set a user role', async () => {
     mockSend
-      .mockResolvedValueOnce({ Attributes: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
       .mockResolvedValueOnce({ Attributes: { ...USER_RECORD, role: 'admin' } });
 
     const res = await app.request(`/api/users/${encodeURIComponent('user@navapbc.com')}/role`, {
@@ -96,7 +96,7 @@ describe('PUT /api/users/:id/role', () => {
   });
 
   it('returns 400 for invalid role value', async () => {
-    mockSend.mockResolvedValueOnce({ Attributes: ADMIN_RECORD });
+    mockSend.mockResolvedValueOnce({ Item: ADMIN_RECORD });
     const res = await app.request(`/api/users/${encodeURIComponent('user@navapbc.com')}/role`, {
       method: 'PUT',
       headers: { Cookie: makeSessionCookie('admin@navapbc.com'), 'Content-Type': 'application/json' },
