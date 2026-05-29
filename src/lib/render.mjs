@@ -1,0 +1,290 @@
+export function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatDateShort(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function avatarHtml(committer, author, size = '5') {
+  const displayName = committer?.login || committer?.name || author;
+  const avatarUrl = committer?.avatar_url || null;
+  const initial = (displayName || '?').slice(0, 1).toUpperCase();
+  if (avatarUrl) {
+    return `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(displayName)}" class="w-${size} h-${size} rounded-full flex-shrink-0" />`;
+  }
+  return `<span class="w-${size} h-${size} rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0">${escapeHtml(initial)}</span>`;
+}
+
+export function renderSkillCard(skill, showPlugin = true) {
+  const committer = skill.committer;
+  const displayName = committer?.login || committer?.name || skill.author;
+  const githubUrl = committer?.login ? `https://github.com/${committer.login}` : null;
+  const preview = skill.description.length > 110
+    ? skill.description.slice(0, 110) + '...'
+    : skill.description;
+  const compatStr = skill.compatibility.slice(0, 2).join(', ') +
+    (skill.compatibility.length > 2 ? ` +${skill.compatibility.length - 2}` : '');
+
+  const pluginBadge = showPlugin
+    ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">${escapeHtml(skill.plugin)}</span>`
+    : '';
+  const agentBadge = skill.type === 'agent'
+    ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>`
+    : '';
+  const sensitiveBadge = skill.sensitive_data
+    ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 rounded" title="Contains sensitive data">⚠</span>`
+    : '';
+
+  return `<a
+    href="/skills/${escapeHtml(skill.slug)}"
+    class="flex flex-col gap-3 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300 transition-all no-underline text-gray-900"
+    data-name="${escapeHtml(skill.name)}"
+    data-description="${escapeHtml(skill.description)}"
+    data-plugin="${escapeHtml(skill.plugin)}"
+    data-compatibility="${escapeHtml(skill.compatibility.join(','))}"
+    data-sensitive="${skill.sensitive_data}"
+    data-type="${escapeHtml(skill.type)}"
+    data-updated="${escapeHtml(skill.last_updated || '')}"
+  >
+    <div class="flex items-start justify-between gap-2 flex-wrap">
+      <span class="font-semibold text-sm text-gray-900">${escapeHtml(skill.name)}</span>
+      <div class="flex items-center gap-1 flex-wrap">${pluginBadge}${agentBadge}${sensitiveBadge}</div>
+    </div>
+    <p class="text-xs text-gray-500 leading-relaxed m-0 flex-1">${escapeHtml(preview)}</p>
+    <div class="flex items-center justify-between mt-auto pt-1">
+      <span class="flex items-center gap-1.5 cursor-pointer"
+        data-github-url="${escapeHtml(githubUrl || '')}"
+        title="${escapeHtml(githubUrl ? '@' + displayName : displayName)}">
+        ${avatarHtml(committer, skill.author, '5')}
+        <span class="text-xs text-gray-400">${escapeHtml(displayName)}</span>
+      </span>
+      <span class="text-xs text-gray-400 truncate ml-2">${escapeHtml(compatStr)}</span>
+    </div>
+  </a>`;
+}
+
+export function renderSkillGrid(skills, showPlugin = true) {
+  if (!skills.length) return '<p class="text-sm text-gray-400 italic">No skills found.</p>';
+  return `<div class="grid grid-cols-3 gap-3">
+    ${skills.map(s => `<div>${renderSkillCard(s, showPlugin)}</div>`).join('')}
+  </div>`;
+}
+
+export function renderSkillDetail(skill) {
+  const hasClaudeCode = skill.compatibility.includes('claude-code');
+  const hasClaudeChat = skill.compatibility.includes('claude-chat') || skill.compatibility.includes('claude-cowork');
+  const claudeCodeCommand = `claude mcp add ${skill.slug} --from-github ${skill.repo}`;
+  const committer = skill.committer;
+  const displayName = committer?.login || committer?.name || skill.author;
+  const githubUrl = committer?.login ? `https://github.com/${committer.login}` : null;
+  const addedDate = formatDate(skill.last_updated);
+
+  const compatBadges = skill.compatibility.map(c =>
+    `<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">${escapeHtml(c)}</span>`
+  ).join('');
+
+  const claudeCodeCard = hasClaudeCode ? `
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
+      <h3 class="text-sm font-semibold text-gray-900 mb-1">Install in Claude Code</h3>
+      <p class="text-xs text-gray-500 mb-3 m-0">Run this command in your terminal</p>
+      <div class="bg-gray-50 border border-gray-200 rounded p-2 flex items-start justify-between gap-2">
+        <code class="text-xs text-gray-700 break-all leading-relaxed">${escapeHtml(claudeCodeCommand)}</code>
+        <button
+          class="flex-shrink-0 px-2 py-1 text-xs font-medium bg-white border border-gray-200 rounded hover:bg-gray-50 cursor-pointer transition-colors"
+          data-copy="${escapeHtml(claudeCodeCommand)}"
+          aria-label="Copy install command">Copy</button>
+      </div>
+    </div>` : '';
+
+  const claudeChatCard = hasClaudeChat ? `
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
+      <h3 class="text-sm font-semibold text-gray-900 mb-1">Install in Claude Chat / Cowork</h3>
+      <p class="text-xs text-gray-500 mb-0 m-0">Open Claude, then go to <strong class="text-gray-700">Customize → Skills</strong> in the sidebar and add this skill from there.</p>
+    </div>` : '';
+
+  const committerCard = `
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
+      <h3 class="text-sm font-semibold text-gray-900 mb-3">Last Committer</h3>
+      <div class="flex items-center gap-3">
+        ${avatarHtml(committer, skill.author, '8')}
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-gray-900 m-0">${escapeHtml(committer?.name || displayName)}</p>
+          ${githubUrl ? `<a href="${escapeHtml(githubUrl)}" target="_blank" rel="noopener" class="text-xs text-plum-600 hover:text-plum-700 no-underline">@${escapeHtml(committer.login)}</a>` : ''}
+        </div>
+      </div>
+    </div>`;
+
+  const toolsUsed = skill.tools_used?.length ? `
+    <section>
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">Composed Skills</h2>
+      <ul class="list-none p-0 m-0 space-y-1">
+        ${skill.tools_used.map(slug => `<li class="text-sm"><a href="/skills/${escapeHtml(slug)}" class="text-plum-600 hover:text-plum-700 no-underline">${escapeHtml(slug)}</a></li>`).join('')}
+      </ul>
+      ${skill.human_in_loop ? `<div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"><strong>Human in the loop:</strong> ${escapeHtml(skill.human_in_loop)}</div>` : ''}
+    </section>` : '';
+
+  return `
+    <a href="/plugins/${escapeHtml(skill.plugin)}" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">← Back to ${escapeHtml(skill.plugin)}</a>
+
+    <div class="mb-8">
+      <div class="flex items-center gap-2 flex-wrap mb-2">
+        <h1 class="text-2xl font-bold text-gray-900 m-0">${escapeHtml(skill.name)}</h1>
+        <span class="px-2 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">${escapeHtml(skill.plugin)}</span>
+        ${skill.sensitive_data ? '<span class="px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 rounded">⚠ sensitive data</span>' : ''}
+        ${skill.type === 'agent' ? '<span class="px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>' : ''}
+      </div>
+      <div class="flex items-center gap-2 text-sm text-gray-400">
+        ${avatarHtml(committer, skill.author, '6')}
+        ${addedDate ? `<span class="text-gray-300">·</span><span>Added ${escapeHtml(addedDate)}</span>` : ''}
+        <span class="text-gray-300">·</span>
+        <a href="https://github.com/${escapeHtml(skill.repo)}/blob/main/${escapeHtml(skill.path)}" target="_blank" rel="noopener" class="text-plum-600 hover:text-plum-700 no-underline">View on GitHub ↗</a>
+      </div>
+    </div>
+
+    <div hidden data-skill-json='${JSON.stringify({ slug: skill.slug, name: skill.name, plugin: skill.plugin, description: skill.description, compatibility: skill.compatibility, type: skill.type })}'></div>
+
+    <div class="flex gap-8 items-start">
+      <div class="flex-1 min-w-0 space-y-8">
+        <section>
+          <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">Description</h2>
+          <p class="text-sm text-gray-600 leading-relaxed m-0">${escapeHtml(skill.description)}</p>
+          ${skill.compatibility.length ? `<div class="flex items-center gap-2 flex-wrap mt-3"><span class="text-xs text-gray-400">Works with:</span>${compatBadges}</div>` : ''}
+        </section>
+        ${toolsUsed}
+        <section>
+          <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">SKILL.md</h2>
+          <pre class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap leading-relaxed m-0"><code>${escapeHtml(skill.content || '')}</code></pre>
+        </section>
+      </div>
+      <aside class="w-64 flex-shrink-0 space-y-4">
+        ${claudeCodeCard}
+        ${claudeChatCard}
+        ${committerCard}
+        <div class="bg-white border border-gray-200 rounded-lg p-4">
+          <h3 class="text-sm font-semibold text-gray-900 mb-3">Details</h3>
+          <dl class="space-y-2 m-0">
+            ${addedDate ? `<div class="flex justify-between gap-2"><dt class="text-xs text-gray-400">Added</dt><dd class="text-xs text-gray-700 m-0">${escapeHtml(addedDate)}</dd></div>` : ''}
+            <div class="flex justify-between gap-2">
+              <dt class="text-xs text-gray-400">Repo</dt>
+              <dd class="text-xs m-0"><a href="https://github.com/${escapeHtml(skill.repo)}" target="_blank" rel="noopener" class="text-plum-600 hover:text-plum-700 no-underline truncate block max-w-32" title="${escapeHtml(skill.repo)}">${escapeHtml(skill.repo)}</a></dd>
+            </div>
+          </dl>
+        </div>
+      </aside>
+    </div>`;
+}
+
+export function renderPluginDetail(plugin, skills, agents) {
+  const initial = (plugin.author || '?').slice(0, 1).toUpperCase();
+
+  const skillsTab = skills.length
+    ? renderSkillGrid(skills, false)
+    : '<p class="text-sm text-gray-400 italic">No skills in this plugin.</p>';
+
+  const agentsTab = agents.length
+    ? renderSkillGrid(agents, false)
+    : '<p class="text-sm text-gray-400 italic">No agents in this plugin.</p>';
+
+  const agentsTabBtn = agents.length
+    ? `<button class="px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent -mb-px bg-transparent cursor-pointer hover:text-gray-700" data-tab="agents">Agents (${agents.length})</button>`
+    : '';
+
+  const agentsPanel = `<div id="tab-agents" class="hidden">
+    <p class="text-sm text-gray-500 mb-4">Agents (${agents.length})</p>
+    ${agentsTab}
+  </div>`;
+
+  return `
+    <a href="/" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">← Back to Marketplace</a>
+
+    <div class="flex items-start justify-between gap-4 mb-6">
+      <div class="min-w-0">
+        <h1 class="text-2xl font-bold text-gray-900 m-0">${escapeHtml(plugin.name)}</h1>
+        ${plugin.description ? `<p class="text-sm text-gray-500 mt-1 m-0">${escapeHtml(plugin.description)}</p>` : ''}
+        <a href="https://github.com/${escapeHtml(plugin.repo)}" target="_blank" rel="noopener" class="inline-block mt-1 text-xs text-plum-600 hover:text-plum-700 no-underline">/${escapeHtml(plugin.name)} ↗</a>
+      </div>
+      <span class="w-9 h-9 rounded-full bg-plum-100 text-plum-700 text-sm font-semibold flex items-center justify-center flex-shrink-0" aria-label="${escapeHtml(plugin.author)}">${escapeHtml(initial)}</span>
+    </div>
+
+    <div class="flex items-center gap-0 border-b border-gray-200 mb-6">
+      <button class="px-4 py-2 text-sm font-medium text-plum-700 border-b-2 border-plum-600 -mb-px bg-transparent cursor-pointer" data-tab="skills">Skills (${skills.length})</button>
+      ${agentsTabBtn}
+      <button class="px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent -mb-px bg-transparent cursor-pointer hover:text-gray-700" data-tab="history">History</button>
+    </div>
+
+    <div id="tab-skills">
+      <p class="text-sm text-gray-500 mb-4">Skills (${skills.length})</p>
+      ${skillsTab}
+    </div>
+    ${agentsPanel}
+    <div id="tab-history" class="hidden">
+      <p class="text-sm text-gray-400 italic">Skill history will appear here once the registry tracks version changes.</p>
+    </div>`;
+}
+
+export function renderWhatsNewGroups(skills) {
+  if (!skills.length) {
+    return `<div class="flex flex-col items-center justify-center py-20 text-center">
+      <span class="text-3xl text-plum-300 mb-4">★</span>
+      <p class="font-semibold text-gray-800 m-0">No skills in the registry yet</p>
+      <p class="text-sm text-gray-500 mt-2 m-0">Check back soon.</p>
+    </div>`;
+  }
+
+  const sorted = [...skills].sort((a, b) => new Date(b.last_updated) - new Date(a.last_updated));
+  const now = new Date();
+  const oneWeekAgo = new Date(now); oneWeekAgo.setDate(now.getDate() - 7);
+  const oneMonthAgo = new Date(now); oneMonthAgo.setDate(now.getDate() - 30);
+
+  const thisWeek = sorted.filter(s => new Date(s.last_updated) >= oneWeekAgo);
+  const thisMonth = sorted.filter(s => { const d = new Date(s.last_updated); return d < oneWeekAgo && d >= oneMonthAgo; });
+  const earlier = sorted.filter(s => new Date(s.last_updated) < oneMonthAgo);
+
+  function skillRow(skill) {
+    const initial = (skill.author || '?').slice(0, 1).toUpperCase();
+    const typeLabel = skill.type === 'agent'
+      ? '<span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>'
+      : '<span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">skill</span>';
+    const sensitiveLabel = skill.sensitive_data
+      ? '<span class="px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 rounded">⚠ sensitive</span>'
+      : '';
+    return `<a href="/skills/${escapeHtml(skill.slug)}" class="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-gray-300 transition-all no-underline">
+      <span class="w-8 h-8 rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">${escapeHtml(initial)}</span>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap mb-1">
+          <span class="font-semibold text-sm text-gray-900">${escapeHtml(skill.name)}</span>
+          ${typeLabel}${sensitiveLabel}
+        </div>
+        <p class="text-xs text-gray-500 m-0 leading-relaxed">${escapeHtml(skill.description)}</p>
+        <p class="text-xs text-gray-400 mt-1.5 m-0">${escapeHtml(skill.plugin)} · Added ${escapeHtml(formatDateShort(skill.last_updated))}</p>
+      </div>
+    </a>`;
+  }
+
+  function group(label, items) {
+    if (!items.length) return '';
+    return `<section class="mb-8">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">${escapeHtml(label)}</span>
+        <div class="flex-1 border-t border-gray-200"></div>
+      </div>
+      <div class="space-y-2">${items.map(skillRow).join('')}</div>
+    </section>`;
+  }
+
+  return group('This week', thisWeek) + group('This month', thisMonth) + group('Earlier', earlier);
+}
