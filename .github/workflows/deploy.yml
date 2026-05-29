@@ -114,7 +114,7 @@ jobs:
       - name: Deploy API Lambda
         run: |
           cd functions/api
-          pnpm install --prod
+          pnpm install --prod --shamefully-hoist
           zip -r ../../api.zip .
           cd ../..
           aws lambda update-function-code \
