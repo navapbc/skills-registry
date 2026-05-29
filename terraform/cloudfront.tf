@@ -47,6 +47,18 @@ resource "aws_cloudfront_distribution" "site" {
     }
   }
 
+  origin {
+    domain_name = trimprefix(aws_apigatewayv2_api.api.api_endpoint, "https://")
+    origin_id   = "api-gateway"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
   # Default behavior: all requests gated by auth check
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
@@ -77,6 +89,21 @@ resource "aws_cloudfront_distribution" "site" {
     # AWS managed CachingDisabled policy
     cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
     # Forward all query strings and headers (except Host) to Lambda
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+  }
+
+  # /api/* → API Gateway — no caching, forwards cookies for JWT auth
+  ordered_cache_behavior {
+    path_pattern           = "/api/*"
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "api-gateway"
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = false
+
+    # CachingDisabled
+    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    # AllViewerExceptHostHeader — forwards Cookie and all headers except Host
     origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
   }
 

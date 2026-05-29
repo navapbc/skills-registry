@@ -37,3 +37,13 @@ output "github_deploy_role_arn" {
   description = "IAM role ARN for GitHub Actions — set as AWS_DEPLOY_ROLE_ARN in GitHub environment secrets"
   value       = aws_iam_role.github_deploy.arn
 }
+
+output "api_lambda_function_name" {
+  description = "API Lambda function name — set as AWS_API_LAMBDA_FUNCTION_NAME in GitHub environment secrets"
+  value       = aws_lambda_function.api.function_name
+}
+
+output "api_gateway_endpoint" {
+  description = "API Gateway base URL (internal — use CloudFront /api/* in the browser)"
+  value       = aws_apigatewayv2_api.api.api_endpoint
+}
