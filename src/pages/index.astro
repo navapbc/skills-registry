@@ -1,42 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import SkillCard from '../components/SkillCard.astro';
 import Tooltip from '../components/Tooltip.astro';
-import registryData from '../../public/registry/index.json';
-
-const { plugins, skills } = registryData;
-const allSkills = skills.filter((s: any) => s.type === 'skill');
-const allAgents = skills.filter((s: any) => s.type === 'agent');
-
-const PREVIEW_COUNT = 6;
-
-// Serialise just what the client search needs
-const searchIndex = [
-  ...plugins.map((p: any) => ({
-    type: 'plugin',
-    name: p.name,
-    description: p.description || '',
-    url: `/plugins/${p.slug}`,
-    meta: `${p.skill_count + p.agent_count} skills`,
-    keywords: '',
-  })),
-  ...allSkills.map((s: any) => ({
-    type: 'skill',
-    name: s.name,
-    description: s.description || '',
-    url: `/skills/${s.slug}`,
-    meta: s.plugin,
-    keywords: [s.plugin, ...(s.compatibility || [])].join(' '),
-  })),
-  ...allAgents.map((s: any) => ({
-    type: 'agent',
-    name: s.name,
-    description: s.description || '',
-    url: `/skills/${s.slug}`,
-    meta: s.plugin,
-    keywords: [s.plugin, ...(s.compatibility || [])].join(' '),
-  })),
-];
 ---
 
 <Base title="Skills Marketplace">
@@ -69,80 +33,54 @@ const searchIndex = [
     </div>
   </div>
 
-  <!-- Browse view (shown when not searching) -->
+  <!-- Browse view -->
   <div id="browse-view">
 
     <!-- Plugins -->
     <section class="mb-10">
       <div class="flex items-center gap-1.5 mb-3">
         <h2 class="text-base font-semibold text-gray-700 m-0">Plugins</h2>
-        <span class="text-xs text-gray-400">({plugins.length})</span>
+        <span class="text-xs text-gray-400" id="plugins-count"></span>
         <Tooltip text="A Plugin is a GitHub repo that contains Skills and Agents — the organizational unit, like a package." />
       </div>
-      <div class="flex flex-wrap gap-2">
-        {plugins.map((plugin: any) => {
-          const total = plugin.skill_count + plugin.agent_count;
-          return (
-            <a
-              href={`/plugins/${plugin.slug}`}
-              class="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-plum-300 hover:shadow-sm no-underline transition-all group"
-            >
-              <span class="text-sm font-medium text-gray-800 group-hover:text-plum-700 transition-colors">{plugin.name}</span>
-              <span class="text-xs text-gray-400 whitespace-nowrap">{total} {total === 1 ? 'skill' : 'skills'}</span>
-            </a>
-          );
-        })}
+      <div class="flex flex-wrap gap-2" id="plugins-list">
+        <span class="text-xs text-gray-400">Loading...</span>
       </div>
     </section>
 
-    <!-- Skills preview -->
+    <!-- Skills -->
     <section class="mb-10">
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-1.5">
           <h2 class="text-base font-semibold text-gray-700 m-0">Skills</h2>
-          <span class="text-xs text-gray-400">({allSkills.length})</span>
+          <span class="text-xs text-gray-400" id="skills-count"></span>
           <Tooltip text='A Skill is a reusable prompt workflow (SKILL.md) that guides an AI through a specific task — like "debug", "write tests", or "plan implementation". You invoke it deliberately.' width="w-64" />
         </div>
-        {allSkills.length > PREVIEW_COUNT && (
-          <button id="skills-expand" class="text-xs text-plum-600 hover:text-plum-700 cursor-pointer bg-transparent border-none">
-            View all ({allSkills.length}) →
-          </button>
-        )}
+        <button id="skills-expand" class="text-xs text-plum-600 hover:text-plum-700 cursor-pointer bg-transparent border-none hidden">
+          View all →
+        </button>
       </div>
-      <div class="grid grid-cols-3 gap-3" id="skills-grid">
-        {allSkills.map((skill: any, i: number) => (
-          <div class={i >= PREVIEW_COUNT ? 'hidden' : ''} data-skill-item>
-            <SkillCard skill={skill} />
-          </div>
-        ))}
+      <div id="skills-grid">
+        <span class="text-xs text-gray-400">Loading...</span>
       </div>
     </section>
 
-    <!-- Agents preview -->
-    {allAgents.length > 0 && (
-      <section class="mb-10">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-1.5">
-            <h2 class="text-base font-semibold text-gray-700 m-0">Agents</h2>
-            <span class="text-xs text-gray-400">({allAgents.length})</span>
-            <Tooltip text="An Agent is a project-level AI config file (CLAUDE.md, .cursorrules, copilot-instructions.md) that sets baseline behavior across a whole project — more like a system prompt than a task." width="w-64" />
-          </div>
-          {allAgents.length > PREVIEW_COUNT && (
-            <button id="agents-expand" class="text-xs text-plum-600 hover:text-plum-700 cursor-pointer bg-transparent border-none">
-              View all ({allAgents.length}) →
-            </button>
-          )}
+    <!-- Agents -->
+    <section class="mb-10" id="agents-section" style="display:none">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-1.5">
+          <h2 class="text-base font-semibold text-gray-700 m-0">Agents</h2>
+          <span class="text-xs text-gray-400" id="agents-count"></span>
+          <Tooltip text="An Agent is a project-level AI config file (CLAUDE.md, .cursorrules, copilot-instructions.md) that sets baseline behavior across a whole project — more like a system prompt than a task." width="w-64" />
         </div>
-        <div class="grid grid-cols-3 gap-3" id="agents-grid">
-          {allAgents.map((agent: any, i: number) => (
-            <div class={i >= PREVIEW_COUNT ? 'hidden' : ''} data-agent-item>
-              <SkillCard skill={agent} />
-            </div>
-          ))}
-        </div>
-      </section>
-    )}
-    <!-- MCP Servers -->
+        <button id="agents-expand" class="text-xs text-plum-600 hover:text-plum-700 cursor-pointer bg-transparent border-none hidden">
+          View all →
+        </button>
+      </div>
+      <div id="agents-grid"></div>
+    </section>
+
+    <!-- MCP Servers placeholder -->
     <section class="mb-10">
       <div class="flex items-center gap-2 mb-3">
         <h2 class="text-base font-semibold text-gray-700 m-0">MCP Servers</h2>
@@ -157,7 +95,7 @@ const searchIndex = [
 
   </div>
 
-  <!-- Search results (shown when searching) -->
+  <!-- Search results -->
   <div id="search-results" class="hidden">
     <p class="text-xs text-gray-400 mb-4" id="search-summary"></p>
     <div id="results-list" class="space-y-1"></div>
@@ -166,65 +104,150 @@ const searchIndex = [
 
 </Base>
 
-<script define:vars={{ searchIndex }}>
-  const globalSearch = document.getElementById('global-search');
-  const browseView = document.getElementById('browse-view');
-  const searchResults = document.getElementById('search-results');
-  const resultsList = document.getElementById('results-list');
-  const searchSummary = document.getElementById('search-summary');
-  const noResults = document.getElementById('no-results');
+<script>
+import { fetchApi } from '../lib/api.mjs';
+import { renderSkillCard, escapeHtml } from '../lib/render.mjs';
 
-  const TYPE_STYLES = {
-    plugin: 'bg-plum-50 text-plum-700',
-    skill:  'bg-gray-100 text-gray-600',
-    agent:  'bg-blue-50 text-blue-700',
-  };
+const PREVIEW_COUNT = 6;
 
-  function renderResults(query) {
-    const q = query.toLowerCase().trim();
-    if (!q) {
-      browseView.classList.remove('hidden');
-      searchResults.classList.add('hidden');
-      return;
-    }
+const globalSearch = document.getElementById('global-search');
+const browseView = document.getElementById('browse-view');
+const searchResults = document.getElementById('search-results');
+const resultsList = document.getElementById('results-list');
+const searchSummary = document.getElementById('search-summary');
+const noResults = document.getElementById('no-results');
 
-    browseView.classList.add('hidden');
-    searchResults.classList.remove('hidden');
+const TYPE_STYLES = {
+  plugin: 'bg-plum-50 text-plum-700',
+  skill:  'bg-gray-100 text-gray-600',
+  agent:  'bg-blue-50 text-blue-700',
+};
 
-    const matches = searchIndex.filter(item =>
-      item.name.toLowerCase().includes(q) ||
-      item.description.toLowerCase().includes(q) ||
-      item.meta.toLowerCase().includes(q) ||
-      item.keywords.toLowerCase().includes(q)
-    );
+let searchIndex = [];
 
-    searchSummary.textContent = `${matches.length} result${matches.length !== 1 ? 's' : ''} for "${query}"`;
-    noResults.classList.toggle('hidden', matches.length > 0);
+// Load data
+Promise.all([
+  fetchApi('/skills'),
+  fetchApi('/plugins'),
+]).then(([{ skills }, { plugins }]) => {
+  const allSkills = skills.filter(s => s.type === 'skill');
+  const allAgents = skills.filter(s => s.type === 'agent');
 
-    resultsList.innerHTML = matches.map(item => `
-      <a href="${item.url}" class="flex items-start gap-3 px-4 py-3 bg-white border border-gray-200 rounded-lg hover:border-plum-300 hover:shadow-sm no-underline transition-all group">
-        <span class="mt-0.5 px-1.5 py-0.5 text-xs font-medium rounded flex-shrink-0 ${TYPE_STYLES[item.type] || 'bg-gray-100 text-gray-600'}">${item.type}</span>
-        <div class="min-w-0">
-          <p class="text-sm font-semibold text-gray-900 m-0 group-hover:text-plum-700 transition-colors">${item.name}</p>
-          ${item.description ? `<p class="text-xs text-gray-500 m-0 mt-0.5 truncate">${item.description}</p>` : ''}
-        </div>
-        <span class="ml-auto text-xs text-gray-400 flex-shrink-0 mt-0.5">${item.meta}</span>
-      </a>
-    `).join('');
+  // Plugins
+  document.getElementById('plugins-count').textContent = `(${plugins.length})`;
+  document.getElementById('plugins-list').innerHTML = plugins.map(p => {
+    const total = (p.skills_count || 0);
+    return `<a href="/plugins/${escapeHtml(p.slug)}" class="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-plum-300 hover:shadow-sm no-underline transition-all group">
+      <span class="text-sm font-medium text-gray-800 group-hover:text-plum-700 transition-colors">${escapeHtml(p.name)}</span>
+      <span class="text-xs text-gray-400 whitespace-nowrap">${total} ${total === 1 ? 'skill' : 'skills'}</span>
+    </a>`;
+  }).join('');
+
+  // Skills grid
+  document.getElementById('skills-count').textContent = `(${allSkills.length})`;
+  renderGrid('skills-grid', 'skills-expand', allSkills);
+
+  // Agents grid
+  if (allAgents.length) {
+    document.getElementById('agents-section').style.display = '';
+    document.getElementById('agents-count').textContent = `(${allAgents.length})`;
+    renderGrid('agents-grid', 'agents-expand', allAgents);
   }
 
-  globalSearch?.addEventListener('input', (e) => {
-    renderResults(e.target.value);
-  });
+  // Build search index
+  searchIndex = [
+    ...plugins.map(p => ({
+      type: 'plugin',
+      name: p.name,
+      description: p.description || '',
+      url: `/plugins/${p.slug}`,
+      meta: `${p.skills_count || 0} skills`,
+      keywords: '',
+    })),
+    ...allSkills.map(s => ({
+      type: 'skill',
+      name: s.name,
+      description: s.description || '',
+      url: `/skills/${s.slug}`,
+      meta: s.plugin,
+      keywords: [s.plugin, ...(s.compatibility || [])].join(' '),
+    })),
+    ...allAgents.map(s => ({
+      type: 'agent',
+      name: s.name,
+      description: s.description || '',
+      url: `/skills/${s.slug}`,
+      meta: s.plugin,
+      keywords: [s.plugin, ...(s.compatibility || [])].join(' '),
+    })),
+  ];
 
-  // View all — expand hidden items
-  document.getElementById('skills-expand')?.addEventListener('click', function() {
-    document.querySelectorAll('[data-skill-item]').forEach(el => el.classList.remove('hidden'));
-    this.classList.add('hidden');
-  });
+  initGithubLinks();
+}).catch(err => {
+  if (!err.message.startsWith('Unauthorized')) {
+    document.getElementById('skills-grid').innerHTML = '<p class="text-sm text-red-500">Failed to load skills. Please try again.</p>';
+  }
+});
 
-  document.getElementById('agents-expand')?.addEventListener('click', function() {
-    document.querySelectorAll('[data-agent-item]').forEach(el => el.classList.remove('hidden'));
-    this.classList.add('hidden');
+function renderGrid(gridId, expandBtnId, items) {
+  const grid = document.getElementById(gridId);
+  const expandBtn = document.getElementById(expandBtnId);
+
+  grid.innerHTML = `<div class="grid grid-cols-3 gap-3">
+    ${items.map((skill, i) => `<div ${i >= PREVIEW_COUNT ? 'class="hidden"' : ''} data-item>${renderSkillCard(skill)}</div>`).join('')}
+  </div>`;
+
+  if (items.length > PREVIEW_COUNT) {
+    expandBtn.classList.remove('hidden');
+    expandBtn.textContent = `View all (${items.length}) →`;
+    expandBtn.addEventListener('click', function() {
+      grid.querySelectorAll('[data-item]').forEach(el => el.classList.remove('hidden'));
+      this.classList.add('hidden');
+    });
+  }
+}
+
+function initGithubLinks() {
+  document.querySelectorAll('[data-github-url]').forEach(el => {
+    el.addEventListener('click', e => {
+      const url = el.dataset.githubUrl;
+      if (url) { e.preventDefault(); e.stopPropagation(); window.open(url, '_blank', 'noopener'); }
+    });
   });
+}
+
+// Search
+function renderResults(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) {
+    browseView.classList.remove('hidden');
+    searchResults.classList.add('hidden');
+    return;
+  }
+  browseView.classList.add('hidden');
+  searchResults.classList.remove('hidden');
+
+  const matches = searchIndex.filter(item =>
+    item.name.toLowerCase().includes(q) ||
+    item.description.toLowerCase().includes(q) ||
+    item.meta.toLowerCase().includes(q) ||
+    item.keywords.toLowerCase().includes(q)
+  );
+
+  searchSummary.textContent = `${matches.length} result${matches.length !== 1 ? 's' : ''} for "${query}"`;
+  noResults.classList.toggle('hidden', matches.length > 0);
+
+  resultsList.innerHTML = matches.map(item => `
+    <a href="${escapeHtml(item.url)}" class="flex items-start gap-3 px-4 py-3 bg-white border border-gray-200 rounded-lg hover:border-plum-300 hover:shadow-sm no-underline transition-all group">
+      <span class="mt-0.5 px-1.5 py-0.5 text-xs font-medium rounded flex-shrink-0 ${TYPE_STYLES[item.type] || 'bg-gray-100 text-gray-600'}">${escapeHtml(item.type)}</span>
+      <div class="min-w-0">
+        <p class="text-sm font-semibold text-gray-900 m-0 group-hover:text-plum-700 transition-colors">${escapeHtml(item.name)}</p>
+        ${item.description ? `<p class="text-xs text-gray-500 m-0 mt-0.5 truncate">${escapeHtml(item.description)}</p>` : ''}
+      </div>
+      <span class="ml-auto text-xs text-gray-400 flex-shrink-0 mt-0.5">${escapeHtml(item.meta)}</span>
+    </a>
+  `).join('');
+}
+
+globalSearch?.addEventListener('input', e => renderResults(e.target.value));
 </script>
