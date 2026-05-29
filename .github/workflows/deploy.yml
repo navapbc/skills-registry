@@ -36,6 +36,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Install API Lambda dependencies
+        run: cd functions/api && pnpm install --frozen-lockfile
+
       - name: Run tests
         run: pnpm test
 
