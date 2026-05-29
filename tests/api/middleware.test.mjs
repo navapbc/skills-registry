@@ -4,7 +4,7 @@ import { createHmac } from 'crypto';
 // auth.mjs imports dynamo.mjs — mock it so the module resolves before dynamo.mjs is written
 vi.mock('../../functions/api/lib/dynamo.mjs', () => ({ upsertUser: vi.fn() }));
 vi.mock('@aws-sdk/client-ssm', () => ({
-  SSMClient: vi.fn(() => ({ send: vi.fn() })),
+  SSMClient: vi.fn(function () { return { send: vi.fn() }; }),
   GetParameterCommand: vi.fn(),
 }));
 vi.mock('hono/cookie', () => ({ getCookie: vi.fn() }));
