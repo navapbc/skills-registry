@@ -19,6 +19,36 @@ resource "aws_cloudfront_function" "auth_check" {
   })
 }
 
+# Cache policy for read-only API list endpoints (skills, plugins).
+# Cookies are NOT in the cache key — all navapbc.com users see the same approved+public catalog,
+# so responses are safe to share. On cache HIT CloudFront serves without calling Lambda;
+# on cache MISS the origin request policy forwards cookies so Lambda still validates JWT.
+resource "aws_cloudfront_cache_policy" "api_read" {
+  name        = "${var.project_name}-api-read-${var.environment}"
+  comment     = "60s TTL for read-only API list/detail endpoints"
+  default_ttl = 60
+  min_ttl     = 0
+  max_ttl     = 300
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_gzip   = true
+    enable_accept_encoding_brotli = true
+
+    cookies_config {
+      cookie_behavior = "none"
+    }
+    headers_config {
+      header_behavior = "none"
+    }
+    query_strings_config {
+      query_string_behavior = "whitelist"
+      query_strings {
+        items = ["type", "plugin", "status", "visibility"]
+      }
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -89,6 +119,32 @@ resource "aws_cloudfront_distribution" "site" {
     # AWS managed CachingDisabled policy
     cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
     # Forward all query strings and headers (except Host) to Lambda
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+  }
+
+  # /api/skills and /api/plugins — 60s cache, shared across all users.
+  # More specific patterns must appear before the /api/* catch-all.
+  ordered_cache_behavior {
+    path_pattern           = "/api/skills"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "api-gateway"
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = true
+
+    cache_policy_id          = aws_cloudfront_cache_policy.api_read.id
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/api/plugins"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "api-gateway"
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = true
+
+    cache_policy_id          = aws_cloudfront_cache_policy.api_read.id
     origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
   }
 
