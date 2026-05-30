@@ -300,21 +300,34 @@ export function renderCategoryGrid(categories, allSkills) {
   }
 
   const categoryCards = categories.map(cat => {
-    const skills = cat.slugs.map(slug => bySlug.get(slug)).filter(Boolean);
+    const featured = (cat.featuredSlugs || []).map(slug => bySlug.get(slug)).filter(Boolean);
+    const all = (cat.slugs || []).map(slug => bySlug.get(slug)).filter(Boolean);
+    const preview = all.slice(0, 3);
 
-    const rows = skills.length
-      ? skills.map(skill => `
-          <div class="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
-            <span class="text-xs text-gray-700">${escapeHtml(skill.name)}</span>
-            ${isNew(skill) ? `<span class="px-1.5 py-0.5 text-xs font-semibold rounded" style="background:#f5f3ff;color:${escapeHtml(cat.textColor)}">new</span>` : ''}
-          </div>`).join('')
-      : '<div class="text-xs text-gray-400 py-1 italic">No skills yet</div>';
+    const featuredRows = featured.map(skill => `
+      <div class="flex items-center justify-between py-1 border-b border-gray-50">
+        <span class="text-xs text-gray-700">${escapeHtml(skill.name)}</span>
+        <span class="text-xs font-medium text-plum-600">Featured</span>
+      </div>`).join('');
+
+    const previewRows = preview.map(skill => `
+      <div class="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
+        <span class="text-xs text-gray-700">${escapeHtml(skill.name)}</span>
+        ${isNew(skill) ? `<span class="px-1.5 py-0.5 text-xs font-semibold rounded" style="background:#f5f3ff;color:${escapeHtml(cat.textColor)}">new</span>` : ''}
+      </div>`).join('');
+
+    const rows = (featuredRows + previewRows) ||
+      '<div class="text-xs text-gray-400 py-1 italic">No skills yet</div>';
+
+    const viewAll = all.length > 0
+      ? `<a href="/category/${escapeHtml(cat.id)}" class="text-xs no-underline font-medium hover:underline" style="color:${escapeHtml(cat.textColor)}">View all (${all.length}) &rarr;</a>`
+      : '';
 
     return `
       <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid ${escapeHtml(cat.borderColor)}">
         <div class="text-xs font-bold uppercase tracking-wider mb-3" style="color:${escapeHtml(cat.textColor)}">${escapeHtml(cat.label)}</div>
         <div class="mb-3">${rows}</div>
-        ${skills.length ? `<div class="text-xs text-gray-400">${skills.length} curated</div>` : ''}
+        ${viewAll}
       </div>`;
   }).join('');
 
@@ -368,4 +381,43 @@ export function renderNewThisWeek(allSkills, categories) {
       </div>
       <div class="flex gap-3">${cards}</div>
     </div>`;
+}
+
+export function renderCategoryDetail(category, allSkills) {
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const bySlug = new Map(allSkills.map(s => [s.slug, s]));
+
+  const featured = (category.featuredSlugs || []).map(s => bySlug.get(s)).filter(Boolean);
+  const skills = (category.slugs || []).map(s => bySlug.get(s)).filter(Boolean);
+
+  const featuredSection = featured.length ? `
+    <section class="mb-8">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="text-xs font-semibold text-plum-600 uppercase tracking-wider">Featured</span>
+        <div class="flex-1 border-t border-gray-200"></div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        ${featured.map(skill => `
+          <div style="border-top:2px solid ${escapeHtml(category.borderColor)}">${renderSkillCard(skill)}</div>
+        `).join('')}
+      </div>
+    </section>` : '';
+
+  const allSection = skills.length ? `
+    <section>
+      <div class="grid grid-cols-3 gap-3">
+        ${skills.map(skill => renderSkillCard(skill)).join('')}
+      </div>
+    </section>` : '<p class="text-sm text-gray-400 italic">No skills in this category yet.</p>';
+
+  return `
+    <a href="/" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-6 transition-colors">
+      &larr; Back to hub
+    </a>
+    <div class="mb-8" style="border-left:4px solid ${escapeHtml(category.borderColor)};padding-left:12px">
+      <h1 class="text-2xl font-bold text-gray-900 m-0">${escapeHtml(category.label)}</h1>
+      <p class="text-sm text-gray-500 mt-1 m-0">${skills.length} skill${skills.length !== 1 ? 's' : ''}</p>
+    </div>
+    ${featuredSection}
+    ${allSection}`;
 }

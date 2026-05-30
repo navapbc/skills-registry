@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { escapeHtml, renderSkillCard, renderSkillDetail, renderPluginDetail, renderWhatsNewGroups, renderCategoryGrid, renderNewThisWeek } from '../../src/lib/render.mjs';
+import { escapeHtml, renderSkillCard, renderSkillDetail, renderPluginDetail, renderWhatsNewGroups, renderCategoryGrid, renderNewThisWeek, renderCategoryDetail } from '../../src/lib/render.mjs';
 import { CATEGORIES } from '../../src/lib/categories.mjs';
 
 const baseSkill = {
@@ -258,5 +258,36 @@ describe('renderNewThisWeek', () => {
     const html = renderNewThisWeek(manyNew, CATEGORIES);
     const linkCount = (html.match(/href="\/skills\//g) || []).length;
     expect(linkCount).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('renderCategoryDetail', () => {
+  const cat = CATEGORIES[0]; // writing-comms, has nava-labs-style in slugs
+
+  it('renders the category label', () => {
+    const html = renderCategoryDetail(cat, catSkills);
+    expect(html).toContain('Writing &amp; Comms');
+  });
+
+  it('renders a skill card for each skill in the category', () => {
+    const html = renderCategoryDetail(cat, catSkills);
+    expect(html).toContain('href="/skills/nava-labs-style"');
+  });
+
+  it('renders empty state when no skills match', () => {
+    const html = renderCategoryDetail(cat, []);
+    expect(html).toContain('No skills in this category yet');
+  });
+
+  it('renders featured section when featuredSlugs has entries', () => {
+    const catWithFeatured = { ...cat, featuredSlugs: ['nava-labs-style'], slugs: ['nava-labs-style'] };
+    const html = renderCategoryDetail(catWithFeatured, catSkills);
+    expect(html).toContain('Featured');
+  });
+
+  it('does not render featured section when featuredSlugs is empty', () => {
+    const catNoFeatured = { ...cat, featuredSlugs: [] };
+    const html = renderCategoryDetail(catNoFeatured, catSkills);
+    expect(html).not.toContain('Featured');
   });
 });
