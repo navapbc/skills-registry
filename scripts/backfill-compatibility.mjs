@@ -71,9 +71,17 @@ console.log(`\nBackfilling compatibility on ${env}:`);
 console.log(`  Table:    ${SKILLS_TABLE}`);
 console.log(`  Dry run:  ${dryRun}\n`);
 
-// Scan all skills
-const result = await ddb.send(new ScanCommand({ TableName: SKILLS_TABLE }));
-const skills = result.Items ?? [];
+// Scan all skills — paginate until LastEvaluatedKey is absent
+const skills = [];
+let lastKey;
+do {
+  const result = await ddb.send(new ScanCommand({
+    TableName: SKILLS_TABLE,
+    ...(lastKey && { ExclusiveStartKey: lastKey }),
+  }));
+  skills.push(...(result.Items ?? []));
+  lastKey = result.LastEvaluatedKey;
+} while (lastKey);
 
 // Only target records where compatibility is currently empty
 const toUpdate = skills.filter(s => !s.compatibility || s.compatibility.length === 0);
