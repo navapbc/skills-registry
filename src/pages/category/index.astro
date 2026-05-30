@@ -1,0 +1,48 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="Category">
+  <div id="category-content">
+    <div class="flex items-center justify-center py-20">
+      <span class="text-sm text-gray-400">Loading...</span>
+    </div>
+  </div>
+</Base>
+
+<script>
+import { fetchApi } from '../../lib/api.mjs';
+import { renderCategoryDetail } from '../../lib/render.mjs';
+import { CATEGORIES } from '../../lib/categories.mjs';
+
+const container = document.getElementById('category-content');
+const catSlug = window.location.pathname.replace(/^\/category\/?/, '').replace(/\/$/, '');
+
+const category = CATEGORIES.find(c => c.id === catSlug);
+
+if (!category) {
+  container.innerHTML = '<p class="text-sm text-gray-500">Category not found. <a href="/" class="text-plum-600 hover:text-plum-700">Back to hub</a></p>';
+} else {
+  document.title = category.label + ' · Skills Hub';
+
+  fetchApi('/skills')
+    .then(({ skills }) => {
+      container.innerHTML = renderCategoryDetail(category, skills);
+      initGithubLinks();
+    })
+    .catch(err => {
+      if (!err.message.startsWith('Unauthorized')) {
+        container.innerHTML = '<p class="text-sm text-red-500">Failed to load. Please try again.</p>';
+      }
+    });
+}
+
+function initGithubLinks() {
+  document.querySelectorAll('[data-github-url]').forEach(el => {
+    el.addEventListener('click', e => {
+      const url = el.dataset.githubUrl;
+      if (url) { e.preventDefault(); e.stopPropagation(); window.open(url, '_blank', 'noopener'); }
+    });
+  });
+}
+</script>

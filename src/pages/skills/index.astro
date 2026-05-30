@@ -12,17 +12,39 @@ import Base from '../../layouts/Base.astro';
 
 <script>
 import { fetchApi } from '../../lib/api.mjs';
-import { renderSkillDetail } from '../../lib/render.mjs';
+import { renderSkillDetail, renderSkillGrid, escapeHtml } from '../../lib/render.mjs';
 
 const STORAGE_KEY = 'nava_installed_skills';
 const container = document.getElementById('skill-content');
 
-// Extract slug from /skills/<slug>
-const slug = window.location.pathname.replace(/^\/skills\//, '').replace(/\/$/, '');
+const slug = window.location.pathname.replace(/^\/skills\/?/, '').replace(/\/$/, '');
 
 if (!slug) {
-  container.innerHTML = '<p class="text-sm text-gray-400">No skill specified.</p>';
+  // List mode — show all skills
+  document.title = 'Skills · Skills Hub';
+  container.innerHTML = `
+    <div class="mb-8">
+      <a href="/" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">&larr; Back to hub</a>
+      <h1 class="text-2xl font-bold text-gray-900 m-0">All Skills</h1>
+      <p class="text-sm text-gray-500 mt-1 m-0" id="skills-count">Loading...</p>
+    </div>
+    <div id="skills-list-grid"><span class="text-xs text-gray-400">Loading...</span></div>`;
+
+  fetchApi('/skills?type=skill')
+    .then(({ skills }) => {
+      const countEl = document.getElementById('skills-count');
+      if (countEl) countEl.textContent = skills.length + ' skills';
+      document.getElementById('skills-list-grid').innerHTML = renderSkillGrid(skills);
+      initGithubLinks();
+    })
+    .catch(err => {
+      if (!err.message.startsWith('Unauthorized')) {
+        const g = document.getElementById('skills-list-grid');
+        if (g) g.innerHTML = '<p class="text-sm text-red-500">Failed to load skills. Please try again.</p>';
+      }
+    });
 } else {
+  // Detail mode — show one skill
   fetchApi('/skills/' + slug)
     .then(skill => {
       container.innerHTML = renderSkillDetail(skill);
@@ -32,7 +54,7 @@ if (!slug) {
     })
     .catch(err => {
       if (err.message.startsWith('API 404')) {
-        container.innerHTML = '<p class="text-sm text-gray-500">Skill not found. <a href="/" class="text-plum-600 hover:text-plum-700">Back to marketplace</a></p>';
+        container.innerHTML = '<p class="text-sm text-gray-500">Skill not found. <a href="/" class="text-plum-600 hover:text-plum-700">Back to hub</a></p>';
       } else if (!err.message.startsWith('Unauthorized')) {
         container.innerHTML = '<p class="text-sm text-red-500">Failed to load skill. Please try again.</p>';
       }
