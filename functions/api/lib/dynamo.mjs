@@ -7,6 +7,7 @@ import {
   DeleteCommand,
   ScanCommand,
   QueryCommand,
+  BatchGetCommand,
 } from '@aws-sdk/lib-dynamodb';
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION ?? 'us-east-1' });
@@ -78,4 +79,4 @@ export async function upsertUser({ user_id, email, name, avatar_url }) {
   return result.Attributes;
 }
 
-export { GetCommand, PutCommand, UpdateCommand, DeleteCommand, ScanCommand, QueryCommand };
+export { GetCommand, PutCommand, UpdateCommand, DeleteCommand, ScanCommand, QueryCommand, BatchGetCommand };

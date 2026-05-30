@@ -122,13 +122,22 @@ const TYPE_STYLES = {
 
 let searchIndex = [];
 
-// Load data
+// Collect all slugs needed by the category grid for a fast BatchGetItem fetch
+const categorySlugs = [...new Set(
+  CATEGORIES.flatMap(c => [...(c.featuredSlugs || []), ...(c.slugs || [])])
+)].join(',');
+
+// Two parallel fetches:
+//  1. Category slugs only (BatchGetItem — fast, targeted)
+//  2. All skills for browse sections + search index (paginated scan)
+// Plus plugins for the plugin chips
 Promise.all([
+  fetchApi('/skills?slugs=' + encodeURIComponent(categorySlugs)),
   fetchApi('/skills'),
   fetchApi('/plugins'),
-]).then(([{ skills }, { plugins }]) => {
-  // Category grid and new-this-week strip
-  document.getElementById('category-grid').innerHTML = renderCategoryGrid(CATEGORIES, skills);
+]).then(([{ skills: catSkills }, { skills }, { plugins }]) => {
+  // Category grid uses targeted fetch; new-this-week uses full list for freshness
+  document.getElementById('category-grid').innerHTML = renderCategoryGrid(CATEGORIES, catSkills);
   document.getElementById('new-this-week').innerHTML = renderNewThisWeek(skills, CATEGORIES);
 
   const allSkills = skills.filter(s => s.type === 'skill');

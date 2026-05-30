@@ -304,15 +304,17 @@ export function renderCategoryGrid(categories, allSkills) {
     const all = (cat.slugs || []).map(slug => bySlug.get(slug)).filter(Boolean);
     const preview = all.slice(0, 3);
 
+    const skillUrl = (skill) => `/${skill.type === 'agent' ? 'agents' : 'skills'}/${escapeHtml(skill.slug)}`;
+
     const featuredRows = featured.map(skill => `
       <div class="flex items-center justify-between py-1 border-b border-gray-50">
-        <span class="text-xs text-gray-700">${escapeHtml(skill.name)}</span>
+        <a href="${skillUrl(skill)}" class="text-xs text-gray-700 no-underline hover:text-plum-600">${escapeHtml(skill.name)}</a>
         <span class="text-xs font-medium text-plum-600">Featured</span>
       </div>`).join('');
 
     const previewRows = preview.map(skill => `
       <div class="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
-        <span class="text-xs text-gray-700">${escapeHtml(skill.name)}</span>
+        <a href="${skillUrl(skill)}" class="text-xs text-gray-700 no-underline hover:text-plum-600">${escapeHtml(skill.name)}</a>
         ${isNew(skill) ? `<span class="px-1.5 py-0.5 text-xs font-semibold rounded" style="background:#f5f3ff;color:${escapeHtml(cat.textColor)}">new</span>` : ''}
       </div>`).join('');
 

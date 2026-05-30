@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { ddb, tables, GetCommand, PutCommand, UpdateCommand, DeleteCommand, ScanCommand } from '../lib/dynamo.mjs';
+import { ddb, tables, GetCommand, PutCommand, UpdateCommand, DeleteCommand, ScanCommand, BatchGetCommand } from '../lib/dynamo.mjs';
 import { can } from '../lib/permissions.mjs';
 import { writeAudit } from '../lib/audit.mjs';
 
@@ -8,19 +8,35 @@ const REQUIRED_FIELDS = ['slug', 'name', 'description', 'plugin', 'repo', 'path'
 export function skillsRoutes(app) {
   app.get('/api/skills', async (c) => {
     const user = c.get('user');
-    const { type, plugin } = c.req.query();
+    const { type, plugin, slugs: slugsParam } = c.req.query();
 
-    // Paginate through all pages — DynamoDB Scan returns ≤1MB per call
-    const items = [];
-    let lastKey;
-    do {
-      const page = await ddb.send(new ScanCommand({
-        TableName: tables.skills(),
-        ...(lastKey && { ExclusiveStartKey: lastKey }),
+    let items;
+
+    if (slugsParam) {
+      // Fast path: BatchGetItem for specific slugs (used by category grid)
+      // DynamoDB BatchGetItem limit is 100 keys per call
+      const slugList = slugsParam.split(',').map(s => s.trim()).filter(Boolean).slice(0, 100);
+      const result = await ddb.send(new BatchGetCommand({
+        RequestItems: {
+          [tables.skills()]: {
+            Keys: slugList.map(slug => ({ slug })),
+          },
+        },
       }));
-      items.push(...(page.Items ?? []));
-      lastKey = page.LastEvaluatedKey;
-    } while (lastKey);
+      items = result.Responses?.[tables.skills()] ?? [];
+    } else {
+      // Full scan — paginate through all pages (DynamoDB Scan returns ≤1MB per call)
+      items = [];
+      let lastKey;
+      do {
+        const page = await ddb.send(new ScanCommand({
+          TableName: tables.skills(),
+          ...(lastKey && { ExclusiveStartKey: lastKey }),
+        }));
+        items.push(...(page.Items ?? []));
+        lastKey = page.LastEvaluatedKey;
+      } while (lastKey);
+    }
 
     if (type) items = items.filter((s) => s.type === type);
     if (plugin) items = items.filter((s) => s.plugin === plugin);
