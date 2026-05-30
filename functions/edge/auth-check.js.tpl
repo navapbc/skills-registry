@@ -23,9 +23,11 @@ function rewriteUri(uri) {
   const lastSegment = uri.split('/').pop();
   if (lastSegment.indexOf('.') !== -1) return uri;
 
-  // Route all /skills/* and /plugins/* to their CSR shells
+  // Route all CSR shell paths to their index.html
   if (uri.indexOf('/skills') === 0) return '/skills/index.html';
   if (uri.indexOf('/plugins') === 0) return '/plugins/index.html';
+  if (uri.indexOf('/agents') === 0) return '/agents/index.html';
+  if (uri.indexOf('/category') === 0) return '/category/index.html';
 
   return uri + '/index.html';
 }

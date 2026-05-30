@@ -52,9 +52,9 @@ import Tooltip from '../components/Tooltip.astro';
           <span class="text-xs text-gray-400" id="skills-count"></span>
           <Tooltip text='A Skill is a reusable prompt workflow (SKILL.md) that guides an AI through a specific task — like "debug", "write tests", or "plan implementation". You invoke it deliberately.' width="w-64" />
         </div>
-        <button id="skills-expand" class="text-xs text-plum-600 hover:text-plum-700 cursor-pointer bg-transparent border-none hidden">
+        <a id="skills-expand" href="/skills" class="text-xs text-plum-600 hover:text-plum-700 no-underline hidden">
           View all →
-        </button>
+        </a>
       </div>
       <div id="skills-grid">
         <span class="text-xs text-gray-400">Loading...</span>
@@ -69,9 +69,9 @@ import Tooltip from '../components/Tooltip.astro';
           <span class="text-xs text-gray-400" id="agents-count"></span>
           <Tooltip text="An Agent is a project-level AI config file (CLAUDE.md, .cursorrules, copilot-instructions.md) that sets baseline behavior across a whole project — more like a system prompt than a task." width="w-64" />
         </div>
-        <button id="agents-expand" class="text-xs text-plum-600 hover:text-plum-700 cursor-pointer bg-transparent border-none hidden">
+        <a id="agents-expand" href="/agents" class="text-xs text-plum-600 hover:text-plum-700 no-underline hidden">
           View all →
-        </button>
+        </a>
       </div>
       <div id="agents-grid"></div>
     </section>
@@ -192,19 +192,15 @@ Promise.all([
 
 function renderGrid(gridId, expandBtnId, items) {
   const grid = document.getElementById(gridId);
-  const expandBtn = document.getElementById(expandBtnId);
+  const expandLink = document.getElementById(expandBtnId);
 
   grid.innerHTML = `<div class="grid grid-cols-3 gap-3">
-    ${items.map((skill, i) => `<div ${i >= PREVIEW_COUNT ? 'class="hidden"' : ''} data-item>${renderSkillCard(skill)}</div>`).join('')}
+    ${items.slice(0, PREVIEW_COUNT).map(skill => `<div>${renderSkillCard(skill)}</div>`).join('')}
   </div>`;
 
   if (items.length > PREVIEW_COUNT) {
-    expandBtn.classList.remove('hidden');
-    expandBtn.textContent = `View all (${items.length}) →`;
-    expandBtn.addEventListener('click', function() {
-      grid.querySelectorAll('[data-item]').forEach(el => el.classList.remove('hidden'));
-      this.classList.add('hidden');
-    });
+    expandLink.classList.remove('hidden');
+    expandLink.textContent = `View all (${items.length}) →`;
   }
 }
 
