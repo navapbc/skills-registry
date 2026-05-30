@@ -44,6 +44,61 @@ const GENERIC_FILENAMES = new Set([
   'GEMINI.md', 'gemini.md', 'APPEND_SYSTEM.md', 'append_system.md',
 ]);
 
+// Paths to exclude — plan documents, templates, and other non-skill files.
+const EXCLUDE_PATH_PATTERNS = [
+  /^docs\/plans\//,
+  /^docs\/superpowers\/plans\//,
+  /\.template$/,
+  /\.example$/,
+];
+
+// Infer compatibility from path when frontmatter doesn't specify it.
+function inferCompatibility(path, type) {
+  if (type === 'skill') return ['claude-code'];
+  if (path.includes('.cursor/') || path.endsWith('.mdc') || path.includes('.cursorrules')) return ['cursor'];
+  if (path.includes('copilot-instructions')) return ['github-copilot'];
+  return ['claude-code'];
+}
+
+// After all records are built, resolve slug collisions:
+//  - Same slug, same plugin → merge (combine compatibility, keep richer content)
+//  - Same slug, different plugins → prefix each with its plugin slug
+function deduplicateRecords(records) {
+  const bySlug = new Map();
+  for (const r of records) {
+    if (!bySlug.has(r.slug)) bySlug.set(r.slug, []);
+    bySlug.get(r.slug).push(r);
+  }
+
+  const result = [];
+  for (const [slug, group] of bySlug) {
+    if (group.length === 1) { result.push(group[0]); continue; }
+
+    // Partition by plugin
+    const byPlugin = new Map();
+    for (const r of group) {
+      if (!byPlugin.has(r.plugin)) byPlugin.set(r.plugin, []);
+      byPlugin.get(r.plugin).push(r);
+    }
+
+    for (const [plugin, pluginGroup] of byPlugin) {
+      // Merge same-plugin duplicates (same skill, different tool dirs e.g. .claude/ vs .cursor/)
+      const merged = { ...pluginGroup[0] };
+      for (const r of pluginGroup.slice(1)) {
+        merged.compatibility = [...new Set([...merged.compatibility, ...r.compatibility])];
+        if (r.content.length > merged.content.length) merged.content = r.content;
+      }
+
+      // If multiple different plugins share this slug, prefix with plugin name
+      if (byPlugin.size > 1) merged.slug = `${plugin}-${slug}`;
+
+      result.push(merged);
+    }
+  }
+
+  return result;
+}
+
 function buildRecord(content, path, repo, meta, body, type, committer) {
   const parts = path.split('/');
   const filename = parts[parts.length - 1];
@@ -63,8 +118,11 @@ function buildRecord(content, path, repo, meta, body, type, committer) {
     author: meta.author || repo.owner?.login || ORG,
     committer: committer || null,
     version: meta.version || '1.0.0',
-    compatibility: Array.isArray(meta.compatibility) ? meta.compatibility
-      : meta.compatibility ? [meta.compatibility] : [],
+    compatibility: Array.isArray(meta.compatibility) && meta.compatibility.length
+      ? meta.compatibility
+      : meta.compatibility
+        ? [meta.compatibility]
+        : inferCompatibility(path, type),
     sensitive_data: meta.sensitive_data === true || meta.sensitive_data === 'true',
     type,
     content,
@@ -198,6 +256,8 @@ async function main() {
     const { repository: repo, path } = hit;
     process.stdout.write(`\r[${fetched}/${totalHits}] ${(`${repo.name}/${path}`).slice(0, 76).padEnd(76)}`);
 
+    if (EXCLUDE_PATH_PATTERNS.some(p => p.test(path))) return;
+
     const content = await fetchContent(repo.name, path);
     if (!content) return;
 
@@ -238,11 +298,13 @@ async function main() {
     plugin.agents = repoAgents.map(a => a.slug);
   }
 
+  const skills = deduplicateRecords([...skillMap.values()]);
+
   const registry = {
     generated_at: new Date().toISOString(),
     org: ORG,
     plugins: [...pluginMap.values()],
-    skills: [...skillMap.values()],
+    skills,
   };
 
   writeFileSync(outputPath, JSON.stringify(registry, null, 2));
