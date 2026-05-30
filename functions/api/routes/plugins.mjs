@@ -6,8 +6,17 @@ const REQUIRED_FIELDS = ['slug', 'name', 'description', 'repo', 'author'];
 
 export function pluginsRoutes(app) {
   app.get('/api/plugins', async (c) => {
-    const result = await ddb.send(new ScanCommand({ TableName: tables.plugins() }));
-    return c.json({ plugins: result.Items ?? [] });
+    const items = [];
+    let lastKey;
+    do {
+      const page = await ddb.send(new ScanCommand({
+        TableName: tables.plugins(),
+        ...(lastKey && { ExclusiveStartKey: lastKey }),
+      }));
+      items.push(...(page.Items ?? []));
+      lastKey = page.LastEvaluatedKey;
+    } while (lastKey);
+    return c.json({ plugins: items });
   });
 
   app.get('/api/plugins/:slug', async (c) => {

@@ -10,8 +10,17 @@ export function skillsRoutes(app) {
     const user = c.get('user');
     const { type, plugin } = c.req.query();
 
-    const result = await ddb.send(new ScanCommand({ TableName: tables.skills() }));
-    let items = result.Items ?? [];
+    // Paginate through all pages — DynamoDB Scan returns ≤1MB per call
+    const items = [];
+    let lastKey;
+    do {
+      const page = await ddb.send(new ScanCommand({
+        TableName: tables.skills(),
+        ...(lastKey && { ExclusiveStartKey: lastKey }),
+      }));
+      items.push(...(page.Items ?? []));
+      lastKey = page.LastEvaluatedKey;
+    } while (lastKey);
 
     if (type) items = items.filter((s) => s.type === type);
     if (plugin) items = items.filter((s) => s.plugin === plugin);
