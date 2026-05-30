@@ -300,7 +300,7 @@ export function renderCategoryGrid(categories, allSkills) {
   }
 
   const categoryCards = categories.map(cat => {
-    const skills = cat.curatedSlugs.map(slug => bySlug.get(slug)).filter(Boolean);
+    const skills = cat.slugs.map(slug => bySlug.get(slug)).filter(Boolean);
 
     const rows = skills.length
       ? skills.map(skill => `
@@ -346,7 +346,7 @@ export function renderNewThisWeek(allSkills, categories) {
   if (!newSkills.length) return '';
 
   function getCategoryLabel(slug) {
-    const cat = categories.find(c => c.curatedSlugs.includes(slug));
+    const cat = categories.find(c => c.slugs.includes(slug));
     return cat ? cat.label : '';
   }
 
