@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { escapeHtml, renderSkillCard, renderSkillDetail, renderPluginDetail, renderWhatsNewGroups } from '../../src/lib/render.mjs';
+import { escapeHtml, renderSkillCard, renderSkillDetail, renderPluginDetail, renderWhatsNewGroups, renderCategoryGrid, renderNewThisWeek } from '../../src/lib/render.mjs';
+import { CATEGORIES } from '../../src/lib/categories.mjs';
 
 const baseSkill = {
   slug: 'test-skill',
@@ -176,5 +177,86 @@ describe('renderWhatsNewGroups', () => {
   it('renders empty state when no skills', () => {
     const html = renderWhatsNewGroups([]);
     expect(html).toContain('No skills');
+  });
+});
+
+const catSkills = [
+  {
+    slug: 'nava-labs-style', name: 'Nava Labs Style', description: 'Writing style guide',
+    plugin: 'labs-tir-prototyping', author: 'navapbc', committer: null, type: 'skill',
+    sensitive_data: false, compatibility: ['claude-code'],
+    last_updated: new Date().toISOString(),
+    repo: 'navapbc/labs-tir-prototyping', path: 'skills/nava-labs-style/SKILL.md', content: '',
+  },
+  {
+    slug: 'diagram', name: 'Diagram', description: 'Draw diagrams',
+    plugin: 'digital-service-orchestra', author: 'navapbc', committer: null, type: 'skill',
+    sensitive_data: false, compatibility: ['claude-code'],
+    last_updated: '2025-01-01T00:00:00Z',
+    repo: 'navapbc/digital-service-orchestra', path: 'SKILL.md', content: '',
+  },
+];
+
+describe('renderCategoryGrid', () => {
+  it('renders a card for each category', () => {
+    const html = renderCategoryGrid(CATEGORIES, catSkills);
+    expect(html).toContain('Writing &amp; Comms');
+    expect(html).toContain('Research &amp; Analysis');
+    expect(html).toContain('Planning');
+    expect(html).toContain('Dev &amp; Code');
+    expect(html).toContain('Ops &amp; Automation');
+  });
+
+  it('shows curated skill names in the correct card', () => {
+    const html = renderCategoryGrid(CATEGORIES, catSkills);
+    expect(html).toContain('Nava Labs Style');
+    expect(html).toContain('Diagram');
+  });
+
+  it('shows "new" badge on skills updated within the last 7 days', () => {
+    const html = renderCategoryGrid(CATEGORIES, catSkills);
+    const writingSection = html.split('Research &amp;')[0];
+    expect(writingSection).toContain('new');
+  });
+
+  it('does not show "new" badge on old skills', () => {
+    const html = renderCategoryGrid(CATEGORIES, catSkills);
+    const researchSection = html.split('Research &amp; Analysis')[1]?.split('Planning')[0] || '';
+    expect(researchSection).not.toContain('>new<');
+  });
+
+  it('renders the submit CTA cell', () => {
+    const html = renderCategoryGrid(CATEGORIES, catSkills);
+    expect(html).toContain('Submit a skill');
+    expect(html).toContain('docs.google.com');
+  });
+
+  it('skips curated slugs not in allSkills without erroring', () => {
+    const html = renderCategoryGrid(CATEGORIES, []);
+    expect(html).toContain('Writing &amp; Comms');
+    expect(html).not.toContain('undefined');
+  });
+});
+
+describe('renderNewThisWeek', () => {
+  it('returns empty string when no skills are new', () => {
+    const old = [{ ...catSkills[1] }];
+    expect(renderNewThisWeek(old, CATEGORIES)).toBe('');
+  });
+
+  it('renders new skills with name and link', () => {
+    const html = renderNewThisWeek(catSkills, CATEGORIES);
+    expect(html).toContain('Nava Labs Style');
+    expect(html).toContain('/skills/nava-labs-style');
+    expect(html).toContain("What's new");
+  });
+
+  it('caps output at 3 skills', () => {
+    const manyNew = Array.from({ length: 10 }, (_, i) => ({
+      ...catSkills[0], slug: `skill-${i}`, name: `Skill ${i}`,
+    }));
+    const html = renderNewThisWeek(manyNew, CATEGORIES);
+    const linkCount = (html.match(/href="\/skills\//g) || []).length;
+    expect(linkCount).toBeLessThanOrEqual(3);
   });
 });

@@ -1,3 +1,5 @@
+import { SUBMIT_FORM_URL } from './categories.mjs';
+
 export function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -287,4 +289,83 @@ export function renderWhatsNewGroups(skills) {
   }
 
   return group('This week', thisWeek) + group('This month', thisMonth) + group('Earlier', earlier);
+}
+
+export function renderCategoryGrid(categories, allSkills) {
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const bySlug = new Map(allSkills.map(s => [s.slug, s]));
+
+  function isNew(skill) {
+    return !!skill.last_updated && new Date(skill.last_updated).getTime() >= sevenDaysAgo;
+  }
+
+  const categoryCards = categories.map(cat => {
+    const skills = cat.curatedSlugs.map(slug => bySlug.get(slug)).filter(Boolean);
+
+    const rows = skills.length
+      ? skills.map(skill => `
+          <div class="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
+            <span class="text-xs text-gray-700">${escapeHtml(skill.name)}</span>
+            ${isNew(skill) ? `<span class="px-1.5 py-0.5 text-xs font-semibold rounded" style="background:#f5f3ff;color:${escapeHtml(cat.textColor)}">new</span>` : ''}
+          </div>`).join('')
+      : '<div class="text-xs text-gray-400 py-1 italic">No skills yet</div>';
+
+    return `
+      <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid ${escapeHtml(cat.borderColor)}">
+        <div class="text-xs font-bold uppercase tracking-wider mb-3" style="color:${escapeHtml(cat.textColor)}">${escapeHtml(cat.label)}</div>
+        <div class="mb-3">${rows}</div>
+        ${skills.length ? `<div class="text-xs text-gray-400">${skills.length} curated</div>` : ''}
+      </div>`;
+  }).join('');
+
+  const submitCell = `
+    <div class="border border-dashed border-plum-200 bg-plum-50 rounded-lg p-4 flex flex-col items-center justify-center text-center gap-2">
+      <div class="text-xs font-semibold text-plum-700">Have a skill to share?</div>
+      <div class="text-xs text-gray-500 leading-relaxed">Submit via Google Form. The ops team reviews submissions weekly.</div>
+      <a href="${escapeHtml(SUBMIT_FORM_URL)}" target="_blank" rel="noopener"
+         class="px-3 py-1.5 text-xs font-medium bg-plum-600 text-white rounded hover:bg-plum-700 no-underline transition-colors">
+        Submit a skill
+      </a>
+    </div>`;
+
+  return `
+    <section class="mb-6">
+      <div class="grid grid-cols-3 gap-4">
+        ${categoryCards}
+        ${submitCell}
+      </div>
+    </section>`;
+}
+
+export function renderNewThisWeek(allSkills, categories) {
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const newSkills = allSkills
+    .filter(s => s.last_updated && new Date(s.last_updated).getTime() >= sevenDaysAgo)
+    .slice(0, 3);
+
+  if (!newSkills.length) return '';
+
+  function getCategoryLabel(slug) {
+    const cat = categories.find(c => c.curatedSlugs.includes(slug));
+    return cat ? cat.label : '';
+  }
+
+  const cards = newSkills.map(skill => {
+    const catLabel = getCategoryLabel(skill.slug);
+    return `
+      <a href="/skills/${escapeHtml(skill.slug)}"
+         class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-1 no-underline hover:border-gray-300 transition-colors">
+        <div class="text-xs font-semibold text-gray-900 mb-1">${escapeHtml(skill.name)}</div>
+        ${catLabel ? `<div class="text-xs text-gray-400">${escapeHtml(catLabel)}</div>` : ''}
+      </a>`;
+  }).join('');
+
+  return `
+    <div class="bg-white border border-gray-200 rounded-lg p-4 mb-10">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-xs font-bold uppercase tracking-wider text-gray-700">New this week</div>
+        <a href="/whats-new" class="text-xs text-plum-600 hover:text-plum-700 no-underline font-medium">What's new &rarr;</a>
+      </div>
+      <div class="flex gap-3">${cards}</div>
+    </div>`;
 }
