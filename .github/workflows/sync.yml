@@ -26,7 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
     permissions:
-      contents: write
+      contents: read
+      id-token: write   # required for OIDC role assumption
     steps:
       - uses: actions/checkout@v4
 
@@ -39,16 +40,18 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Sync registry
+      - name: Install API Lambda dependencies
+        run: cd functions/api && pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Sync registry to DynamoDB
         env:
           GITHUB_TOKEN: ${{ secrets.REGISTRY_SCAN_TOKEN }}
           GITHUB_ORG: navapbc
-        run: pnpm run sync:v2
-
-      - name: Commit updated registry
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/registry/index.json
-          git diff --staged --quiet || git commit -m "chore: sync registry [skip ci]"
-          git push
+          SYNC_ENV: ${{ github.event_name == 'workflow_dispatch' && (inputs.environment == 'production' && 'prod' || 'staging') || 'staging' }}
+        run: node scripts/sync-registry-v2.mjs --env $SYNC_ENV

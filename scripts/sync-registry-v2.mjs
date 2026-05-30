@@ -1,16 +1,26 @@
 #!/usr/bin/env node
 // scripts/sync-registry-v2.mjs
 // Uses GitHub Code Search to find skill/agent files across the org at any directory depth.
-// Handles deep paths like plugins/dso/skills/*/SKILL.md that v1 misses.
+// Writes results directly to DynamoDB (source of truth).
 //
-// Requires: GITHUB_TOKEN (classic PAT, SSO-authorized for org)
-// Usage: node scripts/sync-registry-v2.mjs [--org navapbc] [--output public/registry/index.json]
+// Requires: GITHUB_TOKEN env var (classic PAT, SSO-authorized for org)
+//           AWS credentials with DynamoDB write access
+// Usage:
+//   node scripts/sync-registry-v2.mjs --env staging
+//   node scripts/sync-registry-v2.mjs --env prod
+//   node scripts/sync-registry-v2.mjs --env staging --json-output public/registry/index.json
 
 import { Octokit } from '@octokit/rest';
-import { readFileSync, writeFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { writeFileSync } from 'fs';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { parseFrontmatter, getDescription, slugify } from './utils.mjs';
+
+// AWS SDK lives in functions/api/node_modules
+const _req = createRequire(resolve(dirname(fileURLToPath(import.meta.url)), '../functions/api/package.json'));
+const { DynamoDBClient } = _req('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, UpdateCommand, PutCommand } = _req('@aws-sdk/lib-dynamodb');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -22,13 +32,25 @@ function getArg(flag) {
 }
 
 const ORG = getArg('--org') || process.env.GITHUB_ORG || 'navapbc';
-const OUTPUT = getArg('--output') || 'public/registry/index.json';
+const JSON_OUTPUT = getArg('--json-output'); // optional local JSON backup
 const VERBOSE = args.includes('--verbose');
+
+const ENV = getArg('--env') || process.env.SYNC_ENV;
+if (!ENV || !['staging', 'prod'].includes(ENV)) {
+  console.error('Usage: node scripts/sync-registry-v2.mjs --env <staging|prod> [--json-output path]');
+  process.exit(1);
+}
+
+const PROJECT = 'skills-registry';
+const SKILLS_TABLE  = `${PROJECT}-skills-${ENV}`;
+const PLUGINS_TABLE = `${PROJECT}-plugins-${ENV}`;
 
 if (!process.env.GITHUB_TOKEN) {
   console.error('GITHUB_TOKEN environment variable is required');
   process.exit(1);
 }
+
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: 'us-east-1' }));
 
 const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
@@ -218,12 +240,6 @@ const AGENT_QUERIES = [
 async function main() {
   console.log(`Searching ${ORG} org via GitHub Code Search...`);
 
-  const outputPath = join(ROOT, OUTPUT);
-  let existing = { plugins: [], skills: [] };
-  try {
-    existing = JSON.parse(readFileSync(outputPath, 'utf8'));
-  } catch { /* first run */ }
-
   const skillHits = new Map(); // full_name::path -> hit
   const agentHits = new Map();
 
@@ -246,8 +262,8 @@ async function main() {
   const totalHits = skillHits.size + agentHits.size;
   console.log(`\nFound ${skillHits.size} skill files, ${agentHits.size} agent files — fetching content...\n`);
 
-  const skillMap = new Map(existing.skills.map(s => [`${s.repo}::${s.path}`, s]));
-  const pluginMap = new Map(existing.plugins.map(p => [p.repo, p]));
+  const skillMap = new Map();
+  const pluginMap = new Map();
   const updatedPlugins = new Set();
   let fetched = 0;
 
@@ -299,18 +315,106 @@ async function main() {
   }
 
   const skills = deduplicateRecords([...skillMap.values()]);
+  const plugins = [...pluginMap.values()];
 
-  const registry = {
-    generated_at: new Date().toISOString(),
-    org: ORG,
-    plugins: [...pluginMap.values()],
-    skills,
-  };
-
-  writeFileSync(outputPath, JSON.stringify(registry, null, 2));
   process.stdout.write('\n');
-  console.log(`\nRegistry: ${registry.plugins.length} plugins, ${registry.skills.length} skills/agents`);
-  console.log(`Wrote ${outputPath}`);
+  console.log(`\nRegistry: ${plugins.length} plugins, ${skills.length} skills/agents`);
+  console.log(`Writing to DynamoDB (${ENV})...\n`);
+
+  const now = new Date().toISOString();
+  let skillOk = 0, skillSkipped = 0, skillErr = 0;
+
+  for (const skill of skills) {
+    try {
+      // Update github-sourced fields; create new record if slug is unseen.
+      // Records with source=user-submitted are skipped (ConditionalCheckFailed).
+      await ddb.send(new UpdateCommand({
+        TableName: SKILLS_TABLE,
+        Key: { slug: skill.slug },
+        UpdateExpression: `SET
+          #name        = :name,
+          description  = :desc,
+          plugin       = :plugin,
+          repo         = :repo,
+          #path        = :path,
+          author       = :author,
+          committer    = :committer,
+          version      = :version,
+          compatibility = :compat,
+          sensitive_data = :sensitive,
+          #type        = :type,
+          content      = :content,
+          last_updated = :updated,
+          updated_at   = :now,
+          source       = if_not_exists(source,       :github),
+          #status      = if_not_exists(#status,      :approved),
+          visibility   = if_not_exists(visibility,   :public),
+          created_by   = if_not_exists(created_by,   :system),
+          created_at   = if_not_exists(created_at,   :now)`,
+        ExpressionAttributeNames: {
+          '#name': 'name', '#path': 'path', '#type': 'type', '#status': 'status',
+        },
+        ExpressionAttributeValues: {
+          ':name': skill.name, ':desc': skill.description, ':plugin': skill.plugin,
+          ':repo': skill.repo, ':path': skill.path, ':author': skill.author,
+          ':committer': skill.committer || null, ':version': skill.version || '1.0.0',
+          ':compat': skill.compatibility, ':sensitive': skill.sensitive_data ?? false,
+          ':type': skill.type, ':content': skill.content,
+          ':updated': skill.last_updated || now, ':now': now,
+          ':github': 'github', ':approved': 'approved', ':public': 'public', ':system': 'system',
+        },
+        // Only update existing records if they came from github; always create new ones.
+        ConditionExpression: 'attribute_not_exists(slug) OR #source = :github',
+        ExpressionAttributeNames: {
+          '#name': 'name', '#path': 'path', '#type': 'type', '#status': 'status', '#source': 'source',
+        },
+      }));
+      skillOk++;
+      process.stdout.write('.');
+    } catch (err) {
+      if (err.name === 'ConditionalCheckFailedException') {
+        skillSkipped++; // user-submitted — leave it alone
+        process.stdout.write('s');
+      } else {
+        console.error(`\nError writing skill ${skill.slug}: ${err.message}`);
+        skillErr++;
+      }
+    }
+  }
+
+  console.log(`\nSkills: ${skillOk} updated, ${skillSkipped} skipped (user-submitted), ${skillErr} errors`);
+
+  let pluginOk = 0, pluginErr = 0;
+  for (const plugin of plugins) {
+    try {
+      await ddb.send(new PutCommand({
+        TableName: PLUGINS_TABLE,
+        Item: {
+          ...plugin,
+          source: 'github',
+          status: 'approved',
+          visibility: 'public',
+          created_by: 'system',
+          updated_at: now,
+          created_at: now,
+          skills_count: plugin.skill_count || 0,
+        },
+      }));
+      pluginOk++;
+      process.stdout.write('.');
+    } catch (err) {
+      console.error(`\nError writing plugin ${plugin.slug}: ${err.message}`);
+      pluginErr++;
+    }
+  }
+
+  console.log(`\nPlugins: ${pluginOk} updated, ${pluginErr} errors`);
+
+  if (JSON_OUTPUT) {
+    const registry = { generated_at: now, org: ORG, plugins, skills };
+    writeFileSync(JSON_OUTPUT, JSON.stringify(registry, null, 2));
+    console.log(`\nJSON backup written to ${JSON_OUTPUT}`);
+  }
 }
 
 main().catch(err => {
