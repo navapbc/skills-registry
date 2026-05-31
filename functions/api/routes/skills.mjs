@@ -91,6 +91,7 @@ export function skillsRoutes(app) {
 
     const existing = await ddb.send(new GetCommand({ TableName: tables.skills(), Key: { slug } }));
     if (!existing.Item) return c.json({ error: 'Not found' }, 404);
+    if (existing.Item.source === 'category-config') return c.json({ error: 'Not found' }, 404);
     if (!can(user, 'edit:any-skill') && !can(user, 'update:skill', existing.Item)) {
       return c.json({ error: 'Forbidden' }, 403);
     }
@@ -134,6 +135,7 @@ export function skillsRoutes(app) {
     const { slug } = c.req.param();
     const existing = await ddb.send(new GetCommand({ TableName: tables.skills(), Key: { slug } }));
     if (!existing.Item) return c.json({ error: 'Not found' }, 404);
+    if (existing.Item.source === 'category-config') return c.json({ error: 'Not found' }, 404);
 
     const body = await c.req.json().catch(() => ({}));
     const now = new Date().toISOString();
@@ -164,6 +166,7 @@ export function skillsRoutes(app) {
     const { slug } = c.req.param();
     const existing = await ddb.send(new GetCommand({ TableName: tables.skills(), Key: { slug } }));
     if (!existing.Item) return c.json({ error: 'Not found' }, 404);
+    if (existing.Item.source === 'category-config') return c.json({ error: 'Not found' }, 404);
 
     const body = await c.req.json().catch(() => ({}));
     const now = new Date().toISOString();

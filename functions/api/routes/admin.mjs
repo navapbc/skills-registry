@@ -111,7 +111,18 @@ export function adminRoutes(app) {
       last_updated: now,
     };
 
-    await ddb.send(new PutCommand({ TableName: tables.skills(), Item: skill }));
+    try {
+      await ddb.send(new PutCommand({
+        TableName: tables.skills(),
+        Item: skill,
+        ConditionExpression: 'attribute_not_exists(slug)',
+      }));
+    } catch (err) {
+      if (err.name === 'ConditionalCheckFailedException') {
+        return c.json({ error: `Slug "${skill.slug}" already exists` }, 409);
+      }
+      throw err;
+    }
     await writeAudit(user, 'created', 'enterprise-skill', skill.slug);
     return c.json(skill, 201);
   });

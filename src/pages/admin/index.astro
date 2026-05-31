@@ -451,7 +451,7 @@ async function loadAudit(panel) {
             <td class="py-2 text-gray-400 text-xs whitespace-nowrap">${escapeHtml(e.timestamp ? new Date(e.timestamp).toLocaleString() : '')}</td>
             <td class="py-2 text-gray-600">${escapeHtml(e.user_id ?? '')}</td>
             <td class="py-2"><span class="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">${escapeHtml(e.action ?? '')}</span></td>
-            <td class="py-2 text-gray-500 font-mono text-xs">${escapeHtml(e.entity_type ?? '')} / ${escapeHtml(e.entity_id ?? '')}</td>
+            <td class="py-2 text-gray-500 font-mono text-xs">${escapeHtml(e.resource_type ?? '')} / ${escapeHtml(e.resource_id ?? '')}</td>
           </tr>`).join('')}
       </tbody>
     </table>
