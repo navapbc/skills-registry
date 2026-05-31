@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { can } from '../../functions/api/lib/permissions.mjs';
+import { can, atLeast } from '../../functions/api/lib/permissions.mjs';
 
-const admin = { user_id: 'admin@navapbc.com', role: 'admin' };
-const user  = { user_id: 'user@navapbc.com',  role: 'user'  };
+const admin    = { user_id: 'admin@navapbc.com',    role: 'admin'    };
+const maintain = { user_id: 'maintain@navapbc.com', role: 'maintain' };
+const user     = { user_id: 'user@navapbc.com',     role: 'user'     };
 
 const publicApproved   = { slug: 'x', visibility: 'public',   status: 'approved', created_by: user.user_id };
 const internalApproved = { slug: 'x', visibility: 'internal', status: 'approved', created_by: user.user_id };
@@ -42,7 +43,7 @@ describe('can — create:skill', () => {
   });
 });
 
-describe('can — update:skill / delete:skill', () => {
+describe('can — update:skill', () => {
   it('user can update their own skill', () => {
     expect(can(user, 'update:skill', publicApproved)).toBe(true);
   });
@@ -50,17 +51,9 @@ describe('can — update:skill / delete:skill', () => {
     const otherSkill = { ...publicApproved, created_by: 'other@navapbc.com' };
     expect(can(user, 'update:skill', otherSkill)).toBe(false);
   });
-  it('user can delete their own skill', () => {
-    expect(can(user, 'delete:skill', publicApproved)).toBe(true);
-  });
-  it('user cannot delete another user skill', () => {
-    const otherSkill = { ...publicApproved, created_by: 'other@navapbc.com' };
-    expect(can(user, 'delete:skill', otherSkill)).toBe(false);
-  });
-  it('admin can update or delete any skill', () => {
+  it('admin can update any skill', () => {
     const otherSkill = { ...publicApproved, created_by: 'other@navapbc.com' };
     expect(can(admin, 'update:skill', otherSkill)).toBe(true);
-    expect(can(admin, 'delete:skill', otherSkill)).toBe(true);
   });
 });
 
@@ -87,5 +80,67 @@ describe('can — admin-only actions', () => {
     expect(can(admin, 'set:role')).toBe(true);
     expect(can(admin, 'manage:plugins')).toBe(true);
     expect(can(admin, 'read:audit')).toBe(true);
+  });
+});
+
+describe('can — maintain role: approve/reject', () => {
+  it('maintain can approve a pending skill', () => {
+    expect(can(maintain, 'approve:skill', ownPending)).toBe(true);
+  });
+  it('maintain can reject a pending skill', () => {
+    expect(can(maintain, 'reject:skill', ownPending)).toBe(true);
+  });
+  it('user still cannot approve or reject', () => {
+    expect(can(user, 'approve:skill', ownPending)).toBe(false);
+  });
+});
+
+describe('can — maintain role: edit any skill', () => {
+  it('maintain can edit any skill', () => {
+    const otherSkill = { ...publicApproved, created_by: 'other@navapbc.com' };
+    expect(can(maintain, 'update:skill', otherSkill)).toBe(true);
+  });
+  it('user can still edit their own skill', () => {
+    expect(can(user, 'update:skill', publicApproved)).toBe(true);
+  });
+  it('user cannot edit another user skill', () => {
+    const otherSkill = { ...publicApproved, created_by: 'other@navapbc.com' };
+    expect(can(user, 'update:skill', otherSkill)).toBe(false);
+  });
+});
+
+describe('can — maintain role: enterprise and categories', () => {
+  it('maintain can manage enterprise skills', () => {
+    expect(can(maintain, 'manage:enterprise')).toBe(true);
+  });
+  it('maintain can manage categories', () => {
+    expect(can(maintain, 'manage:categories')).toBe(true);
+  });
+  it('user cannot manage enterprise skills', () => {
+    expect(can(user, 'manage:enterprise')).toBe(false);
+  });
+});
+
+describe('can — delete:skill is admin-only', () => {
+  it('user cannot delete any skill (admin-only now)', () => {
+    expect(can(user, 'delete:skill', publicApproved)).toBe(false);
+  });
+  it('maintain cannot delete skills', () => {
+    expect(can(maintain, 'delete:skill', publicApproved)).toBe(false);
+  });
+  it('admin can delete any skill', () => {
+    expect(can(admin, 'delete:skill', publicApproved)).toBe(true);
+  });
+});
+
+describe('atLeast helper', () => {
+  it('user is not at least maintain', () => {
+    expect(atLeast(user, 'maintain')).toBe(false);
+  });
+  it('maintain is at least maintain', () => {
+    expect(atLeast(maintain, 'maintain')).toBe(true);
+  });
+  it('admin is at least maintain', () => {
+    expect(atLeast(admin, 'maintain')).toBe(true);
   });
 });
