@@ -45,6 +45,7 @@ function makeSessionCookie(email = 'user@navapbc.com') {
 
 const USER_RECORD  = { user_id: 'user@navapbc.com',  email: 'user@navapbc.com',  name: 'Test',  role: 'user'  };
 const ADMIN_RECORD = { user_id: 'admin@navapbc.com', email: 'admin@navapbc.com', name: 'Admin', role: 'admin' };
+const MAINTAIN_RECORD = { user_id: 'maintain@navapbc.com', email: 'maintain@navapbc.com', name: 'Maintainer', role: 'maintain' };
 
 beforeEach(() => mockSend.mockReset());
 
@@ -131,18 +132,16 @@ describe('POST /api/skills', () => {
 });
 
 describe('DELETE /api/skills/:slug', () => {
-  it('allows user to delete their own skill', async () => {
+  it('returns 403 for user deleting own skill (now admin-only)', async () => {
     mockSend
       .mockResolvedValueOnce({ Item: USER_RECORD })
-      .mockResolvedValueOnce({ Item: { slug: 'my-skill', created_by: 'user@navapbc.com', status: 'pending' } })
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({});
+      .mockResolvedValueOnce({ Item: { slug: 'my-skill', created_by: 'user@navapbc.com', status: 'pending' } });
 
     const res = await app.request('/api/skills/my-skill', {
       method: 'DELETE',
       headers: { Cookie: makeSessionCookie() },
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
   });
 
   it('returns 403 when user tries to delete another user skill', async () => {
@@ -183,5 +182,62 @@ describe('POST /api/skills/:slug/approve', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe('approved');
+  });
+});
+
+describe('POST /api/skills — maintain auto-approves', () => {
+  it('creates skill with status=approved for maintain role', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({});
+
+    const res = await app.request('/api/skills', {
+      method: 'POST',
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slug: 'my-skill', name: 'My Skill', description: 'desc', plugin: 'p',
+        repo: 'org/repo', path: 'SKILL.md', author: 'me',
+        compatibility: ['claude-code'], type: 'skill',
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.status).toBe('approved');
+  });
+});
+
+describe('DELETE /api/skills/:slug — admin-only', () => {
+  it('returns 403 for user deleting own skill (now admin-only)', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'my-skill', created_by: 'user@navapbc.com', status: 'pending' } });
+
+    const res = await app.request('/api/skills/my-skill', {
+      method: 'DELETE',
+      headers: { Cookie: makeSessionCookie() },
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('POST /api/skills — tags field', () => {
+  it('stores tags array when provided', async () => {
+    let capturedItem;
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockImplementationOnce((cmd) => { capturedItem = cmd.params?.Item; return {}; })
+      .mockResolvedValueOnce({});
+
+    await app.request('/api/skills', {
+      method: 'POST',
+      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slug: 'tagged', name: 'Tagged', description: 'desc', plugin: 'p',
+        repo: 'org/repo', path: 'SKILL.md', author: 'me',
+        compatibility: ['claude-code'], type: 'skill', tags: ['testing', 'docs'],
+      }),
+    });
+    expect(capturedItem?.tags).toEqual(['testing', 'docs']);
   });
 });

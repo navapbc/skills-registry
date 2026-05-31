@@ -1,7 +1,7 @@
 import { ddb, tables, UpdateCommand, ScanCommand } from '../lib/dynamo.mjs';
 import { can } from '../lib/permissions.mjs';
 
-const VALID_ROLES = new Set(['user', 'admin']);
+const VALID_ROLES = new Set(['user', 'maintain', 'admin']);
 
 export function usersRoutes(app) {
   app.get('/api/users/me', (c) => {
@@ -22,7 +22,7 @@ export function usersRoutes(app) {
 
     const body = await c.req.json().catch(() => null);
     if (!body?.role || !VALID_ROLES.has(body.role)) {
-      return c.json({ error: 'role must be "user" or "admin"' }, 400);
+      return c.json({ error: 'role must be "user", "maintain", or "admin"' }, 400);
     }
 
     const targetId = decodeURIComponent(c.req.param('id'));

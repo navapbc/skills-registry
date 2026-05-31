@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { ddb, tables, GetCommand, PutCommand, UpdateCommand, DeleteCommand, ScanCommand, BatchGetCommand } from '../lib/dynamo.mjs';
-import { can } from '../lib/permissions.mjs';
+import { can, atLeast } from '../lib/permissions.mjs';
 import { writeAudit } from '../lib/audit.mjs';
 
 const REQUIRED_FIELDS = ['slug', 'name', 'description', 'plugin', 'repo', 'path', 'author', 'compatibility', 'type'];
@@ -67,7 +67,7 @@ export function skillsRoutes(app) {
     const now = new Date().toISOString();
     const skill = {
       ...body,
-      status: user.role === 'admin' ? 'approved' : 'pending',
+      status: atLeast(user, 'maintain') ? 'approved' : 'pending',
       visibility: body.visibility ?? 'public',
       source: 'user-submitted',
       created_by: user.user_id,
@@ -76,6 +76,7 @@ export function skillsRoutes(app) {
       version: body.version ?? '1.0.0',
       sensitive_data: body.sensitive_data ?? false,
       content: body.content ?? '',
+      tags: body.tags ?? [],
       last_updated: now,
     };
 
@@ -90,7 +91,9 @@ export function skillsRoutes(app) {
 
     const existing = await ddb.send(new GetCommand({ TableName: tables.skills(), Key: { slug } }));
     if (!existing.Item) return c.json({ error: 'Not found' }, 404);
-    if (!can(user, 'update:skill', existing.Item)) return c.json({ error: 'Forbidden' }, 403);
+    if (!can(user, 'edit:any-skill') && !can(user, 'update:skill', existing.Item)) {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
 
     const body = await c.req.json().catch(() => null);
     if (!body) return c.json({ error: 'Invalid JSON' }, 400);
@@ -103,6 +106,7 @@ export function skillsRoutes(app) {
       updated_at: now,
       updated_by: user.user_id,
       status: user.role === 'admin' ? (body.status ?? existing.Item.status) : 'pending',
+      tags: body.tags ?? existing.Item.tags ?? [],
     };
 
     await ddb.send(new PutCommand({ TableName: tables.skills(), Item: updated }));
@@ -116,7 +120,7 @@ export function skillsRoutes(app) {
 
     const existing = await ddb.send(new GetCommand({ TableName: tables.skills(), Key: { slug } }));
     if (!existing.Item) return c.json({ error: 'Not found' }, 404);
-    if (!can(user, 'delete:skill', existing.Item)) return c.json({ error: 'Forbidden' }, 403);
+    if (!can(user, 'delete:skill')) return c.json({ error: 'Forbidden' }, 403);
 
     await ddb.send(new DeleteCommand({ TableName: tables.skills(), Key: { slug } }));
     await writeAudit(user, 'deleted', 'skill', slug);
