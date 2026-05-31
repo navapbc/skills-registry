@@ -28,6 +28,8 @@ function rewriteUri(uri) {
   if (uri.indexOf('/plugins') === 0) return '/plugins/index.html';
   if (uri.indexOf('/agents') === 0) return '/agents/index.html';
   if (uri.indexOf('/category') === 0) return '/category/index.html';
+  if (uri.indexOf('/admin') === 0) return '/admin/index.html';
+  if (uri.indexOf('/submit') === 0) return '/submit/index.html';
 
   return uri + '/index.html';
 }
