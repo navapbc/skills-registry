@@ -122,23 +122,27 @@ const TYPE_STYLES = {
 
 let searchIndex = [];
 
-// Collect all slugs needed by the category grid for a fast BatchGetItem fetch
-const categorySlugs = [...new Set(
-  CATEGORIES.flatMap(c => [...(c.featuredSlugs || []), ...(c.slugs || [])])
-)].join(',');
+// Fetch admin-managed category config first, then merge with static CATEGORIES
+fetchApi('/categories').then(({ categories: apiCategories }) => {
+  const mergedCategories = CATEGORIES.map(c => {
+    const override = apiCategories.find(x => x.id === c.id);
+    return { ...c, featuredSlugs: override?.featuredSlugs ?? [] };
+  });
 
-// Two parallel fetches:
-//  1. Category slugs only (BatchGetItem — fast, targeted)
-//  2. All skills for browse sections + search index (paginated scan)
-// Plus plugins for the plugin chips
-Promise.all([
-  fetchApi('/skills?slugs=' + encodeURIComponent(categorySlugs)),
-  fetchApi('/skills'),
-  fetchApi('/plugins'),
-]).then(([{ skills: catSkills }, { skills }, { plugins }]) => {
+  const categorySlugs = [...new Set(
+    mergedCategories.flatMap(c => [...(c.featuredSlugs || []), ...(c.slugs || [])])
+  )].join(',');
+
+  return Promise.all([
+    fetchApi('/skills?slugs=' + encodeURIComponent(categorySlugs)),
+    fetchApi('/skills'),
+    fetchApi('/plugins'),
+    Promise.resolve(mergedCategories),
+  ]);
+}).then(([{ skills: catSkills }, { skills }, { plugins }, mergedCategories]) => {
   // Category grid uses targeted fetch; new-this-week uses full list for freshness
-  document.getElementById('category-grid').innerHTML = renderCategoryGrid(CATEGORIES, catSkills);
-  document.getElementById('new-this-week').innerHTML = renderNewThisWeek(skills, CATEGORIES);
+  document.getElementById('category-grid').innerHTML = renderCategoryGrid(mergedCategories, catSkills);
+  document.getElementById('new-this-week').innerHTML = renderNewThisWeek(skills, mergedCategories);
 
   const allSkills = skills.filter(s => s.type === 'skill');
   const allAgents = skills.filter(s => s.type === 'agent');
