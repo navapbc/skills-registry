@@ -50,6 +50,14 @@ export function renderSkillCard(skill, showPlugin = true) {
   const sensitiveBadge = skill.sensitive_data
     ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 rounded" title="Contains sensitive data">⚠</span>`
     : '';
+  const anthropicBadge = skill.source === 'anthropic-builtin'
+    ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-violet-50 text-violet-700 rounded">Anthropic Tool</span>`
+    : '';
+  const tags = skill.tags?.length
+    ? `<div class="flex flex-wrap gap-1" data-tags>
+      ${skill.tags.slice(0, 3).map(t => `<span class="px-1 py-0.5 text-xs bg-gray-100 text-gray-500 rounded">#${escapeHtml(t)}</span>`).join('')}
+    </div>`
+    : '';
 
   return `<a
     href="/skills/${escapeHtml(skill.slug)}"
@@ -64,9 +72,10 @@ export function renderSkillCard(skill, showPlugin = true) {
   >
     <div class="flex items-start justify-between gap-2 flex-wrap">
       <span class="font-semibold text-sm text-gray-900">${escapeHtml(skill.name)}</span>
-      <div class="flex items-center gap-1 flex-wrap">${pluginBadge}${agentBadge}${sensitiveBadge}</div>
+      <div class="flex items-center gap-1 flex-wrap">${pluginBadge}${agentBadge}${sensitiveBadge}${anthropicBadge}</div>
     </div>
     <p class="text-xs text-gray-500 leading-relaxed m-0 flex-1">${escapeHtml(preview)}</p>
+    ${tags}
     <div class="flex items-center justify-between mt-auto pt-1">
       <span class="flex items-center gap-1.5 cursor-pointer"
         data-github-url="${escapeHtml(githubUrl || '')}"
@@ -165,6 +174,16 @@ export function renderSkillDetail(skill) {
           <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">Description</h2>
           <p class="text-sm text-gray-600 leading-relaxed m-0">${escapeHtml(skill.description)}</p>
           ${skill.compatibility.length ? `<div class="flex items-center gap-2 flex-wrap mt-3"><span class="text-xs text-gray-400">Works with:</span>${compatBadges}</div>` : ''}
+          ${skill.tags?.length
+  ? `<div class="flex flex-wrap gap-1.5 mt-3">
+      ${skill.tags.map(t => `<span class="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-500 rounded">#${escapeHtml(t)}</span>`).join('')}
+    </div>`
+  : ''}
+          ${skill.source === 'anthropic-builtin'
+  ? `<div class="mt-4 p-3 bg-violet-50 border border-violet-200 rounded-lg text-xs text-violet-700">
+      <strong>Anthropic Tool</strong> — This skill runs via the Anthropic Messages API code execution container. It is not a SKILL.md workflow.
+    </div>`
+  : ''}
         </section>
         ${toolsUsed}
         <section>

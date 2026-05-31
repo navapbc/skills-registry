@@ -291,3 +291,43 @@ describe('renderCategoryDetail', () => {
     expect(html).not.toContain('Featured');
   });
 });
+
+describe('renderSkillCard — tags', () => {
+  const base = {
+    slug: 'test', name: 'Test Skill', description: 'A test skill',
+    plugin: 'test-plugin', author: 'author', compatibility: ['claude-code'],
+    type: 'skill', source: 'github', tags: ['testing', 'docs', 'security', 'extra'],
+  };
+
+  it('renders up to 3 tag chips', () => {
+    const html = renderSkillCard(base);
+    expect(html).toContain('#testing');
+    expect(html).toContain('#docs');
+    expect(html).toContain('#security');
+    expect(html).not.toContain('#extra');
+  });
+
+  it('renders no tag section when tags is empty', () => {
+    const html = renderSkillCard({ ...base, tags: [] });
+    expect(html).not.toContain('data-tags');
+  });
+
+  it('renders no tag section when tags is absent', () => {
+    const { tags: _, ...noTags } = base;
+    const html = renderSkillCard(noTags);
+    expect(html).not.toContain('data-tags');
+  });
+});
+
+describe('renderSkillCard — anthropic-builtin badge', () => {
+  const builtin = {
+    slug: 'xlsx', name: 'xlsx', description: 'Excel tool',
+    plugin: '', author: 'Anthropic', compatibility: [],
+    type: 'tool', source: 'anthropic-builtin', tags: [],
+  };
+
+  it('shows Anthropic Tool badge for anthropic-builtin source', () => {
+    const html = renderSkillCard(builtin);
+    expect(html).toContain('Anthropic Tool');
+  });
+});
