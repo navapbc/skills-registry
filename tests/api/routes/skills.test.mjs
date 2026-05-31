@@ -131,6 +131,25 @@ describe('POST /api/skills', () => {
   });
 });
 
+describe('PUT /api/skills/:slug', () => {
+  it('allows maintain to edit another user skill', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'other-skill', created_by: 'other@navapbc.com', status: 'approved' } })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({});
+
+    const res = await app.request('/api/skills/other-skill', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Updated Name', description: 'Updated desc' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('approved');
+  });
+});
+
 describe('DELETE /api/skills/:slug', () => {
   it('returns 403 for user deleting own skill (now admin-only)', async () => {
     mockSend
@@ -207,19 +226,6 @@ describe('POST /api/skills — maintain auto-approves', () => {
   });
 });
 
-describe('DELETE /api/skills/:slug — admin-only', () => {
-  it('returns 403 for user deleting own skill (now admin-only)', async () => {
-    mockSend
-      .mockResolvedValueOnce({ Item: USER_RECORD })
-      .mockResolvedValueOnce({ Item: { slug: 'my-skill', created_by: 'user@navapbc.com', status: 'pending' } });
-
-    const res = await app.request('/api/skills/my-skill', {
-      method: 'DELETE',
-      headers: { Cookie: makeSessionCookie() },
-    });
-    expect(res.status).toBe(403);
-  });
-});
 
 describe('POST /api/skills — tags field', () => {
   it('stores tags array when provided', async () => {

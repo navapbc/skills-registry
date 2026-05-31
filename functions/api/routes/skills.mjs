@@ -105,7 +105,7 @@ export function skillsRoutes(app) {
       slug,
       updated_at: now,
       updated_by: user.user_id,
-      status: user.role === 'admin' ? (body.status ?? existing.Item.status) : 'pending',
+      status: atLeast(user, 'maintain') ? (body.status ?? existing.Item.status) : 'pending',
       tags: body.tags ?? existing.Item.tags ?? [],
     };
 
