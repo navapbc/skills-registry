@@ -62,6 +62,10 @@ describe('can — approve:skill / reject:skill', () => {
     expect(can(user, 'approve:skill', ownPending)).toBe(false);
     expect(can(user, 'reject:skill', ownPending)).toBe(false);
   });
+  it('maintain can approve or reject', () => {
+    expect(can(maintain, 'approve:skill', ownPending)).toBe(true);
+    expect(can(maintain, 'reject:skill', ownPending)).toBe(true);
+  });
   it('admin can approve or reject', () => {
     expect(can(admin, 'approve:skill', ownPending)).toBe(true);
     expect(can(admin, 'reject:skill', ownPending)).toBe(true);
@@ -83,15 +87,12 @@ describe('can — admin-only actions', () => {
   });
 });
 
-describe('can — maintain role: approve/reject', () => {
-  it('maintain can approve a pending skill', () => {
-    expect(can(maintain, 'approve:skill', ownPending)).toBe(true);
+describe('can — maintain role: manage plugins', () => {
+  it('maintain can manage plugins', () => {
+    expect(can(maintain, 'manage:plugins')).toBe(true);
   });
-  it('maintain can reject a pending skill', () => {
-    expect(can(maintain, 'reject:skill', ownPending)).toBe(true);
-  });
-  it('user still cannot approve or reject', () => {
-    expect(can(user, 'approve:skill', ownPending)).toBe(false);
+  it('user cannot manage plugins', () => {
+    expect(can(user, 'manage:plugins')).toBe(false);
   });
 });
 
@@ -130,6 +131,18 @@ describe('can — delete:skill is admin-only', () => {
   });
   it('admin can delete any skill', () => {
     expect(can(admin, 'delete:skill', publicApproved)).toBe(true);
+  });
+});
+
+describe('can — delete:plugin is admin-only', () => {
+  it('user cannot delete plugin', () => {
+    expect(can(user, 'delete:plugin')).toBe(false);
+  });
+  it('maintain cannot delete plugin', () => {
+    expect(can(maintain, 'delete:plugin')).toBe(false);
+  });
+  it('admin can delete plugin', () => {
+    expect(can(admin, 'delete:plugin')).toBe(true);
   });
 });
 
