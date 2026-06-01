@@ -178,30 +178,14 @@ const TYPE_STYLES = {
 
 let searchIndex = [];
 
-// Fetch admin-managed category config first, then merge with static CATEGORIES
-fetchApi('/categories').then(({ categories: apiCategories }) => {
-  const mergedCategories = CATEGORIES.map(c => {
-    const override = apiCategories.find(x => x.id === c.id);
-    return { ...c, featuredSlugs: override?.featuredSlugs ?? [] };
-  });
-
-  const categorySlugs = [...new Set(
-    mergedCategories.flatMap(c => [...(c.featuredSlugs || []), ...(c.slugs || [])])
-  )].join(',');
-
-  return Promise.all([
-    fetchApi('/skills?slugs=' + encodeURIComponent(categorySlugs)),
-    fetchApi('/skills'),
-    fetchApi('/plugins'),
-    Promise.resolve(mergedCategories),
-  ]);
-}).then(([{ skills: catSkills }, { skills }, { plugins }, mergedCategories]) => {
-  // Category grid: merge targeted fetch with full list so enterprise skills (source=enterprise)
-  // are included even if their slugs aren't in the static categories.mjs config
-  const enterpriseSkills = skills.filter(s => s.source === 'enterprise');
-  const catSkillSlugs = new Set(catSkills.map(s => s.slug));
-  const gridSkills = [...catSkills, ...enterpriseSkills.filter(s => !catSkillSlugs.has(s.slug))];
-  // category-grid hidden — see HTML comment above
+// Categories section is hidden — fetch skills and plugins directly.
+// Previously fetched ?slugs= for the category grid which poisoned the CloudFront cache
+// (no query string in cache key, so the scoped response was served for all /api/skills calls).
+Promise.all([
+  fetchApi('/skills'),
+  fetchApi('/plugins'),
+]).then(([{ skills }, { plugins }]) => {
+  const mergedCategories = CATEGORIES; // categories hidden, use static config for New This Week
   document.getElementById('new-this-week').innerHTML = renderNewThisWeek(skills, mergedCategories);
 
   // Enterprise (org-wide) skills surfaced first in the skills grid
