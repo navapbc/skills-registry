@@ -161,6 +161,7 @@ if (favs.length > 0) {
       <span class="text-xs text-gray-400">${escapeHtml(f.plugin || '')}</span>
     </a></div>`).join('')}
   </div>`;
+  initFavoriteButtons();
 }
 
 const globalSearch = document.getElementById('global-search');
@@ -262,6 +263,7 @@ Promise.all([
   ];
 
   initGithubLinks();
+  initFavoriteButtons();
 }).catch(err => {
   if (!err.message.startsWith('Unauthorized')) {
     document.getElementById('skills-grid').innerHTML = '<p class="text-sm text-gray-500">Failed to load skills. Please refresh the page.</p>';
