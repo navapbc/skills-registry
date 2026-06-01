@@ -64,22 +64,6 @@ import Tooltip from '../components/Tooltip.astro';
   <div id="browse-view">
 
     <!-- Plugins -->
-    <section class="mb-10">
-      <div class="flex items-center gap-1.5 mb-3">
-        <h2 class="text-base font-semibold text-gray-700 m-0">Plugins</h2>
-        <span class="text-xs text-gray-400" id="plugins-count"></span>
-        <Tooltip text="A Plugin is a GitHub repo that contains Skills and Agents — the organizational unit, like a package." />
-      </div>
-      <div class="flex flex-wrap gap-2" id="plugins-list">
-        <div class="flex flex-wrap gap-2 animate-pulse">
-          <div class="h-8 bg-gray-100 rounded-lg w-28"></div>
-          <div class="h-8 bg-gray-100 rounded-lg w-36"></div>
-          <div class="h-8 bg-gray-100 rounded-lg w-24"></div>
-          <div class="h-8 bg-gray-100 rounded-lg w-32"></div>
-        </div>
-      </div>
-    </section>
-
     <!-- Skills -->
     <section class="mb-10">
       <div class="flex items-center justify-between mb-3">
@@ -117,6 +101,23 @@ import Tooltip from '../components/Tooltip.astro';
         </a>
       </div>
       <div id="agents-grid"></div>
+    </section>
+
+    <!-- Plugins -->
+    <section class="mb-10">
+      <div class="flex items-center gap-1.5 mb-3">
+        <h2 class="text-base font-semibold text-gray-700 m-0">Plugins</h2>
+        <span class="text-xs text-gray-400" id="plugins-count"></span>
+        <Tooltip text="A Plugin is a GitHub repo that contains Skills and Agents — the organizational unit, like a package." />
+      </div>
+      <div id="plugins-list">
+        <div class="grid grid-cols-4 gap-2 animate-pulse">
+          <div class="h-10 bg-gray-100 rounded-lg"></div>
+          <div class="h-10 bg-gray-100 rounded-lg"></div>
+          <div class="h-10 bg-gray-100 rounded-lg"></div>
+          <div class="h-10 bg-gray-100 rounded-lg"></div>
+        </div>
+      </div>
     </section>
 
     <!-- MCP Servers placeholder -->
@@ -194,15 +195,28 @@ fetchApi('/categories').then(({ categories: apiCategories }) => {
   const allSkills = skills.filter(s => s.type === 'skill');
   const allAgents = skills.filter(s => s.type === 'agent');
 
-  // Plugins
+  // Plugins — sorted by total item count descending
+  const sortedPlugins = [...plugins].sort((a, b) => {
+    const aTotal = (a.skills_count || 0) + (a.agents_count || 0);
+    const bTotal = (b.skills_count || 0) + (b.agents_count || 0);
+    return bTotal - aTotal;
+  });
   document.getElementById('plugins-count').textContent = `(${plugins.length})`;
-  document.getElementById('plugins-list').innerHTML = plugins.map(p => {
-    const total = (p.skills_count || 0);
-    return `<a href="/plugins/${escapeHtml(p.slug)}" class="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-plum-300 hover:shadow-sm no-underline transition-all group">
-      <span class="text-sm font-medium text-gray-800 group-hover:text-plum-700 transition-colors">${escapeHtml(p.name)}</span>
-      <span class="text-xs text-gray-400 whitespace-nowrap">${total} ${total === 1 ? 'skill' : 'skills'}</span>
-    </a>`;
-  }).join('');
+  document.getElementById('plugins-list').innerHTML = `<div class="grid grid-cols-4 gap-2">
+    ${sortedPlugins.map(p => {
+      const skills = p.skills_count || 0;
+      const agents = p.agents_count || 0;
+      const total = skills + agents;
+      const label = [
+        skills > 0 ? `${skills} skill${skills !== 1 ? 's' : ''}` : '',
+        agents > 0 ? `${agents} agent${agents !== 1 ? 's' : ''}` : '',
+      ].filter(Boolean).join(', ') || '0 items';
+      return `<a href="/plugins/${escapeHtml(p.slug)}" class="flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-plum-300 hover:shadow-sm no-underline transition-all group">
+        <span class="text-sm font-medium text-gray-800 group-hover:text-plum-700 truncate transition-colors">${escapeHtml(p.name)}</span>
+        <span class="text-xs text-gray-400 ml-2 flex-shrink-0 tabular-nums">${total}</span>
+      </a>`;
+    }).join('')}
+  </div>`;
 
   // Skills grid
   document.getElementById('skills-count').textContent = `(${allSkills.length})`;

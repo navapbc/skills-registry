@@ -64,7 +64,7 @@ export function renderSkillCard(skill, showPlugin = true) {
 
   return `<a
     href="/skills/${escapeHtml(skill.slug)}"
-    class="flex flex-col gap-3 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300 transition-all no-underline text-gray-900"
+    class="h-full flex flex-col gap-3 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300 transition-all no-underline text-gray-900"
     data-name="${escapeHtml(skill.name)}"
     data-description="${escapeHtml(skill.description)}"
     data-plugin="${escapeHtml(skill.plugin)}"
@@ -94,7 +94,7 @@ export function renderSkillCard(skill, showPlugin = true) {
 export function renderSkillGrid(skills, showPlugin = true) {
   if (!skills.length) return '<p class="text-sm text-gray-400 italic">No skills found.</p>';
   return `<div class="grid grid-cols-3 gap-3">
-    ${skills.map(s => `<div>${renderSkillCard(s, showPlugin)}</div>`).join('')}
+    ${skills.map(s => `<div class="h-full">${renderSkillCard(s, showPlugin)}</div>`).join('')}
   </div>`;
 }
 

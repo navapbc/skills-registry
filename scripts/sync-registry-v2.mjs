@@ -432,6 +432,7 @@ async function main() {
           updated_at: now,
           created_at: now,
           skills_count: plugin.skill_count || 0,
+          agents_count: plugin.agent_count || 0,
         },
       }));
       pluginOk++;
