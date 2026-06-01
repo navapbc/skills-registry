@@ -85,7 +85,7 @@ import Tooltip from '../components/Tooltip.astro';
     </section>
 
     <!-- Agents -->
-    <section class="mb-10" id="agents-section" style="display:none">
+    <section class="mb-10" id="agents-section">
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-1.5">
           <h2 class="text-base font-semibold text-gray-700 m-0">Agents</h2>
@@ -96,7 +96,13 @@ import Tooltip from '../components/Tooltip.astro';
           View all →
         </a>
       </div>
-      <div id="agents-grid"></div>
+      <div id="agents-grid">
+        <div class="grid grid-cols-3 gap-3 animate-pulse">
+          <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div><div class="h-3 bg-gray-100 rounded w-full mb-1"></div><div class="h-3 bg-gray-100 rounded w-4/5"></div></div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div><div class="h-3 bg-gray-100 rounded w-full mb-1"></div><div class="h-3 bg-gray-100 rounded w-3/5"></div></div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div><div class="h-3 bg-gray-100 rounded w-5/6 mb-1"></div><div class="h-3 bg-gray-100 rounded w-4/5"></div></div>
+        </div>
+      </div>
     </section>
 
     <!-- PLUGINS SECTION — commented out, revisit later
@@ -235,11 +241,12 @@ fetchApi('/categories').then(({ categories: apiCategories }) => {
   document.getElementById('skills-count').textContent = `(${allSkills.length})`;
   renderGrid('skills-grid', 'skills-expand', allSkills);
 
-  // Agents grid
+  // Agents grid — always render (section is visible by default with skeleton)
+  document.getElementById('agents-count').textContent = `(${allAgents.length})`;
   if (allAgents.length) {
-    document.getElementById('agents-section').style.display = '';
-    document.getElementById('agents-count').textContent = `(${allAgents.length})`;
     renderGrid('agents-grid', 'agents-expand', allAgents);
+  } else {
+    document.getElementById('agents-grid').innerHTML = '<p class="text-sm text-gray-400 italic">No agents in the registry yet.</p>';
   }
 
   // Build search index
