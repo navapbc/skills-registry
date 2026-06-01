@@ -25,6 +25,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
   DeleteCommand: vi.fn(function (p) { return { type: 'Delete', params: p }; }),
   ScanCommand: vi.fn(function (p) { return { type: 'Scan', params: p }; }),
   QueryCommand: vi.fn(function (p) { return { type: 'Query', params: p }; }),
+  BatchGetCommand: vi.fn(function (p) { return { type: 'BatchGet', params: p }; }),
 }));
 
 import { app } from '../../../functions/api/index.mjs';
@@ -302,5 +303,103 @@ describe('DELETE /api/skills/:slug — admin succeeds', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.deleted).toBe('some-skill');
+  });
+});
+
+describe('GET /api/skills?slugs= — BatchGetItem fast path', () => {
+  it('returns skills by slug list', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({
+        Responses: {
+          'undefined': [
+            { slug: 'fix-bug', name: 'Fix Bug', status: 'approved', visibility: 'public', created_by: 'system' },
+            { slug: 'test', name: 'Test', status: 'approved', visibility: 'public', created_by: 'system' },
+          ],
+        },
+      });
+    const res = await app.request('/api/skills?slugs=fix-bug%2Ctest', {
+      headers: { Cookie: makeSessionCookie() },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.skills).toHaveLength(2);
+  });
+});
+
+describe('GET /api/skills?type= — type filter', () => {
+  it('filters skills by type', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({
+        Items: [
+          { slug: 'fix-bug', type: 'skill', status: 'approved', visibility: 'public', created_by: 'system' },
+          { slug: 'my-agent', type: 'agent', status: 'approved', visibility: 'public', created_by: 'system' },
+        ],
+        LastEvaluatedKey: undefined,
+      });
+    const res = await app.request('/api/skills?type=skill', {
+      headers: { Cookie: makeSessionCookie() },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.skills).toHaveLength(1);
+    expect(body.skills[0].type).toBe('skill');
+  });
+});
+
+describe('GET /api/skills?plugin= — plugin filter', () => {
+  it('filters skills by plugin', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({
+        Items: [
+          { slug: 'fix-bug', plugin: 'my-plugin', type: 'skill', status: 'approved', visibility: 'public', created_by: 'system' },
+          { slug: 'other', plugin: 'other-plugin', type: 'skill', status: 'approved', visibility: 'public', created_by: 'system' },
+        ],
+        LastEvaluatedKey: undefined,
+      });
+    const res = await app.request('/api/skills?plugin=my-plugin', {
+      headers: { Cookie: makeSessionCookie() },
+    });
+    const body = await res.json();
+    expect(body.skills).toHaveLength(1);
+    expect(body.skills[0].plugin).toBe('my-plugin');
+  });
+});
+
+describe('GET /api/skills/:slug — edge cases', () => {
+  it('returns 404 when skill not found', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Item: undefined });
+    const res = await app.request('/api/skills/missing', {
+      headers: { Cookie: makeSessionCookie() },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 403 when user cannot read skill', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'private-skill', status: 'approved', visibility: 'private', created_by: 'other@navapbc.com' } });
+    const res = await app.request('/api/skills/private-skill', {
+      headers: { Cookie: makeSessionCookie() },
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('PUT /api/skills/:slug — edge cases', () => {
+  it('returns 404 when skill not found', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Item: undefined });
+    const res = await app.request('/api/skills/missing', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Updated' }),
+    });
+    expect(res.status).toBe(404);
   });
 });

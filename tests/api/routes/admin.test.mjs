@@ -349,6 +349,22 @@ describe('DELETE /api/admin/enterprise-skills/:slug', () => {
   });
 });
 
+// ── POST /api/admin/enterprise-skills — slug collision ────────────────────
+describe('POST /api/admin/enterprise-skills — slug collision', () => {
+  it('returns 409 when slug already exists', async () => {
+    const conflictErr = Object.assign(new Error('condition'), { name: 'ConditionalCheckFailedException' });
+    mockSend
+      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
+      .mockRejectedValueOnce(conflictErr);
+    const res = await app.request('/api/admin/enterprise-skills', {
+      method: 'POST',
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'existing-skill', name: 'Existing', description: 'Already there' }),
+    });
+    expect(res.status).toBe(409);
+  });
+});
+
 // ── GET /api/admin/categories (admin-gated) ───────────────────────────────
 describe('GET /api/admin/categories', () => {
   it('returns 403 for user role', async () => {

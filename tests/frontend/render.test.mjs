@@ -371,3 +371,42 @@ describe('renderCategoryGrid — enterprise auto-feature', () => {
     expect(html).not.toContain('Daily Briefing');
   });
 });
+
+describe('renderSkillDetail — tools_used and human_in_loop', () => {
+  const agentSkill = {
+    slug: 'my-agent', name: 'My Agent', description: 'An agent',
+    plugin: 'my-plugin', author: 'author', compatibility: ['claude-code'],
+    type: 'agent', source: 'github', tags: [],
+    tools_used: ['fix-bug', 'test'],
+    human_in_loop: 'Requires approval before deploying',
+  };
+
+  it('renders tools_used section when present', () => {
+    const html = renderSkillDetail(agentSkill);
+    expect(html).toContain('Composed Skills');
+    expect(html).toContain('fix-bug');
+  });
+
+  it('renders human_in_loop warning when set', () => {
+    const html = renderSkillDetail(agentSkill);
+    expect(html).toContain('Human in the loop');
+    expect(html).toContain('Requires approval before deploying');
+  });
+
+  it('renders no tools_used section when empty', () => {
+    const html = renderSkillDetail({ ...agentSkill, tools_used: [] });
+    expect(html).not.toContain('Composed Skills');
+  });
+});
+
+describe('renderSkillDetail — empty compatibility', () => {
+  it('omits Works-with section when compatibility is empty', () => {
+    const skill = {
+      slug: 'test', name: 'Test', description: 'desc',
+      plugin: 'p', author: 'a', compatibility: [],
+      type: 'skill', source: 'github', tags: [],
+    };
+    const html = renderSkillDetail(skill);
+    expect(html).not.toContain('Works with');
+  });
+});

@@ -157,3 +157,12 @@ describe('atLeast helper', () => {
     expect(atLeast(admin, 'maintain')).toBe(true);
   });
 });
+
+describe('can — unknown action returns false', () => {
+  it('user returns false for unrecognised action', () => {
+    expect(can(user, 'nonexistent:action')).toBe(false);
+  });
+  it('maintain returns false for unrecognised action', () => {
+    expect(can(maintain, 'fly:to:moon')).toBe(false);
+  });
+});
