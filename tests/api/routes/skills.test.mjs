@@ -247,3 +247,60 @@ describe('POST /api/skills — tags field', () => {
     expect(capturedItem?.tags).toEqual(['testing', 'docs']);
   });
 });
+
+describe('POST /api/skills/:slug/approve — category-config guard', () => {
+  it('returns 404 for category-config records', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'category::dev-code', source: 'category-config' } });
+    const res = await app.request('/api/skills/category::dev-code/approve', {
+      method: 'POST',
+      headers: { Cookie: makeSessionCookie('admin@navapbc.com') },
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('POST /api/skills/:slug/reject', () => {
+  it('maintain can reject a pending skill', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'some-skill', status: 'pending', source: 'user-submitted', created_by: 'other@navapbc.com' } })
+      .mockResolvedValueOnce({ Attributes: { slug: 'some-skill', status: 'rejected' } })
+      .mockResolvedValueOnce({});
+    const res = await app.request('/api/skills/some-skill/reject', {
+      method: 'POST',
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'Not relevant' }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it('returns 404 for category-config records', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'category::dev-code', source: 'category-config' } });
+    const res = await app.request('/api/skills/category::dev-code/reject', {
+      method: 'POST',
+      headers: { Cookie: makeSessionCookie('admin@navapbc.com') },
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('DELETE /api/skills/:slug — admin succeeds', () => {
+  it('admin can delete any skill', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'some-skill', created_by: 'user@navapbc.com' } })
+      .mockResolvedValueOnce({})  // DeleteCommand
+      .mockResolvedValueOnce({}); // writeAudit
+    const res = await app.request('/api/skills/some-skill', {
+      method: 'DELETE',
+      headers: { Cookie: makeSessionCookie('admin@navapbc.com') },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.deleted).toBe('some-skill');
+  });
+});
