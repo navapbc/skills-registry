@@ -29,6 +29,9 @@ jobs:
       - name: Install root dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install API dependencies
+        run: cd functions/api && pnpm install --frozen-lockfile
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -38,6 +41,7 @@ jobs:
       - name: Sync Anthropic built-in skills (staging)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NODE_PATH: functions/api/node_modules
         run: node scripts/sync-anthropic-builtin-skills.mjs --env staging
 
   sync-prod:
@@ -64,6 +68,9 @@ jobs:
       - name: Install root dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install API dependencies
+        run: cd functions/api && pnpm install --frozen-lockfile
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -73,4 +80,5 @@ jobs:
       - name: Sync Anthropic built-in skills (prod)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NODE_PATH: functions/api/node_modules
         run: node scripts/sync-anthropic-builtin-skills.mjs --env prod
