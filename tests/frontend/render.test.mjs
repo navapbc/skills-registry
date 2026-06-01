@@ -124,7 +124,8 @@ describe('renderSkillDetail', () => {
   it('includes data-skill-json for localStorage', () => {
     const html = renderSkillDetail(baseSkill);
     expect(html).toContain('data-skill-json');
-    expect(html).toContain('"slug":"test-skill"');
+    // After HTML-escaping, double quotes become &quot; to prevent XSS
+    expect(html).toContain('&quot;slug&quot;:&quot;test-skill&quot;');
   });
 
   it('links back to the plugin page', () => {
