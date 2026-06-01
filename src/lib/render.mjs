@@ -169,7 +169,7 @@ export function renderSkillDetail(skill) {
       </div>
     </div>
 
-    <div hidden data-skill-json='${JSON.stringify({ slug: skill.slug, name: skill.name, plugin: skill.plugin, description: skill.description, compatibility: skill.compatibility, type: skill.type })}'></div>
+    <div hidden data-skill-json="${escapeHtml(JSON.stringify({ slug: skill.slug, name: skill.name, plugin: skill.plugin, description: skill.description, compatibility: skill.compatibility, type: skill.type }))}"></div>
 
     <div class="flex gap-8 items-start">
       <div class="flex-1 min-w-0 space-y-8">
