@@ -187,22 +187,22 @@ export function renderSkillDetail(skill) {
       <div class="flex-1 min-w-0 space-y-8">
         <section>
           <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">Description</h2>
-          <p class="text-sm text-gray-600 leading-relaxed m-0">${escapeHtml(skill.description)}</p>
-          ${skill.compatibility.length ? `<div class="flex items-center gap-2 flex-wrap mt-3"><span class="text-xs text-gray-400">Works with:</span>${compatBadges}</div>` : ''}
-          ${skill.tags?.length
-  ? `<div class="flex flex-wrap gap-1.5 mt-3">
-      ${skill.tags.map(t => `<span class="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-500 rounded">#${escapeHtml(t)}</span>`).join('')}
-    </div>`
-  : ''}
+          ${skill.compatibility.length ? `<div class="flex items-center gap-2 flex-wrap mb-3"><span class="text-xs text-gray-400">Works with:</span>${compatBadges}</div>` : ''}
           ${skill.source === 'anthropic-builtin'
-  ? `<div class="mt-4 p-3 bg-violet-50 border border-violet-200 rounded-lg text-xs text-violet-700">
+  ? `<div class="mb-3 p-3 bg-violet-50 border border-violet-200 rounded-lg text-xs text-violet-700">
       <strong>Anthropic Tool</strong> — This skill runs via the Anthropic Messages API code execution container. It is not a SKILL.md workflow.
     </div>`
   : ''}
           ${skill.source === 'enterprise'
-  ? `<div class="mt-4 p-3 bg-violet-50 border border-violet-200 rounded-lg flex items-center gap-2">
+  ? `<div class="mb-3 p-3 bg-violet-50 border border-violet-200 rounded-lg flex items-center gap-2">
       <span class="px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-700 rounded flex-shrink-0">Org-wide</span>
-      <span class="text-xs text-violet-700">Available to all Nava staff in Claude Desktop — no installation needed.</span>
+      <span class="text-xs text-violet-700">Available to all Nava staff across Claude Chat and Claude for Work — no installation needed.</span>
+    </div>`
+  : ''}
+          <p class="text-sm text-gray-600 leading-relaxed m-0">${escapeHtml(skill.description)}</p>
+          ${skill.tags?.length
+  ? `<div class="flex flex-wrap gap-1.5 mt-3">
+      ${skill.tags.map(t => `<span class="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-500 rounded">#${escapeHtml(t)}</span>`).join('')}
     </div>`
   : ''}
         </section>

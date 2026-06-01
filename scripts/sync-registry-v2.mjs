@@ -148,7 +148,7 @@ function buildRecord(content, path, repo, meta, body, type, committer) {
     sensitive_data: meta.sensitive_data === true || meta.sensitive_data === 'true',
     type,
     content,
-    last_updated: repo.pushed_at || committer?.date || null,
+    last_updated: committer?.date || repo.pushed_at || null,
   };
   if (type === 'agent') {
     record.tools_used = Array.isArray(meta.tools_used) ? meta.tools_used
@@ -400,8 +400,8 @@ async function main() {
           ':enterprise': 'enterprise',
           ':category': skill.category ?? '',
         },
-        // Only update existing records if they came from github or enterprise; always create new ones.
-        ConditionExpression: 'attribute_not_exists(slug) OR #source = :github OR #source = :enterprise',
+        // Skip write when content hasn't changed: only update if new record, or source matches and last_updated differs.
+        ConditionExpression: 'attribute_not_exists(slug) OR ((#source = :github OR #source = :enterprise) AND (attribute_not_exists(last_updated) OR last_updated <> :updated))',
       }));
       skillOk++;
       process.stdout.write('.');
