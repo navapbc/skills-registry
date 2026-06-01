@@ -24,7 +24,7 @@ import Base from '../../layouts/Base.astro';
 <script>
 import { fetchApi } from '../../lib/api.mjs';
 import { renderSkillDetail, renderSkillGrid } from '../../lib/render.mjs';
-import { isFavorited, toggleFavorite } from '../../lib/favorites.mjs';
+import { isFavorited, toggleFavorite, initFavoriteButtons } from '../../lib/favorites.mjs';
 
 const NAVA_N = `███╗   ██╗\n████╗  ██║\n██╔██╗ ██║\n██║╚██╗██║\n██║ ╚████║\n╚═╝  ╚═══╝`;
 function notFoundHtml(entity) {

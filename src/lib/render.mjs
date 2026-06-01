@@ -62,7 +62,18 @@ export function renderSkillCard(skill, showPlugin = true) {
     </div>`
     : '';
 
-  return `<a
+  const skillData = escapeHtml(JSON.stringify({ slug: skill.slug, name: skill.name, plugin: skill.plugin, type: skill.type, description: skill.description, compatibility: skill.compatibility }));
+
+  return `<div class="relative h-full">
+    <button
+      class="fav-btn absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center text-gray-300 hover:text-amber-400 transition-colors rounded"
+      data-slug="${escapeHtml(skill.slug)}"
+      data-skill="${skillData}"
+      aria-label="Add to favorites"
+      aria-pressed="false"
+      title="Favorite"
+    ><span aria-hidden="true" class="fav-star text-base leading-none">☆</span></button>
+  <a
     href="/skills/${escapeHtml(skill.slug)}"
     class="h-full flex flex-col gap-3 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300 transition-all no-underline text-gray-900"
     data-name="${escapeHtml(skill.name)}"
@@ -73,7 +84,7 @@ export function renderSkillCard(skill, showPlugin = true) {
     data-type="${escapeHtml(skill.type)}"
     data-updated="${escapeHtml(skill.last_updated || '')}"
   >
-    <div class="flex items-start justify-between gap-2 flex-wrap">
+    <div class="flex items-start justify-between gap-2 flex-wrap pr-5">
       <span class="font-semibold text-sm text-gray-900">${escapeHtml(skill.name)}</span>
       <div class="flex items-center gap-1 flex-wrap">${pluginBadge}${agentBadge}${sensitiveBadge}${anthropicBadge}${orgWideBadge}</div>
     </div>
@@ -88,7 +99,7 @@ export function renderSkillCard(skill, showPlugin = true) {
       </span>
       <span class="text-xs text-gray-400 truncate ml-2">${escapeHtml(compatStr)}</span>
     </div>
-  </a>`;
+  </a></div>`;
 }
 
 export function renderSkillGrid(skills, showPlugin = true) {
