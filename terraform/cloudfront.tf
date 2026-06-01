@@ -19,6 +19,54 @@ resource "aws_cloudfront_function" "auth_check" {
   })
 }
 
+# Security response headers — applied to all CloudFront behaviors.
+resource "aws_cloudfront_response_headers_policy" "security" {
+  name    = "${var.project_name}-security-${var.environment}"
+  comment = "Security headers for skills hub"
+
+  security_headers_config {
+    # HSTS — force HTTPS for 1 year, include subdomains, eligible for preload list
+    strict_transport_security {
+      access_control_max_age_sec = 31536000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+
+    # CSP — 'unsafe-inline' required for Astro CSR inline scripts and Tailwind inline styles
+    content_security_policy {
+      content_security_policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self'; font-src 'self'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none';"
+      override                = true
+    }
+
+    # Clickjacking protection (belt-and-suspenders with CSP frame-ancestors)
+    frame_options {
+      frame_option = "DENY"
+      override     = true
+    }
+
+    # Prevent MIME-type sniffing
+    content_type_options {
+      override = true
+    }
+
+    # Don't leak internal URLs as Referer to external sites
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+  }
+
+  # COOP — prevent cross-origin windows from accessing this page's browsing context
+  custom_headers_config {
+    items {
+      header   = "Cross-Origin-Opener-Policy"
+      value    = "same-origin"
+      override = true
+    }
+  }
+}
+
 # Cache policy for read-only API list endpoints (skills, plugins).
 # Cookies are NOT in the cache key — all navapbc.com users see the same approved+public catalog,
 # so responses are safe to share. On cache HIT CloudFront serves without calling Lambda;
@@ -98,7 +146,8 @@ resource "aws_cloudfront_distribution" "site" {
     compress               = true
 
     # AWS managed CachingOptimized policy
-    cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    cache_policy_id             = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    response_headers_policy_id  = aws_cloudfront_response_headers_policy.security.id
 
     function_association {
       event_type   = "viewer-request"
@@ -198,7 +247,8 @@ resource "aws_cloudfront_distribution" "site" {
     target_origin_id       = "s3"
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
-    cache_policy_id        = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    cache_policy_id                = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    response_headers_policy_id     = aws_cloudfront_response_headers_policy.security.id
 
     function_association {
       event_type   = "viewer-request"
