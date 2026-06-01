@@ -24,7 +24,7 @@ category: ops-automation
 | `description` | yes | 1–2 sentences shown in the hub |
 | `category` | yes | One of: `writing-comms`, `research-analysis`, `planning`, `dev-code`, `ops-automation` |
 | `sensitive_data` | no | `true` if the skill touches client or internal data — shows an amber ⚠ badge |
-| `compatibility` | no | Defaults to `[claude-desktop]` |
+| `compatibility` | no | Defaults to `[claude-chat, claude-cowork]` |
 | `author` | no | Your name or team |
 
 ### Example
@@ -35,7 +35,8 @@ name: daily-briefing
 description: Generates a personalized daily briefing summary from your calendar and recent activity.
 category: ops-automation
 compatibility:
-  - claude-desktop
+  - claude-chat
+  - claude-cowork
 sensitive_data: false
 author: Nava Ops
 ---

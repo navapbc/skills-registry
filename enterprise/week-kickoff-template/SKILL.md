@@ -1,7 +1,7 @@
 ---
 name: week-kickoff-template
 category: planning
-compatibility: [claude-desktop]
+compatibility: [claude-chat, claude-cowork]
 description: Run the start-of-week planning ritual for any Nava manager or leader. Produces a focused weekly goals and tasks document grounded in the user's strategic priorities, real data from Slack/Jira/Calendar, and their own input on what matters most this week. Triggers when the user says "week kickoff", "weekly planning", "start of week", "plan out the week", "let's set up my weekly goals", or similar. Invoke proactively at the start of any Monday work session where weekly goals haven't been set.
 ---
 

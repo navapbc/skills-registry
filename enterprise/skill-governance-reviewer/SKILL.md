@@ -1,7 +1,7 @@
 ---
 name: skills-governance-reviewer
 category: ops-automation
-compatibility: [claude-desktop]
+compatibility: [claude-chat, claude-cowork]
 description: >
   Use this skill to evaluate whether a skill is ready for enterprise-wide publish
   in the Nava Skills Marketplace. Triggers when someone shares a SKILL.md file for

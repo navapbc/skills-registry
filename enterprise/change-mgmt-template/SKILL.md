@@ -2,7 +2,7 @@
 name: change-mgmt-template
 version: "2.0"
 category: planning
-compatibility: [claude-desktop]
+compatibility: [claude-chat, claude-cowork]
 description: >
   Generate a Nava-format change management plan from a proposal or initiative description.
   Takes an existing proposal or initiative description and produces a complete CM plan —

@@ -1,7 +1,7 @@
 ---
 name: skill-enterprise-transform
 category: ops-automation
-compatibility: [claude-desktop]
+compatibility: [claude-chat, claude-cowork]
 description: >
   Take a skill that was built for a specific person or role and generalize it for
   enterprise-wide deployment. Audits for personal references, hardcoded configs,
