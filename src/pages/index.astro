@@ -40,7 +40,12 @@ import Tooltip from '../components/Tooltip.astro';
         <Tooltip text="A Plugin is a GitHub repo that contains Skills and Agents — the organizational unit, like a package." />
       </div>
       <div class="flex flex-wrap gap-2" id="plugins-list">
-        <span class="text-xs text-gray-400">Loading...</span>
+        <div class="flex flex-wrap gap-2 animate-pulse">
+          <div class="h-8 bg-gray-100 rounded-lg w-28"></div>
+          <div class="h-8 bg-gray-100 rounded-lg w-36"></div>
+          <div class="h-8 bg-gray-100 rounded-lg w-24"></div>
+          <div class="h-8 bg-gray-100 rounded-lg w-32"></div>
+        </div>
       </div>
     </section>
 
@@ -57,7 +62,14 @@ import Tooltip from '../components/Tooltip.astro';
         </a>
       </div>
       <div id="skills-grid">
-        <span class="text-xs text-gray-400">Loading...</span>
+        <div class="grid grid-cols-3 gap-3 animate-pulse">
+          <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div><div class="h-3 bg-gray-100 rounded w-full mb-1"></div><div class="h-3 bg-gray-100 rounded w-4/5"></div></div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div><div class="h-3 bg-gray-100 rounded w-full mb-1"></div><div class="h-3 bg-gray-100 rounded w-3/5"></div></div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div><div class="h-3 bg-gray-100 rounded w-5/6 mb-1"></div><div class="h-3 bg-gray-100 rounded w-4/5"></div></div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-1/2 mb-2"></div><div class="h-3 bg-gray-100 rounded w-full mb-1"></div><div class="h-3 bg-gray-100 rounded w-2/3"></div></div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div><div class="h-3 bg-gray-100 rounded w-4/5 mb-1"></div><div class="h-3 bg-gray-100 rounded w-3/4"></div></div>
+          <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div><div class="h-3 bg-gray-100 rounded w-full mb-1"></div><div class="h-3 bg-gray-100 rounded w-1/2"></div></div>
+        </div>
       </div>
     </section>
 
@@ -199,7 +211,7 @@ fetchApi('/categories').then(({ categories: apiCategories }) => {
   initGithubLinks();
 }).catch(err => {
   if (!err.message.startsWith('Unauthorized')) {
-    document.getElementById('skills-grid').innerHTML = '<p class="text-sm text-red-500">Failed to load skills. Please try again.</p>';
+    document.getElementById('skills-grid').innerHTML = '<p class="text-sm text-gray-500">Failed to load skills. Please refresh the page.</p>';
   }
 });
 
