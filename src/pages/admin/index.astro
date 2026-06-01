@@ -31,15 +31,6 @@ import Base from '../../layouts/Base.astro';
 import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
 
-function getUserRole() {
-  const cookie = document.cookie.split('; ').find(r => r.startsWith('__user='));
-  if (!cookie) return 'user';
-  try {
-    const payload = cookie.split('=')[1];
-    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))).role ?? 'user';
-  } catch { return 'user'; }
-}
-
 async function apiPost(path, body) {
   const res = await fetch(`/api${path}`, {
     method: 'POST', credentials: 'include',
@@ -66,17 +57,19 @@ async function apiDelete(path) {
   return res.json();
 }
 
-const role = getUserRole();
+let role = 'user';
+let currentTab = null;
 
-if (role === 'user') {
+// Fetch actual role from API — the __user cookie only has name/email/picture, not role
+const me = await fetchApi('/users/me').catch(() => null);
+if (!me || me.role === 'user') {
   window.location.href = '/';
 }
+role = me?.role ?? 'user';
 
 if (role === 'admin') {
   document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
 }
-
-let currentTab = null;
 
 function activateTab(tabId) {
   document.querySelectorAll('.tab-btn').forEach(btn => {
