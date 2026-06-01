@@ -69,7 +69,8 @@ const { title = 'Skills Registry' } = Astro.props;
         if (activeId) {
           const el = document.getElementById(activeId);
           if (el) {
-            el.classList.add('bg-plum-50', 'text-plum-700', 'font-medium');\n            el.setAttribute('aria-current', 'page');
+            el.classList.add('bg-plum-50', 'text-plum-700', 'font-medium');
+            el.setAttribute('aria-current', 'page');
             el.classList.remove('text-gray-600');
           }
         }
