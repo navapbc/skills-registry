@@ -379,13 +379,14 @@ async function main() {
           content      = :content,
           last_updated = :updated,
           updated_at   = :now,
-          source       = if_not_exists(source,       :src),
+          #source      = if_not_exists(#source,      :src),
           #status      = if_not_exists(#status,      :approved),
           visibility   = if_not_exists(visibility,   :public),
           created_by   = if_not_exists(created_by,   :system),
           created_at   = if_not_exists(created_at,   :now)`,
         ExpressionAttributeNames: {
-          '#name': 'name', '#path': 'path', '#type': 'type', '#status': 'status',
+          '#name': 'name', '#path': 'path', '#type': 'type',
+          '#status': 'status', '#source': 'source',
         },
         ExpressionAttributeValues: {
           ':name': skill.name, ':desc': skill.description, ':plugin': skill.plugin,
@@ -401,9 +402,6 @@ async function main() {
         },
         // Only update existing records if they came from github or enterprise; always create new ones.
         ConditionExpression: 'attribute_not_exists(slug) OR #source = :github OR #source = :enterprise',
-        ExpressionAttributeNames: {
-          '#name': 'name', '#path': 'path', '#type': 'type', '#status': 'status', '#source': 'source',
-        },
       }));
       skillOk++;
       process.stdout.write('.');

@@ -92,15 +92,19 @@ data "aws_iam_policy_document" "github_deploy" {
     ]
   }
 
-  # DynamoDB: allow sync scripts to write built-in and enterprise skills
+  # DynamoDB: allow sync scripts to write skills and plugins
   statement {
-    sid    = "DynamoDBSyncSkills"
+    sid    = "DynamoDBSync"
     effect = "Allow"
     actions = [
       "dynamodb:PutItem",
       "dynamodb:GetItem",
+      "dynamodb:UpdateItem",
     ]
-    resources = [aws_dynamodb_table.skills.arn]
+    resources = [
+      aws_dynamodb_table.skills.arn,
+      aws_dynamodb_table.plugins.arn,
+    ]
   }
 }
 

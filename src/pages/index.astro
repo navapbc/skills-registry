@@ -5,22 +5,10 @@ import Tooltip from '../components/Tooltip.astro';
 
 <Base title="Skills Marketplace">
 
-  <!-- Search hero -->
-  <div class="mb-10">
-    <div class="mb-4">
-      <h1 class="text-2xl font-bold text-gray-900 m-0">Skills Marketplace</h1>
-      <p class="text-sm text-gray-500 mt-1 m-0">Browse, install, and share reusable AI skills across Nava</p>
-    </div>
-    <div class="relative">
-      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
-      <input
-        type="search"
-        id="global-search"
-        placeholder="Search skills, agents, and plugins..."
-        autocomplete="off"
-        class="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-plum-300 focus:border-plum-400 placeholder:text-gray-400"
-      />
-    </div>
+  <!-- Page title -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 m-0">Skills Marketplace</h1>
+    <p class="text-sm text-gray-500 mt-1 m-0">Browse, install, and share reusable AI skills across Nava</p>
   </div>
 
   <!-- Category grid — populated by client script after skills are fetched -->
@@ -54,6 +42,20 @@ import Tooltip from '../components/Tooltip.astro';
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-1"><div class="h-3 bg-gray-200 rounded w-2/3 mb-1.5"></div><div class="h-3 bg-gray-100 rounded w-2/5"></div></div>
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-1"><div class="h-3 bg-gray-200 rounded w-3/4 mb-1.5"></div><div class="h-3 bg-gray-100 rounded w-1/2"></div></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="mt-8 mb-8">
+    <div class="relative">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+      <input
+        type="search"
+        id="global-search"
+        placeholder="Search skills, agents, and plugins..."
+        autocomplete="off"
+        class="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-plum-300 focus:border-plum-400 placeholder:text-gray-400"
+      />
     </div>
   </div>
 
