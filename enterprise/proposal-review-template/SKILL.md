@@ -1,6 +1,8 @@
 ---
 name: proposal-review-template
 version: "2.0"
+category: writing-comms
+compatibility: [claude-desktop]
 description: >
   Review a proposal, strategic initiative, roadmap, project plan, press release, or
   document through three core lenses: alignment with company goals, cross-org
