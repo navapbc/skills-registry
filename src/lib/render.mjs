@@ -397,7 +397,6 @@ export function renderNewThisWeek(allSkills, categories) {
   return `
     <div class="bg-white border border-gray-200 rounded-lg p-4 mb-10">
       <div class="flex items-center justify-between mb-3">
-        <div class="text-xs font-bold uppercase tracking-wider text-gray-700">New this week</div>
         <a href="/whats-new" class="text-xs text-plum-600 hover:text-plum-700 no-underline font-medium">What's new &rarr;</a>
       </div>
       <div class="flex gap-3">${cards}</div>
