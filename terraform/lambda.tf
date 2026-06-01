@@ -130,6 +130,7 @@ data "aws_iam_policy_document" "lambda_api_policy" {
     actions = [
       "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem",
       "dynamodb:DeleteItem", "dynamodb:Scan", "dynamodb:Query",
+      "dynamodb:BatchGetItem",
     ]
     resources = [
       aws_dynamodb_table.skills.arn,
