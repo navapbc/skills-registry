@@ -355,7 +355,7 @@ export function renderCategoryGrid(categories, allSkills) {
   const submitCell = `
     <div class="border border-dashed border-plum-200 bg-plum-50 rounded-lg p-4 flex flex-col items-center justify-center text-center gap-2">
       <div class="text-xs font-semibold text-plum-700">Have a skill to share?</div>
-      <div class="text-xs text-gray-500 leading-relaxed">Submit via Google Form. The ops team reviews submissions weekly.</div>
+      <div class="text-xs text-gray-500 leading-relaxed">Submit via Google Form. The ops team reviews within 1 business day.</div>
       <a href="${escapeHtml(SUBMIT_FORM_URL)}" target="_blank" rel="noopener"
          class="px-3 py-1.5 text-xs font-medium bg-plum-600 text-white rounded hover:bg-plum-700 no-underline transition-colors">
         Submit a skill
