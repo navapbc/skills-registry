@@ -48,12 +48,13 @@ import Tooltip from '../components/Tooltip.astro';
   <!-- Search -->
   <div class="mt-8 mb-8">
     <div class="relative">
-      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" aria-hidden="true">🔍</span>
       <input
         type="search"
         id="global-search"
         placeholder="Search skills, agents, and plugins..."
         autocomplete="off"
+        aria-label="Search skills, agents, and plugins"
         class="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-plum-300 focus:border-plum-400 placeholder:text-gray-400"
       />
     </div>
@@ -134,7 +135,7 @@ import Tooltip from '../components/Tooltip.astro';
   </div>
 
   <!-- Search results -->
-  <div id="search-results" class="hidden">
+  <div id="search-results" class="hidden" role="region" aria-label="Search results" aria-live="polite">
     <p class="text-xs text-gray-400 mb-4" id="search-summary"></p>
     <div id="results-list" class="space-y-1"></div>
     <p class="text-sm text-gray-400 italic hidden" id="no-results">No results found.</p>

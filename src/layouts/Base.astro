@@ -16,9 +16,11 @@ const { title = 'Skills Registry' } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body class="bg-gray-50 text-gray-900">
+    <!-- Skip link: lets keyboard users jump past sidebar -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-plum-600 focus:text-white focus:rounded focus:text-sm focus:font-medium">Skip to main content</a>
     <div class="flex h-screen overflow-hidden">
       <Sidebar />
-      <main class="flex-1 overflow-y-auto">
+      <main id="main-content" class="flex-1 overflow-y-auto" tabindex="-1">
         <div class="max-w-5xl mx-auto px-8 py-8">
           <slot />
         </div>
@@ -67,7 +69,7 @@ const { title = 'Skills Registry' } = Astro.props;
         if (activeId) {
           const el = document.getElementById(activeId);
           if (el) {
-            el.classList.add('bg-plum-50', 'text-plum-700', 'font-medium');
+            el.classList.add('bg-plum-50', 'text-plum-700', 'font-medium');\n            el.setAttribute('aria-current', 'page');
             el.classList.remove('text-gray-600');
           }
         }

@@ -1,39 +1,39 @@
 ---
 import UserFooter from './UserFooter.astro';
 ---
-<aside class="w-56 flex-shrink-0 flex flex-col bg-white border-r border-gray-200 overflow-y-auto">
+<aside class="w-56 flex-shrink-0 flex flex-col bg-white border-r border-gray-200 overflow-y-auto" aria-label="Site sidebar">
 
   <!-- Logo -->
   <div class="px-4 py-4 border-b border-gray-200">
     <a href="/" class="flex items-center gap-2 no-underline text-gray-900 hover:text-plum-700">
-      <span class="text-plum-600 font-bold text-base leading-none">✦</span>
+      <span class="text-plum-600 font-bold text-base leading-none" aria-hidden="true">✦</span>
       <span class="font-semibold text-sm">Nava Skills</span>
     </a>
   </div>
 
   <!-- Nav -->
-  <nav class="flex-1 px-2 py-3 space-y-4">
+  <nav class="flex-1 px-2 py-3 space-y-4" aria-label="Main navigation">
     <div>
-      <p class="px-2 mb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Navigation</p>
+      <p class="px-2 mb-1 text-xs font-semibold text-gray-600 uppercase tracking-wider" aria-hidden="true">Navigation</p>
       <ul class="space-y-0.5 list-none p-0 m-0">
         <li>
           <a href="/" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors" id="nav-marketplace">
-            <span class="text-gray-400 text-xs">⊞</span> Marketplace
+            <span aria-hidden="true" class="text-gray-400 text-xs">⊞</span> Marketplace
           </a>
         </li>
         <li>
           <a href="/my-skills" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors" id="nav-my-skills">
-            <span class="text-gray-400 text-xs">◈</span> My Skills
+            <span aria-hidden="true" class="text-gray-400 text-xs">◈</span> My Skills
           </a>
         </li>
         <li>
           <a href="/whats-new" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors" id="nav-whats-new">
-            <span class="text-gray-400 text-xs">★</span> What's New
+            <span aria-hidden="true" class="text-gray-400 text-xs">★</span> What's New
           </a>
         </li>
         <li>
           <a href="/contribute" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors" id="nav-contribute">
-            <span class="text-gray-400 text-xs">+</span> Add a Skill
+            <span aria-hidden="true" class="text-gray-400 text-xs">+</span> Add a Skill
           </a>
         </li>
       </ul>
@@ -41,21 +41,21 @@ import UserFooter from './UserFooter.astro';
 
     <!-- Resources -->
     <div>
-      <p class="px-2 mb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Resources</p>
+      <p class="px-2 mb-1 text-xs font-semibold text-gray-600 uppercase tracking-wider" aria-hidden="true">Resources</p>
       <ul class="space-y-0.5 list-none p-0 m-0">
         <li>
           <a href="https://navasage.atlassian.net/wiki/spaces/NH/pages/3137536013/FAQ+Claude+Skills" target="_blank" rel="noopener" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
-            <span class="text-gray-400 text-xs">?</span> FAQ: Claude Skills
+            <span aria-hidden="true" class="text-gray-400 text-xs">?</span> FAQ: Claude Skills
           </a>
         </li>
         <li>
           <a href="https://navasage.atlassian.net/wiki/spaces/CB/pages/1984135232/AI+Community+of+Practice" target="_blank" rel="noopener" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
-            <span class="text-gray-400 text-xs">◎</span> Community of Practice
+            <span aria-hidden="true" class="text-gray-400 text-xs">◎</span> Community of Practice
           </a>
         </li>
         <li>
           <a href="https://navapbc.enterprise.slack.com/archives/C0B3YQCPZFB" target="_blank" rel="noopener" class="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
-            <span class="text-gray-400 text-xs">◷</span> AI Office Hours
+            <span aria-hidden="true" class="text-gray-400 text-xs">◷</span> AI Office Hours
           </a>
         </li>
       </ul>
