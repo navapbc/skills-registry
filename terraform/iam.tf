@@ -91,6 +91,17 @@ data "aws_iam_policy_document" "github_deploy" {
       aws_lambda_function.api.arn,
     ]
   }
+
+  # DynamoDB: allow sync scripts to write built-in and enterprise skills
+  statement {
+    sid    = "DynamoDBSyncSkills"
+    effect = "Allow"
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:GetItem",
+    ]
+    resources = [aws_dynamodb_table.skills.arn]
+  }
 }
 
 resource "aws_iam_role_policy" "github_deploy" {
