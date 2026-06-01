@@ -17,22 +17,12 @@ import Tooltip from '../components/Tooltip.astro';
     <div id="favorites-grid"></div>
   </div>
 
-  <!-- Category grid — populated by client script after skills are fetched -->
+  <!-- CATEGORIES SECTION — commented out, revisit later
   <div class="mb-3">
     <h2 class="text-base font-semibold text-gray-700 m-0">Categories</h2>
   </div>
-  <div id="category-grid">
-    <section class="mb-6">
-      <div class="grid grid-cols-3 gap-4 animate-pulse">
-        <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid #e5e7eb"><div class="h-3 bg-gray-200 rounded w-2/5 mb-3"></div><div class="space-y-2 mb-3"><div class="h-3 bg-gray-100 rounded w-3/4"></div><div class="h-3 bg-gray-100 rounded w-2/3"></div><div class="h-3 bg-gray-100 rounded w-1/2"></div></div><div class="h-3 bg-gray-100 rounded w-1/3"></div></div>
-        <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid #e5e7eb"><div class="h-3 bg-gray-200 rounded w-3/5 mb-3"></div><div class="space-y-2 mb-3"><div class="h-3 bg-gray-100 rounded w-2/3"></div><div class="h-3 bg-gray-100 rounded w-3/4"></div><div class="h-3 bg-gray-100 rounded w-2/5"></div></div><div class="h-3 bg-gray-100 rounded w-1/4"></div></div>
-        <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid #e5e7eb"><div class="h-3 bg-gray-200 rounded w-2/5 mb-3"></div><div class="space-y-2 mb-3"><div class="h-3 bg-gray-100 rounded w-4/5"></div><div class="h-3 bg-gray-100 rounded w-1/2"></div><div class="h-3 bg-gray-100 rounded w-3/5"></div></div><div class="h-3 bg-gray-100 rounded w-1/3"></div></div>
-        <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid #e5e7eb"><div class="h-3 bg-gray-200 rounded w-1/2 mb-3"></div><div class="space-y-2 mb-3"><div class="h-3 bg-gray-100 rounded w-3/4"></div><div class="h-3 bg-gray-100 rounded w-2/3"></div><div class="h-3 bg-gray-100 rounded w-3/5"></div></div><div class="h-3 bg-gray-100 rounded w-2/5"></div></div>
-        <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid #e5e7eb"><div class="h-3 bg-gray-200 rounded w-2/5 mb-3"></div><div class="space-y-2 mb-3"><div class="h-3 bg-gray-100 rounded w-1/2"></div><div class="h-3 bg-gray-100 rounded w-3/4"></div><div class="h-3 bg-gray-100 rounded w-2/3"></div></div><div class="h-3 bg-gray-100 rounded w-1/3"></div></div>
-        <div class="border border-dashed border-gray-200 bg-gray-50 rounded-lg p-4"></div>
-      </div>
-    </section>
-  </div>
+  <div id="category-grid"></div>
+  END CATEGORIES SECTION -->
 
   <!-- New this week strip — populated by client script after skills are fetched -->
   <div class="mt-8 mb-3">
@@ -109,22 +99,15 @@ import Tooltip from '../components/Tooltip.astro';
       <div id="agents-grid"></div>
     </section>
 
-    <!-- Plugins -->
+    <!-- PLUGINS SECTION — commented out, revisit later
     <section class="mb-10">
       <div class="flex items-center gap-1.5 mb-3">
         <h2 class="text-base font-semibold text-gray-700 m-0">Plugins</h2>
         <span class="text-xs text-gray-400" id="plugins-count"></span>
-        <Tooltip text="A Plugin is a GitHub repo that contains Skills and Agents — the organizational unit, like a package." />
       </div>
-      <div id="plugins-list">
-        <div class="grid grid-cols-4 gap-2 animate-pulse">
-          <div class="h-10 bg-gray-100 rounded-lg"></div>
-          <div class="h-10 bg-gray-100 rounded-lg"></div>
-          <div class="h-10 bg-gray-100 rounded-lg"></div>
-          <div class="h-10 bg-gray-100 rounded-lg"></div>
-        </div>
-      </div>
+      <div id="plugins-list"></div>
     </section>
+    END PLUGINS SECTION -->
 
     <!-- MCP Servers placeholder -->
     <section class="mb-10">
@@ -212,34 +195,41 @@ fetchApi('/categories').then(({ categories: apiCategories }) => {
   const enterpriseSkills = skills.filter(s => s.source === 'enterprise');
   const catSkillSlugs = new Set(catSkills.map(s => s.slug));
   const gridSkills = [...catSkills, ...enterpriseSkills.filter(s => !catSkillSlugs.has(s.slug))];
-  document.getElementById('category-grid').innerHTML = renderCategoryGrid(mergedCategories, gridSkills);
+  // category-grid hidden — see HTML comment above
   document.getElementById('new-this-week').innerHTML = renderNewThisWeek(skills, mergedCategories);
 
-  const allSkills = skills.filter(s => s.type === 'skill');
+  // Enterprise (org-wide) skills surfaced first in the skills grid
+  const allSkills = skills
+    .filter(s => s.type === 'skill')
+    .sort((a, b) => {
+      if (a.source === 'enterprise' && b.source !== 'enterprise') return -1;
+      if (b.source === 'enterprise' && a.source !== 'enterprise') return 1;
+      return 0;
+    });
   const allAgents = skills.filter(s => s.type === 'agent');
 
-  // Plugins — sorted by total item count descending
+  // Plugins — section hidden, guard against missing DOM elements
   const sortedPlugins = [...plugins].sort((a, b) => {
     const aTotal = (a.skills_count || 0) + (a.agents_count || 0);
     const bTotal = (b.skills_count || 0) + (b.agents_count || 0);
     return bTotal - aTotal;
   });
+  // Plugins section hidden — elements may not exist in DOM
+  // Uncomment HTML section above to re-enable
+  /*
   document.getElementById('plugins-count').textContent = `(${plugins.length})`;
   document.getElementById('plugins-list').innerHTML = `<div class="grid grid-cols-4 gap-2">
     ${sortedPlugins.map(p => {
       const skills = p.skills_count || 0;
       const agents = p.agents_count || 0;
       const total = skills + agents;
-      const label = [
-        skills > 0 ? `${skills} skill${skills !== 1 ? 's' : ''}` : '',
-        agents > 0 ? `${agents} agent${agents !== 1 ? 's' : ''}` : '',
-      ].filter(Boolean).join(', ') || '0 items';
       return `<a href="/plugins/${escapeHtml(p.slug)}" class="flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-plum-300 hover:shadow-sm no-underline transition-all group">
         <span class="text-sm font-medium text-gray-800 group-hover:text-plum-700 truncate transition-colors">${escapeHtml(p.name)}</span>
         <span class="text-xs text-gray-400 ml-2 flex-shrink-0 tabular-nums">${total}</span>
       </a>`;
     }).join('')}
   </div>`;
+  */
 
   // Skills grid
   document.getElementById('skills-count').textContent = `(${allSkills.length})`;
