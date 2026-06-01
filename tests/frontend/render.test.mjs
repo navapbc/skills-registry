@@ -331,3 +331,43 @@ describe('renderSkillCard — anthropic-builtin badge', () => {
     expect(html).toContain('Anthropic Tool');
   });
 });
+
+describe('renderSkillCard — org-wide badge', () => {
+  const enterprise = {
+    slug: 'daily-briefing', name: 'Daily Briefing', description: 'Briefing skill',
+    plugin: 'skills-registry', author: 'Nava Ops', compatibility: ['claude-desktop'],
+    type: 'skill', source: 'enterprise', tags: [], category: 'ops-automation',
+  };
+  it('shows Org-wide badge for enterprise source', () => {
+    const html = renderSkillCard(enterprise);
+    expect(html).toContain('Org-wide');
+    expect(html).toContain('violet');
+  });
+  it('does not show Org-wide badge for github source', () => {
+    const html = renderSkillCard({ ...enterprise, source: 'github' });
+    expect(html).not.toContain('Org-wide');
+  });
+});
+
+describe('renderCategoryGrid — enterprise auto-feature', () => {
+  const cats = [{ id: 'ops-automation', label: 'Ops', borderColor: '#ccc', textColor: '#333', featuredSlugs: [], slugs: ['retro'] }];
+  const retro = { slug: 'retro', name: 'Retro', description: 'Retro skill', source: 'github', type: 'skill', category: '' };
+  const orgSkill = { slug: 'daily-briefing', name: 'Daily Briefing', description: 'Briefing', source: 'enterprise', type: 'skill', category: 'ops-automation' };
+
+  it('auto-features enterprise skills in their category', () => {
+    const html = renderCategoryGrid(cats, [retro, orgSkill]);
+    expect(html).toContain('Daily Briefing');
+    expect(html).toContain('Org-wide');
+  });
+
+  it('enterprise skills appear in view-all count', () => {
+    const html = renderCategoryGrid(cats, [retro, orgSkill]);
+    expect(html).toContain('View all (2)');
+  });
+
+  it('enterprise skills not in wrong category', () => {
+    const wrongCat = [{ id: 'planning', label: 'Planning', borderColor: '#ccc', textColor: '#333', featuredSlugs: [], slugs: [] }];
+    const html = renderCategoryGrid(wrongCat, [orgSkill]);
+    expect(html).not.toContain('Daily Briefing');
+  });
+});

@@ -53,6 +53,9 @@ export function renderSkillCard(skill, showPlugin = true) {
   const anthropicBadge = skill.source === 'anthropic-builtin'
     ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-violet-50 text-violet-700 rounded">Anthropic Tool</span>`
     : '';
+  const orgWideBadge = skill.source === 'enterprise'
+    ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-700 rounded">Org-wide</span>`
+    : '';
   const tags = skill.tags?.length
     ? `<div class="flex flex-wrap gap-1" data-tags>
       ${skill.tags.slice(0, 3).map(t => `<span class="px-1 py-0.5 text-xs bg-gray-100 text-gray-500 rounded">#${escapeHtml(t)}</span>`).join('')}
@@ -72,7 +75,7 @@ export function renderSkillCard(skill, showPlugin = true) {
   >
     <div class="flex items-start justify-between gap-2 flex-wrap">
       <span class="font-semibold text-sm text-gray-900">${escapeHtml(skill.name)}</span>
-      <div class="flex items-center gap-1 flex-wrap">${pluginBadge}${agentBadge}${sensitiveBadge}${anthropicBadge}</div>
+      <div class="flex items-center gap-1 flex-wrap">${pluginBadge}${agentBadge}${sensitiveBadge}${anthropicBadge}${orgWideBadge}</div>
     </div>
     <p class="text-xs text-gray-500 leading-relaxed m-0 flex-1">${escapeHtml(preview)}</p>
     ${tags}
@@ -182,6 +185,12 @@ export function renderSkillDetail(skill) {
           ${skill.source === 'anthropic-builtin'
   ? `<div class="mt-4 p-3 bg-violet-50 border border-violet-200 rounded-lg text-xs text-violet-700">
       <strong>Anthropic Tool</strong> — This skill runs via the Anthropic Messages API code execution container. It is not a SKILL.md workflow.
+    </div>`
+  : ''}
+          ${skill.source === 'enterprise'
+  ? `<div class="mt-4 p-3 bg-violet-50 border border-violet-200 rounded-lg flex items-center gap-2">
+      <span class="px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-700 rounded flex-shrink-0">Org-wide</span>
+      <span class="text-xs text-violet-700">Available to all Nava staff in Claude Desktop — no installation needed.</span>
     </div>`
   : ''}
         </section>
@@ -319,16 +328,28 @@ export function renderCategoryGrid(categories, allSkills) {
   }
 
   const categoryCards = categories.map(cat => {
-    const featured = (cat.featuredSlugs || []).map(slug => bySlug.get(slug)).filter(Boolean);
-    const all = (cat.slugs || []).map(slug => bySlug.get(slug)).filter(Boolean);
-    const preview = all.slice(0, 3);
+    const adminFeatured = (cat.featuredSlugs || []).map(slug => bySlug.get(slug)).filter(Boolean);
+    const enterpriseFeatured = allSkills.filter(s => s.source === 'enterprise' && s.category === cat.id);
+    // Merge, deduplicating by slug (admin-featured take precedence, then enterprise)
+    const featuredSlugsSet = new Set(adminFeatured.map(s => s.slug));
+    const featured = [
+      ...adminFeatured,
+      ...enterpriseFeatured.filter(s => !featuredSlugsSet.has(s.slug)),
+    ];
+    const catSlugs = (cat.slugs || []).map(slug => bySlug.get(slug)).filter(Boolean);
+    const enterpriseSlugsSet = new Set(enterpriseFeatured.map(s => s.slug));
+    const catSlugsFiltered = catSlugs.filter(s => !enterpriseSlugsSet.has(s.slug));
+    const all = [...enterpriseFeatured, ...catSlugsFiltered];
+    const preview = all.filter(s => !featuredSlugsSet.has(s.slug) && s.source !== 'enterprise').slice(0, 3);
 
     const skillUrl = (skill) => `/${skill.type === 'agent' ? 'agents' : 'skills'}/${escapeHtml(skill.slug)}`;
 
     const featuredRows = featured.map(skill => `
       <div class="flex items-center justify-between py-1 border-b border-gray-50">
         <a href="${skillUrl(skill)}" class="text-xs text-gray-700 no-underline hover:text-plum-600">${escapeHtml(skill.name)}</a>
-        <span class="text-xs font-medium text-plum-600">Featured</span>
+        ${skill.source === 'enterprise'
+      ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-700 rounded">Org-wide</span>`
+      : `<span class="text-xs font-medium text-plum-600">Featured</span>`}
       </div>`).join('');
 
     const previewRows = preview.map(skill => `
