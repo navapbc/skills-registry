@@ -41,7 +41,6 @@ jobs:
       - name: Sync Anthropic built-in skills (staging)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          NODE_PATH: functions/api/node_modules
         run: node scripts/sync-anthropic-builtin-skills.mjs --env staging
 
   sync-prod:
@@ -80,5 +79,4 @@ jobs:
       - name: Sync Anthropic built-in skills (prod)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          NODE_PATH: functions/api/node_modules
         run: node scripts/sync-anthropic-builtin-skills.mjs --env prod

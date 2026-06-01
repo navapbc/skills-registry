@@ -1,12 +1,11 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { ddb, tables, PutCommand } from '../functions/api/lib/dynamo.mjs';
 
 const args = process.argv.slice(2);
 const envFlag = args.indexOf('--env');
 const env = envFlag !== -1 ? args[envFlag + 1] : null;
 
 if (!env || !['staging', 'prod'].includes(env)) {
-  console.error('Usage: node sync-anthropic-builtin-skills.mjs --env staging|prod');
+  console.error('Usage: node scripts/sync-anthropic-builtin-skills.mjs --env staging|prod');
   process.exit(1);
 }
 
@@ -16,7 +15,7 @@ if (!ANTHROPIC_API_KEY) {
   process.exit(1);
 }
 
-const TABLE = `skills-registry-skills-${env}`;
+process.env.SKILLS_TABLE = `skills-registry-skills-${env}`;
 
 const DESCRIPTIONS = {
   xlsx: 'Read and write Excel spreadsheets via Claude code execution in the Anthropic Messages API.',
@@ -24,9 +23,6 @@ const DESCRIPTIONS = {
   pdf:  'Extract and process PDF content via Claude code execution in the Anthropic Messages API.',
   docx: 'Read and write Word documents via Claude code execution in the Anthropic Messages API.',
 };
-
-const client = new DynamoDBClient({ region: 'us-east-1' });
-const ddb = DynamoDBDocumentClient.from(client);
 
 async function fetchAnthropicSkills() {
   const res = await fetch('https://api.anthropic.com/v1/skills?source=anthropic', {
@@ -67,7 +63,7 @@ async function upsertSkill(skill) {
   };
 
   await ddb.send(new PutCommand({
-    TableName: TABLE,
+    TableName: tables.skills(),
     Item: item,
     ConditionExpression: 'attribute_not_exists(#slug) OR #src = :builtin',
     ExpressionAttributeNames: { '#slug': 'slug', '#src': 'source' },
@@ -78,7 +74,7 @@ async function upsertSkill(skill) {
 }
 
 async function main() {
-  console.log(`Syncing Anthropic built-in skills → ${TABLE}`);
+  console.log(`Syncing Anthropic built-in skills → ${tables.skills()}`);
   const skills = await fetchAnthropicSkills();
   console.log(`Found ${skills.length} Anthropic skills`);
 
