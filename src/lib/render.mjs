@@ -425,7 +425,6 @@ export function renderNewThisWeek(allSkills, categories) {
 }
 
 export function renderCategoryDetail(category, allSkills) {
-  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const bySlug = new Map(allSkills.map(s => [s.slug, s]));
 
   const featured = (category.featuredSlugs || []).map(s => bySlug.get(s)).filter(Boolean);

@@ -180,8 +180,12 @@ fetchApi('/categories').then(({ categories: apiCategories }) => {
     Promise.resolve(mergedCategories),
   ]);
 }).then(([{ skills: catSkills }, { skills }, { plugins }, mergedCategories]) => {
-  // Category grid uses targeted fetch; new-this-week uses full list for freshness
-  document.getElementById('category-grid').innerHTML = renderCategoryGrid(mergedCategories, catSkills);
+  // Category grid: merge targeted fetch with full list so enterprise skills (source=enterprise)
+  // are included even if their slugs aren't in the static categories.mjs config
+  const enterpriseSkills = skills.filter(s => s.source === 'enterprise');
+  const catSkillSlugs = new Set(catSkills.map(s => s.slug));
+  const gridSkills = [...catSkills, ...enterpriseSkills.filter(s => !catSkillSlugs.has(s.slug))];
+  document.getElementById('category-grid').innerHTML = renderCategoryGrid(mergedCategories, gridSkills);
   document.getElementById('new-this-week').innerHTML = renderNewThisWeek(skills, mergedCategories);
 
   const allSkills = skills.filter(s => s.type === 'skill');
