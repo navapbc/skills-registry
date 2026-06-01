@@ -308,6 +308,32 @@ async function main() {
   for (const hit of skillHits.values()) await processHit(hit, 'skill');
   for (const hit of agentHits.values()) await processHit(hit, 'agent');
 
+  // Fetch enterprise/ skills directly from skills-registry repo (bypasses search indexing delay)
+  console.log('\nFetching enterprise/ skills directly from skills-registry...');
+  try {
+    const REGISTRY_REPO = 'skills-registry';
+    const { data: repoData } = await octokit.rest.repos.get({ owner: ORG, repo: REGISTRY_REPO });
+    const { data: tree } = await octokit.rest.git.getTree({
+      owner: ORG, repo: REGISTRY_REPO, tree_sha: 'HEAD', recursive: 'true',
+    });
+    const enterpriseFiles = tree.tree.filter(
+      f => f.type === 'blob' && f.path.startsWith('enterprise/') && f.path.endsWith('/SKILL.md')
+    );
+    console.log(`  Found ${enterpriseFiles.length} enterprise SKILL.md files`);
+    for (const file of enterpriseFiles) {
+      const content = await fetchContent(REGISTRY_REPO, file.path);
+      if (!content) continue;
+      const { meta, body } = parseFrontmatter(content);
+      const committer = await fetchLastCommitter(REGISTRY_REPO, file.path);
+      const record = buildRecord(content, file.path, repoData, meta, body, 'skill', committer);
+      skillMap.set(`${ORG}/${REGISTRY_REPO}::${file.path}`, record);
+      updatedPlugins.add(`${ORG}/${REGISTRY_REPO}`);
+      console.log(`  ✓ ${record.slug} (source: ${record.source}, category: ${record.category || 'none'})`);
+    }
+  } catch (err) {
+    console.error(`  Warning: could not fetch enterprise skills directly — ${err.message}`);
+  }
+
   // Recompute counts for repos that gained new entries
   for (const pluginKey of updatedPlugins) {
     const plugin = pluginMap.get(pluginKey);
