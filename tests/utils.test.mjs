@@ -53,6 +53,25 @@ describe('parseFrontmatter', () => {
     const { meta } = parseFrontmatter('---\n  name :   padded value  \n---\nbody');
     expect(meta.name).toBe('padded value');
   });
+
+  it('parses YAML folded scalar (>) into a single string', () => {
+    const content = `---\nname: test\ndescription: >\n  First line of description.\n  Second line here.\n---\nbody`;
+    const { meta } = parseFrontmatter(content);
+    expect(meta.description).toBe('First line of description. Second line here.');
+  });
+
+  it('parses YAML literal block scalar (|) into a single string', () => {
+    const content = `---\nname: test\ndescription: |\n  Line one.\n  Line two.\n---\nbody`;
+    const { meta } = parseFrontmatter(content);
+    expect(meta.description).toBe('Line one. Line two.');
+  });
+
+  it('parses fields after a block scalar correctly', () => {
+    const content = `---\ndescription: >\n  Multi-line text here.\nversion: "2.0"\n---\nbody`;
+    const { meta } = parseFrontmatter(content);
+    expect(meta.description).toBe('Multi-line text here.');
+    expect(meta.version).toBe('2.0');
+  });
 });
 
 describe('getDescription', () => {
