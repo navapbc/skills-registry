@@ -27,13 +27,35 @@ import Tooltip from '../components/Tooltip.astro';
   <div class="mb-3">
     <h2 class="text-base font-semibold text-gray-700 m-0">Categories</h2>
   </div>
-  <div id="category-grid"></div>
+  <div id="category-grid">
+    <section class="mb-6">
+      <div class="grid grid-cols-3 gap-4 animate-pulse">
+        <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid #e5e7eb"><div class="h-3 bg-gray-200 rounded w-2/5 mb-3"></div><div class="space-y-2 mb-3"><div class="h-3 bg-gray-100 rounded w-3/4"></div><div class="h-3 bg-gray-100 rounded w-2/3"></div><div class="h-3 bg-gray-100 rounded w-1/2"></div></div><div class="h-3 bg-gray-100 rounded w-1/3"></div></div>
+        <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid #e5e7eb"><div class="h-3 bg-gray-200 rounded w-3/5 mb-3"></div><div class="space-y-2 mb-3"><div class="h-3 bg-gray-100 rounded w-2/3"></div><div class="h-3 bg-gray-100 rounded w-3/4"></div><div class="h-3 bg-gray-100 rounded w-2/5"></div></div><div class="h-3 bg-gray-100 rounded w-1/4"></div></div>
+        <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid #e5e7eb"><div class="h-3 bg-gray-200 rounded w-2/5 mb-3"></div><div class="space-y-2 mb-3"><div class="h-3 bg-gray-100 rounded w-4/5"></div><div class="h-3 bg-gray-100 rounded w-1/2"></div><div class="h-3 bg-gray-100 rounded w-3/5"></div></div><div class="h-3 bg-gray-100 rounded w-1/3"></div></div>
+        <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid #e5e7eb"><div class="h-3 bg-gray-200 rounded w-1/2 mb-3"></div><div class="space-y-2 mb-3"><div class="h-3 bg-gray-100 rounded w-3/4"></div><div class="h-3 bg-gray-100 rounded w-2/3"></div><div class="h-3 bg-gray-100 rounded w-3/5"></div></div><div class="h-3 bg-gray-100 rounded w-2/5"></div></div>
+        <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid #e5e7eb"><div class="h-3 bg-gray-200 rounded w-2/5 mb-3"></div><div class="space-y-2 mb-3"><div class="h-3 bg-gray-100 rounded w-1/2"></div><div class="h-3 bg-gray-100 rounded w-3/4"></div><div class="h-3 bg-gray-100 rounded w-2/3"></div></div><div class="h-3 bg-gray-100 rounded w-1/3"></div></div>
+        <div class="border border-dashed border-gray-200 bg-gray-50 rounded-lg p-4"></div>
+      </div>
+    </section>
+  </div>
 
   <!-- New this week strip — populated by client script after skills are fetched -->
   <div class="mt-8 mb-3">
     <h2 class="text-base font-semibold text-gray-700 m-0">New This Week</h2>
   </div>
-  <div id="new-this-week"></div>
+  <div id="new-this-week">
+    <div class="bg-white border border-gray-200 rounded-lg p-4 mb-10 animate-pulse">
+      <div class="flex items-center justify-between mb-3">
+        <div class="h-3 bg-gray-100 rounded w-20"></div>
+      </div>
+      <div class="flex gap-3">
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-1"><div class="h-3 bg-gray-200 rounded w-3/4 mb-1.5"></div><div class="h-3 bg-gray-100 rounded w-1/2"></div></div>
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-1"><div class="h-3 bg-gray-200 rounded w-2/3 mb-1.5"></div><div class="h-3 bg-gray-100 rounded w-2/5"></div></div>
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-1"><div class="h-3 bg-gray-200 rounded w-3/4 mb-1.5"></div><div class="h-3 bg-gray-100 rounded w-1/2"></div></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Browse view -->
   <div id="browse-view">
