@@ -155,6 +155,12 @@ function buildRecord(content, path, repo, meta, body, type, committer) {
       : meta.tools_used ? [meta.tools_used] : [];
     record.human_in_loop = meta.human_in_loop || '';
   }
+  if (path.startsWith('enterprise/')) {
+    record.source = 'enterprise';
+    record.category = meta.category ?? '';
+  } else {
+    record.category = meta.category ?? '';
+  }
   return record;
 }
 
@@ -342,11 +348,12 @@ async function main() {
           version      = :version,
           compatibility = :compat,
           sensitive_data = :sensitive,
+          category     = :category,
           #type        = :type,
           content      = :content,
           last_updated = :updated,
           updated_at   = :now,
-          source       = if_not_exists(source,       :github),
+          source       = if_not_exists(source,       :src),
           #status      = if_not_exists(#status,      :approved),
           visibility   = if_not_exists(visibility,   :public),
           created_by   = if_not_exists(created_by,   :system),
@@ -362,9 +369,12 @@ async function main() {
           ':type': skill.type, ':content': skill.content,
           ':updated': skill.last_updated || now, ':now': now,
           ':github': 'github', ':approved': 'approved', ':public': 'public', ':system': 'system',
+          ':src': skill.source ?? 'github',
+          ':enterprise': 'enterprise',
+          ':category': skill.category ?? '',
         },
-        // Only update existing records if they came from github; always create new ones.
-        ConditionExpression: 'attribute_not_exists(slug) OR #source = :github',
+        // Only update existing records if they came from github or enterprise; always create new ones.
+        ConditionExpression: 'attribute_not_exists(slug) OR #source = :github OR #source = :enterprise',
         ExpressionAttributeNames: {
           '#name': 'name', '#path': 'path', '#type': 'type', '#status': 'status', '#source': 'source',
         },
