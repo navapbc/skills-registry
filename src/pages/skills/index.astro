@@ -24,6 +24,7 @@ import Base from '../../layouts/Base.astro';
 <script>
 import { fetchApi } from '../../lib/api.mjs';
 import { renderSkillDetail, renderSkillGrid, escapeHtml } from '../../lib/render.mjs';
+import { isFavorited, toggleFavorite } from '../../lib/favorites.mjs';
 
 const NAVA_N = `███╗   ██╗\n████╗  ██║\n██╔██╗ ██║\n██║╚██╗██║\n██║ ╚████║\n╚═╝  ╚═══╝`;
 function notFoundHtml(entity) {
@@ -72,6 +73,7 @@ if (!slug) {
       document.title = skill.name + ' · Skills Hub';
       initCopyButtons(skill);
       initGithubLinks();
+      initFavoriteButton(skill);
     })
     .catch(err => {
       if (err.message.startsWith('API 404')) {
@@ -111,6 +113,24 @@ function initGithubLinks() {
       const url = el.dataset.githubUrl;
       if (url) { e.preventDefault(); e.stopPropagation(); window.open(url, '_blank', 'noopener'); }
     });
+  });
+}
+
+function updateFavBtn(btn, isFav) {
+  btn.setAttribute('aria-pressed', String(isFav));
+  btn.setAttribute('aria-label', isFav ? 'Remove from favorites' : 'Add to favorites');
+  btn.className = `favorite-btn inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg transition-colors ${isFav ? 'bg-amber-50 border-amber-300 text-amber-700' : 'bg-white border-gray-200 text-gray-600 hover:border-amber-300 hover:text-amber-600'}`;
+  btn.innerHTML = `<span aria-hidden="true">${isFav ? '★' : '☆'}</span> ${isFav ? 'Favorited' : 'Favorite'}`;
+}
+
+function initFavoriteButton(skill) {
+  const favBtn = document.querySelector('.favorite-btn');
+  if (!favBtn) return;
+  const currentlyFav = isFavorited(skill.slug);
+  updateFavBtn(favBtn, currentlyFav);
+  favBtn.addEventListener('click', () => {
+    const nowFav = toggleFavorite(skill);
+    updateFavBtn(favBtn, nowFav);
   });
 }
 </script>

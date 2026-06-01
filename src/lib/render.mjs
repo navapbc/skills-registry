@@ -98,6 +98,18 @@ export function renderSkillGrid(skills, showPlugin = true) {
   </div>`;
 }
 
+export function renderFavoriteButton(slug, isFav = false) {
+  return `<button
+    class="favorite-btn inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg transition-colors ${isFav ? 'bg-amber-50 border-amber-300 text-amber-700' : 'bg-white border-gray-200 text-gray-600 hover:border-amber-300 hover:text-amber-600'}"
+    data-slug="${escapeHtml(slug)}"
+    aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}"
+    aria-pressed="${isFav}"
+  >
+    <span aria-hidden="true">${isFav ? '★' : '☆'}</span>
+    ${isFav ? 'Favorited' : 'Favorite'}
+  </button>`;
+}
+
 export function renderSkillDetail(skill) {
   const hasClaudeCode = skill.compatibility.includes('claude-code');
   const hasClaudeChat = skill.compatibility.includes('claude-chat') || skill.compatibility.includes('claude-cowork');
@@ -201,6 +213,7 @@ export function renderSkillDetail(skill) {
         </section>
       </div>
       <aside class="w-64 flex-shrink-0 space-y-4">
+        <div>${renderFavoriteButton(skill.slug)}</div>
         ${claudeCodeCard}
         ${claudeChatCard}
         ${committerCard}

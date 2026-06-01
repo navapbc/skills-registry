@@ -3,10 +3,10 @@ import Base from '../layouts/Base.astro';
 ---
 
 <Base title="My Skills" description="Skills and agents you have installed or bookmarked.">
-  <div class="flex items-start justify-between mb-8">
+  <div class="flex items-start justify-between mb-6">
     <div>
       <h1 class="text-2xl font-bold text-gray-900 m-0">My Skills</h1>
-      <p class="text-sm text-gray-500 mt-1 m-0" id="skills-count">Skills you've installed</p>
+      <p class="text-sm text-gray-500 mt-1 m-0" id="skills-count"></p>
     </div>
     <button
       id="clear-all"
@@ -16,24 +16,57 @@ import Base from '../layouts/Base.astro';
     </button>
   </div>
 
-  <!-- Empty state -->
-  <div id="empty-state" class="hidden">
-    <div class="flex flex-col items-center justify-center py-20 px-8 border-2 border-dashed border-gray-200 rounded-xl bg-white text-center">
-      <span class="text-3xl text-plum-300 mb-4">✦</span>
-      <p class="font-semibold text-gray-800 mb-2 m-0">No skills installed yet</p>
-      <p class="text-sm text-gray-500 mb-6 m-0 max-w-xs">Copy a skill's install command and it'll appear here for quick access.</p>
-      <a href="/" class="px-4 py-2 text-sm font-medium bg-plum-600 text-white rounded hover:bg-plum-700 no-underline transition-colors">
-        Browse Marketplace →
-      </a>
-    </div>
+  <!-- Tab switcher -->
+  <div class="flex items-center gap-0 border-b border-gray-200 mb-6">
+    <button
+      id="tab-btn-favorites"
+      class="px-4 py-2 text-sm font-medium border-b-2 -mb-px bg-transparent cursor-pointer transition-colors text-plum-700 border-plum-600"
+      data-tab="favorites"
+    >Favorites</button>
+    <button
+      id="tab-btn-installed"
+      class="px-4 py-2 text-sm font-medium border-b-2 border-transparent -mb-px bg-transparent cursor-pointer transition-colors text-gray-500 hover:text-gray-700"
+      data-tab="installed"
+    >Installed</button>
   </div>
 
-  <!-- Skills grid -->
-  <div id="skills-grid" class="grid grid-cols-3 gap-3"></div>
+  <!-- Favorites panel -->
+  <div id="panel-favorites">
+    <div id="favorites-empty-state" class="hidden">
+      <div class="flex flex-col items-center justify-center py-20 px-8 border-2 border-dashed border-amber-200 rounded-xl bg-white text-center">
+        <span class="text-3xl text-amber-300 mb-4">☆</span>
+        <p class="font-semibold text-gray-800 mb-2 m-0">No favorites yet</p>
+        <p class="text-sm text-gray-500 mb-6 m-0 max-w-xs">Star any skill or agent on its detail page and it'll appear here for quick access.</p>
+        <a href="/" class="px-4 py-2 text-sm font-medium bg-plum-600 text-white rounded hover:bg-plum-700 no-underline transition-colors">
+          Browse Marketplace →
+        </a>
+      </div>
+    </div>
+    <div id="favorites-grid" class="grid grid-cols-3 gap-3"></div>
+  </div>
+
+  <!-- Installed panel -->
+  <div id="panel-installed" class="hidden">
+    <!-- Empty state -->
+    <div id="empty-state" class="hidden">
+      <div class="flex flex-col items-center justify-center py-20 px-8 border-2 border-dashed border-gray-200 rounded-xl bg-white text-center">
+        <span class="text-3xl text-plum-300 mb-4">✦</span>
+        <p class="font-semibold text-gray-800 mb-2 m-0">No skills installed yet</p>
+        <p class="text-sm text-gray-500 mb-6 m-0 max-w-xs">Copy a skill's install command and it'll appear here for quick access.</p>
+        <a href="/" class="px-4 py-2 text-sm font-medium bg-plum-600 text-white rounded hover:bg-plum-700 no-underline transition-colors">
+          Browse Marketplace →
+        </a>
+      </div>
+    </div>
+
+    <!-- Skills grid -->
+    <div id="skills-grid" class="grid grid-cols-3 gap-3"></div>
+  </div>
 </Base>
 
 <script>
   const STORAGE_KEY = 'nava_installed_skills';
+  const FAV_KEY = 'nava_favorite_skills';
 
   interface InstalledSkill {
     slug: string;
@@ -46,12 +79,39 @@ import Base from '../layouts/Base.astro';
     installCommand?: string;
   }
 
+  interface FavoriteSkill {
+    slug: string;
+    name: string;
+    plugin: string;
+    type: string;
+    description: string;
+    compatibility: string[];
+  }
+
   function getInstalled(): InstalledSkill[] {
     try {
       return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     } catch {
       return [];
     }
+  }
+
+  function getFavorites(): FavoriteSkill[] {
+    try {
+      return JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  function saveFavorites(favs: FavoriteSkill[]) {
+    localStorage.setItem(FAV_KEY, JSON.stringify(favs));
+  }
+
+  function removeFavorite(slug: string) {
+    const favs = getFavorites().filter(f => f.slug !== slug);
+    saveFavorites(favs);
+    renderFavorites();
   }
 
   function saveInstalled(skills: InstalledSkill[]) {
@@ -61,7 +121,7 @@ import Base from '../layouts/Base.astro';
   function removeSkill(slug: string) {
     const skills = getInstalled().filter(s => s.slug !== slug);
     saveInstalled(skills);
-    render();
+    renderInstalled();
   }
 
   function timeAgo(ts: number): string {
@@ -74,7 +134,86 @@ import Base from '../layouts/Base.astro';
     return `${Math.floor(days / 30)} month${Math.floor(days / 30) > 1 ? 's' : ''} ago`;
   }
 
-  function render() {
+  let activeTab: 'favorites' | 'installed' = 'favorites';
+
+  function switchTab(tab: 'favorites' | 'installed') {
+    activeTab = tab;
+    const favPanel = document.getElementById('panel-favorites')!;
+    const instPanel = document.getElementById('panel-installed')!;
+    const favBtn = document.getElementById('tab-btn-favorites')!;
+    const instBtn = document.getElementById('tab-btn-installed')!;
+    const clearBtn = document.getElementById('clear-all')!;
+
+    if (tab === 'favorites') {
+      favPanel.classList.remove('hidden');
+      instPanel.classList.add('hidden');
+      favBtn.className = 'px-4 py-2 text-sm font-medium border-b-2 -mb-px bg-transparent cursor-pointer transition-colors text-plum-700 border-plum-600';
+      instBtn.className = 'px-4 py-2 text-sm font-medium border-b-2 border-transparent -mb-px bg-transparent cursor-pointer transition-colors text-gray-500 hover:text-gray-700';
+      renderFavorites();
+      clearBtn.classList.add('hidden');
+    } else {
+      favPanel.classList.add('hidden');
+      instPanel.classList.remove('hidden');
+      instBtn.className = 'px-4 py-2 text-sm font-medium border-b-2 -mb-px bg-transparent cursor-pointer transition-colors text-plum-700 border-plum-600';
+      favBtn.className = 'px-4 py-2 text-sm font-medium border-b-2 border-transparent -mb-px bg-transparent cursor-pointer transition-colors text-gray-500 hover:text-gray-700';
+      renderInstalled();
+    }
+  }
+
+  function renderFavorites() {
+    const favs = getFavorites();
+    const grid = document.getElementById('favorites-grid')!;
+    const emptyState = document.getElementById('favorites-empty-state')!;
+    const countEl = document.getElementById('skills-count')!;
+
+    if (favs.length === 0) {
+      emptyState.classList.remove('hidden');
+      grid.classList.add('hidden');
+      countEl.textContent = '';
+      return;
+    }
+
+    emptyState.classList.add('hidden');
+    grid.classList.remove('hidden');
+    countEl.textContent = `${favs.length} favorite${favs.length === 1 ? '' : 's'}`;
+
+    grid.innerHTML = favs.map(fav => {
+      const typeTag = fav.type === 'agent'
+        ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>`
+        : `<span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">${fav.plugin}</span>`;
+      const preview = fav.description.length > 100
+        ? fav.description.slice(0, 100) + '...'
+        : fav.description;
+      const href = `/${fav.type === 'agent' ? 'agents' : 'skills'}/${fav.slug}`;
+
+      return `
+        <div class="flex flex-col gap-3 p-4 bg-white border border-amber-200 rounded-lg">
+          <div class="flex items-start justify-between gap-2">
+            <a href="${href}" class="font-semibold text-sm text-gray-900 no-underline hover:text-plum-700">${fav.name}</a>
+            <div class="flex items-center gap-1">${typeTag}</div>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed m-0 flex-1">${preview}</p>
+          <div class="flex items-center justify-between mt-auto pt-1 gap-2">
+            <span class="text-xs text-gray-400">${fav.plugin || ''}</span>
+            <button
+              class="unfav-btn px-2 py-1 text-xs text-amber-600 border border-amber-200 rounded hover:border-amber-300 hover:text-amber-700 cursor-pointer transition-colors bg-white"
+              data-slug="${fav.slug}"
+              aria-label="Remove from favorites"
+            >★ Remove</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    grid.querySelectorAll('.unfav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const slug = (btn as HTMLElement).dataset.slug || '';
+        removeFavorite(slug);
+      });
+    });
+  }
+
+  function renderInstalled() {
     const skills = getInstalled();
     const grid = document.getElementById('skills-grid')!;
     const emptyState = document.getElementById('empty-state')!;
@@ -85,7 +224,7 @@ import Base from '../layouts/Base.astro';
       emptyState.classList.remove('hidden');
       grid.classList.add('hidden');
       clearBtn.classList.add('hidden');
-      countEl.textContent = 'Skills you\'ve installed';
+      countEl.textContent = '';
       return;
     }
 
@@ -95,7 +234,6 @@ import Base from '../layouts/Base.astro';
     countEl.textContent = `${skills.length} skill${skills.length === 1 ? '' : 's'} installed`;
 
     grid.innerHTML = skills.map(skill => {
-      const initial = skill.name.slice(0, 1).toUpperCase();
       const typeTag = skill.type === 'agent'
         ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>`
         : `<span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">${skill.plugin}</span>`;
@@ -148,13 +286,18 @@ import Base from '../layouts/Base.astro';
     });
   }
 
-  // Clear all
+  // Tab button event listeners
+  document.getElementById('tab-btn-favorites')?.addEventListener('click', () => switchTab('favorites'));
+  document.getElementById('tab-btn-installed')?.addEventListener('click', () => switchTab('installed'));
+
+  // Clear all (installed tab only)
   document.getElementById('clear-all')?.addEventListener('click', () => {
     if (confirm('Remove all installed skills?')) {
       saveInstalled([]);
-      render();
+      renderInstalled();
     }
   });
 
-  render();
+  // Initial render — default to favorites tab
+  switchTab('favorites');
 </script>

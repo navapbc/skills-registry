@@ -11,6 +11,12 @@ import Tooltip from '../components/Tooltip.astro';
     <p class="text-sm text-gray-500 mt-1 m-0">Browse, install, and share reusable AI skills across Nava</p>
   </div>
 
+  <!-- Favorites — shown only if user has favorites (populated by client script) -->
+  <div id="favorites-section" class="hidden mb-6">
+    <h2 class="text-base font-semibold text-gray-700 m-0 mb-3">Your Favorites</h2>
+    <div id="favorites-grid"></div>
+  </div>
+
   <!-- Category grid — populated by client script after skills are fetched -->
   <div class="mb-3">
     <h2 class="text-base font-semibold text-gray-700 m-0">Categories</h2>
@@ -148,8 +154,25 @@ import Tooltip from '../components/Tooltip.astro';
 import { fetchApi } from '../lib/api.mjs';
 import { renderSkillCard, escapeHtml, renderCategoryGrid, renderNewThisWeek } from '../lib/render.mjs';
 import { CATEGORIES } from '../lib/categories.mjs';
+import { getFavorites } from '../lib/favorites.mjs';
 
 const PREVIEW_COUNT = 6;
+
+// Render favorites immediately from localStorage (no API needed)
+const favs = getFavorites();
+if (favs.length > 0) {
+  document.getElementById('favorites-section').classList.remove('hidden');
+  document.getElementById('favorites-grid').innerHTML = `<div class="grid grid-cols-3 gap-3">
+    ${favs.map(f => `<div class="h-full"><a href="/${f.type === 'agent' ? 'agents' : 'skills'}/${escapeHtml(f.slug)}" class="h-full flex flex-col gap-3 p-4 bg-white border border-amber-200 rounded-lg hover:shadow-md hover:border-amber-300 transition-all no-underline text-gray-900">
+      <div class="flex items-start justify-between gap-2">
+        <span class="font-semibold text-sm text-gray-900">${escapeHtml(f.name)}</span>
+        <span class="text-amber-500 text-sm flex-shrink-0" aria-hidden="true">★</span>
+      </div>
+      <p class="text-xs text-gray-500 leading-relaxed m-0 flex-1">${escapeHtml(f.description ? (f.description.length > 110 ? f.description.slice(0, 110) + '...' : f.description) : '')}</p>
+      <span class="text-xs text-gray-400">${escapeHtml(f.plugin || '')}</span>
+    </a></div>`).join('')}
+  </div>`;
+}
 
 const globalSearch = document.getElementById('global-search');
 const browseView = document.getElementById('browse-view');
