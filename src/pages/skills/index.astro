@@ -24,7 +24,7 @@ import Base from '../../layouts/Base.astro';
 <script>
 import { fetchApi } from '../../lib/api.mjs';
 import { renderSkillDetail, renderSkillGrid, escapeHtml } from '../../lib/render.mjs';
-import { isFavorited, toggleFavorite, initFavoriteButtons } from '../../lib/favorites.mjs';
+import { isFavorited, toggleFavorite, initFavoriteButtons, addInstalled } from '../../lib/favorites.mjs';
 
 const NAVA_N = `███╗   ██╗\n████╗  ██║\n██╔██╗ ██║\n██║╚██╗██║\n██║ ╚████║\n╚═╝  ╚═══╝`;
 function notFoundHtml(entity) {
@@ -36,7 +36,6 @@ function notFoundHtml(entity) {
   </div>`;
 }
 
-const STORAGE_KEY = 'nava_installed_skills';
 const container = document.getElementById('skill-content');
 
 const slug = window.location.pathname.replace(/^\/skills\/?/, '').replace(/\/$/, '');
@@ -119,7 +118,7 @@ function initCopyButtons(skill) {
     btn.addEventListener('click', () => {
       const text = btn.dataset.copy || '';
       navigator.clipboard.writeText(text).then(() => {
-        saveToMySkills(skill, text);
+        addInstalled(skill, text);
         btn.textContent = 'Copied!';
         setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
       });
@@ -127,15 +126,6 @@ function initCopyButtons(skill) {
   });
 }
 
-function saveToMySkills(skill, cmd) {
-  try {
-    const installed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    if (!installed.find(s => s.slug === skill.slug)) {
-      installed.unshift({ slug: skill.slug, name: skill.name, plugin: skill.plugin, description: skill.description, compatibility: skill.compatibility, type: skill.type, installedAt: Date.now(), installCommand: cmd });
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(installed));
-    }
-  } catch {}
-}
 
 function initGithubLinks() {
   document.querySelectorAll('[data-github-url]').forEach(el => {

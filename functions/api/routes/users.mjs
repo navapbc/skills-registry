@@ -17,6 +17,38 @@ export function usersRoutes(app) {
     return c.json({ users: result.Items ?? [] });
   });
 
+  app.put('/api/users/me/favorites', async (c) => {
+    const user = c.get('user');
+    const body = await c.req.json().catch(() => null);
+    if (!body || !Array.isArray(body.favorites)) {
+      return c.json({ error: 'favorites must be an array of slugs' }, 400);
+    }
+    const result = await ddb.send(new UpdateCommand({
+      TableName: tables.users(),
+      Key: { user_id: user.user_id },
+      UpdateExpression: 'SET favorites = :favs',
+      ExpressionAttributeValues: { ':favs': body.favorites },
+      ReturnValues: 'ALL_NEW',
+    }));
+    return c.json({ favorites: result.Attributes?.favorites ?? [] });
+  });
+
+  app.put('/api/users/me/installed', async (c) => {
+    const user = c.get('user');
+    const body = await c.req.json().catch(() => null);
+    if (!body || !Array.isArray(body.installed)) {
+      return c.json({ error: 'installed must be an array' }, 400);
+    }
+    const result = await ddb.send(new UpdateCommand({
+      TableName: tables.users(),
+      Key: { user_id: user.user_id },
+      UpdateExpression: 'SET installed = :inst',
+      ExpressionAttributeValues: { ':inst': body.installed },
+      ReturnValues: 'ALL_NEW',
+    }));
+    return c.json({ installed: result.Attributes?.installed ?? [] });
+  });
+
   app.put('/api/users/:id/role', async (c) => {
     const user = c.get('user');
     if (!can(user, 'set:role')) return c.json({ error: 'Forbidden' }, 403);

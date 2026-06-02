@@ -69,6 +69,75 @@ describe('GET /api/users', () => {
   });
 });
 
+describe('PUT /api/users/me/favorites', () => {
+  it('saves favorites slug array to user record', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Attributes: { ...USER_RECORD, favorites: ['skill-a', 'skill-b'] } });
+
+    const res = await app.request('/api/users/me/favorites', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ favorites: ['skill-a', 'skill-b'] }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.favorites).toEqual(['skill-a', 'skill-b']);
+  });
+
+  it('returns 400 when favorites is not an array', async () => {
+    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
+
+    const res = await app.request('/api/users/me/favorites', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ favorites: 'not-an-array' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when favorites key is missing', async () => {
+    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
+
+    const res = await app.request('/api/users/me/favorites', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('PUT /api/users/me/installed', () => {
+  it('saves installed skills to user record', async () => {
+    const installed = [{ slug: 'fix-bug', name: 'Fix Bug', type: 'skill', installedAt: 1234567890 }];
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Attributes: { ...USER_RECORD, installed } });
+
+    const res = await app.request('/api/users/me/installed', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ installed }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.installed).toHaveLength(1);
+    expect(body.installed[0].slug).toBe('fix-bug');
+  });
+
+  it('returns 400 when installed is not an array', async () => {
+    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
+
+    const res = await app.request('/api/users/me/installed', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ installed: 'bad' }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe('PUT /api/users/:id/role', () => {
   it('returns 403 for non-admin', async () => {
     mockSend.mockResolvedValueOnce({ Item: USER_RECORD });

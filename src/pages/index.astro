@@ -143,15 +143,21 @@ import Tooltip from '../components/Tooltip.astro';
 import { fetchApi } from '../lib/api.mjs';
 import { renderSkillCard, escapeHtml, renderCategoryGrid, renderNewThisWeek } from '../lib/render.mjs';
 import { CATEGORIES } from '../lib/categories.mjs';
-import { getFavorites, initFavoriteButtons } from '../lib/favorites.mjs';
+import { getFavorites, initFavoriteButtons, initFromUser } from '../lib/favorites.mjs';
 
 const PREVIEW_COUNT = 6;
 
-// Render favorites immediately from localStorage (no API needed)
-const favs = getFavorites();
-if (favs.length > 0) {
-  document.getElementById('favorites-section').classList.remove('hidden');
-  document.getElementById('favorites-grid').innerHTML = `<div class="grid grid-cols-3 gap-3">
+function renderHomepageFavorites() {
+  const favs = getFavorites();
+  const section = document.getElementById('favorites-section');
+  const grid = document.getElementById('favorites-grid');
+  if (!section || !grid) return;
+  if (favs.length === 0) {
+    section.classList.add('hidden');
+    return;
+  }
+  section.classList.remove('hidden');
+  grid.innerHTML = `<div class="grid grid-cols-3 gap-3">
     ${favs.map(f => `<div class="h-full"><a href="/${f.type === 'agent' ? 'agents' : 'skills'}/${escapeHtml(f.slug)}" class="h-full flex flex-col gap-3 p-4 bg-white border border-amber-200 rounded-lg hover:shadow-md hover:border-amber-300 transition-all no-underline text-gray-900">
       <div class="flex items-start justify-between gap-2">
         <span class="font-semibold text-sm text-gray-900">${escapeHtml(f.name)}</span>
@@ -163,6 +169,14 @@ if (favs.length > 0) {
   </div>`;
   initFavoriteButtons();
 }
+
+// Render favorites immediately from localStorage (no flicker)
+renderHomepageFavorites();
+
+// Sync favorites with server in the background; re-render if server state differs
+fetchApi('/users/me').then(user => {
+  if (initFromUser(user)) renderHomepageFavorites();
+}).catch(() => {});
 
 const globalSearch = document.getElementById('global-search');
 const browseView = document.getElementById('browse-view');

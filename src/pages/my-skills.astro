@@ -65,62 +65,16 @@ import Base from '../layouts/Base.astro';
 </Base>
 
 <script>
-  const STORAGE_KEY = 'nava_installed_skills';
-  const FAV_KEY = 'nava_favorite_skills';
+  import { getFavorites, getInstalled, removeFavorite, removeInstalled, clearInstalled, initFromUser } from '../lib/favorites.mjs';
+  import { fetchApi } from '../lib/api.mjs';
 
-  interface InstalledSkill {
-    slug: string;
-    name: string;
-    plugin: string;
-    description: string;
-    compatibility: string[];
-    type: string;
-    installedAt: number;
-    installCommand?: string;
-  }
-
-  interface FavoriteSkill {
-    slug: string;
-    name: string;
-    plugin: string;
-    type: string;
-    description: string;
-    compatibility: string[];
-  }
-
-  function getInstalled(): InstalledSkill[] {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    } catch {
-      return [];
-    }
-  }
-
-  function getFavorites(): FavoriteSkill[] {
-    try {
-      return JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
-    } catch {
-      return [];
-    }
-  }
-
-  function saveFavorites(favs: FavoriteSkill[]) {
-    localStorage.setItem(FAV_KEY, JSON.stringify(favs));
-  }
-
-  function removeFavorite(slug: string) {
-    const favs = getFavorites().filter(f => f.slug !== slug);
-    saveFavorites(favs);
-    renderFavorites();
-  }
-
-  function saveInstalled(skills: InstalledSkill[]) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(skills));
-  }
+  // Sync server-side favorites in the background; re-render if data changed
+  fetchApi('/users/me').then(user => {
+    if (initFromUser(user)) renderFavorites();
+  }).catch(() => {});
 
   function removeSkill(slug: string) {
-    const skills = getInstalled().filter(s => s.slug !== slug);
-    saveInstalled(skills);
+    removeInstalled(slug);
     renderInstalled();
   }
 
@@ -293,7 +247,7 @@ import Base from '../layouts/Base.astro';
   // Clear all (installed tab only)
   document.getElementById('clear-all')?.addEventListener('click', () => {
     if (confirm('Remove all installed skills?')) {
-      saveInstalled([]);
+      clearInstalled();
       renderInstalled();
     }
   });

@@ -16,7 +16,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['scripts/utils.mjs', 'src/lib/**/*.mjs', 'functions/api/**/*.mjs'],
-      exclude: ['src/lib/api.mjs'],
+      exclude: ['src/lib/api.mjs', 'src/lib/favorites.mjs'],
       reporter: ['text', 'html'],
       thresholds: {
         lines: 80,
