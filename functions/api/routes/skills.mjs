@@ -103,7 +103,11 @@ export function skillsRoutes(app) {
     const updated = {
       ...existing.Item,
       ...body,
+      // Provenance fields — never overwriteable via API, always preserved from existing record
       slug,
+      source: existing.Item.source,
+      created_by: existing.Item.created_by,
+      created_at: existing.Item.created_at,
       updated_at: now,
       updated_by: user.user_id,
       status: atLeast(user, 'maintain') ? (body.status ?? existing.Item.status) : 'pending',

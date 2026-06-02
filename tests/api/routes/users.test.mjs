@@ -83,7 +83,8 @@ describe('PUT /api/users/:id/role', () => {
   it('allows admin to set a user role', async () => {
     mockSend
       .mockResolvedValueOnce({ Item: ADMIN_RECORD })
-      .mockResolvedValueOnce({ Attributes: { ...USER_RECORD, role: 'admin' } });
+      .mockResolvedValueOnce({ Attributes: { ...USER_RECORD, role: 'admin' } })
+      .mockResolvedValueOnce({}); // writeAudit
 
     const res = await app.request(`/api/users/${encodeURIComponent('user@navapbc.com')}/role`, {
       method: 'PUT',
@@ -93,6 +94,22 @@ describe('PUT /api/users/:id/role', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.role).toBe('admin');
+  });
+
+  it('writes an audit record when role is changed', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Attributes: { ...USER_RECORD, role: 'maintain' } })
+      .mockResolvedValueOnce({}); // writeAudit
+
+    await app.request(`/api/users/${encodeURIComponent('user@navapbc.com')}/role`, {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie('admin@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'maintain' }),
+    });
+
+    // getOrCreateUser + UpdateCommand + writeAudit PutCommand
+    expect(mockSend).toHaveBeenCalledTimes(3);
   });
 
   it('returns 400 for invalid role value', async () => {

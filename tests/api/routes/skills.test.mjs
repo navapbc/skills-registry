@@ -402,4 +402,114 @@ describe('PUT /api/skills/:slug — edge cases', () => {
     });
     expect(res.status).toBe(404);
   });
+
+  it('returns 403 when user tries to edit another user skill', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'other-skill', created_by: 'other@navapbc.com', status: 'approved' } });
+
+    const res = await app.request('/api/skills/other-skill', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Hacked' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 404 for category-config record', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'category::dev-code', source: 'category-config' } });
+
+    const res = await app.request('/api/skills/category::dev-code', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Hack' }),
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/skills/:slug — happy path', () => {
+  it('returns skill for authenticated user', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'public-skill', name: 'Public', status: 'approved', visibility: 'public', created_by: 'system' } });
+
+    const res = await app.request('/api/skills/public-skill', { headers: { Cookie: makeSessionCookie() } });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.slug).toBe('public-skill');
+    expect(body.name).toBe('Public');
+  });
+});
+
+describe('PUT /api/skills/:slug — provenance field protection', () => {
+  it('preserves source, created_by, and created_at regardless of request body', async () => {
+    let capturedItem;
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Item: {
+        slug: 'my-skill',
+        source: 'user-submitted',
+        created_by: 'user@navapbc.com',
+        created_at: '2026-01-01T00:00:00Z',
+        status: 'approved',
+      }})
+      .mockImplementationOnce((cmd) => { capturedItem = cmd.params?.Item; return {}; })
+      .mockResolvedValueOnce({});
+
+    await app.request('/api/skills/my-skill', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Updated',
+        source: 'enterprise',
+        created_by: 'attacker@navapbc.com',
+        created_at: '2020-01-01T00:00:00Z',
+      }),
+    });
+
+    expect(capturedItem?.source).toBe('user-submitted');
+    expect(capturedItem?.created_by).toBe('user@navapbc.com');
+    expect(capturedItem?.created_at).toBe('2026-01-01T00:00:00Z');
+  });
+
+  it('resets status to pending when regular user edits own skill', async () => {
+    let capturedItem;
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'my-skill', source: 'user-submitted', created_by: 'user@navapbc.com', status: 'approved' }})
+      .mockImplementationOnce((cmd) => { capturedItem = cmd.params?.Item; return {}; })
+      .mockResolvedValueOnce({});
+
+    await app.request('/api/skills/my-skill', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Updated', status: 'approved' }),
+    });
+
+    expect(capturedItem?.status).toBe('pending');
+  });
+
+  it('maintain preserves approved status when editing any skill', async () => {
+    let capturedItem;
+    mockSend
+      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'other-skill', source: 'github', created_by: 'other@navapbc.com', status: 'approved' }})
+      .mockImplementationOnce((cmd) => { capturedItem = cmd.params?.Item; return {}; })
+      .mockResolvedValueOnce({});
+
+    await app.request('/api/skills/other-skill', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: ['productivity'], category: 'planning' }),
+    });
+
+    expect(capturedItem?.status).toBe('approved');
+    expect(capturedItem?.tags).toEqual(['productivity']);
+    expect(capturedItem?.category).toBe('planning');
+    expect(capturedItem?.source).toBe('github');
+    expect(capturedItem?.created_by).toBe('other@navapbc.com');
+  });
 });

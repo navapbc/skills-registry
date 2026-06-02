@@ -388,6 +388,31 @@ describe('GET /api/admin/categories', () => {
   });
 });
 
+// ── PUT /api/admin/categories/:id/featured — body validation ─────────────
+describe('PUT /api/admin/categories/:id/featured — body validation', () => {
+  it('returns 400 when featuredSlugs is missing', async () => {
+    mockSend.mockResolvedValueOnce({ Item: MAINTAIN_RECORD });
+
+    const res = await app.request('/api/admin/categories/dev-code/featured', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ other: 'field' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when featuredSlugs is not an array', async () => {
+    mockSend.mockResolvedValueOnce({ Item: MAINTAIN_RECORD });
+
+    const res = await app.request('/api/admin/categories/dev-code/featured', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ featuredSlugs: 'not-an-array' }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
 // ── PUT /api/admin/users/:id/role ─────────────────────────────────────────
 describe('PUT /api/admin/users/:id/role', () => {
   it('returns 403 for maintain role', async () => {

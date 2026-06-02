@@ -1,5 +1,6 @@
 import { ddb, tables, UpdateCommand, ScanCommand } from '../lib/dynamo.mjs';
 import { can } from '../lib/permissions.mjs';
+import { writeAudit } from '../lib/audit.mjs';
 
 const VALID_ROLES = new Set(['user', 'maintain', 'admin']);
 
@@ -37,6 +38,7 @@ export function usersRoutes(app) {
       })
     );
 
+    await writeAudit(user, 'role-changed', 'user', targetId);
     return c.json(result.Attributes);
   });
 }
