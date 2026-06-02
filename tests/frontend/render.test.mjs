@@ -68,6 +68,18 @@ describe('renderSkillCard', () => {
     expect(html).toContain('bg-blue-50');
   });
 
+  it('links to /agents/:slug for agent type', () => {
+    const agent = { ...baseSkill, type: 'agent' };
+    const html = renderSkillCard(agent);
+    expect(html).toContain('href="/agents/test-skill"');
+    expect(html).not.toContain('href="/skills/test-skill"');
+  });
+
+  it('links to /skills/:slug for skill type', () => {
+    const html = renderSkillCard(baseSkill);
+    expect(html).toContain('href="/skills/test-skill"');
+  });
+
   it('shows sensitive badge when sensitive_data=true', () => {
     const sensitive = { ...baseSkill, sensitive_data: true };
     const html = renderSkillCard(sensitive);
@@ -128,9 +140,24 @@ describe('renderSkillDetail', () => {
     expect(html).toContain('&quot;slug&quot;:&quot;test-skill&quot;');
   });
 
-  it('links back to the plugin page', () => {
+  it('links back to the plugin page for a regular skill', () => {
     const html = renderSkillDetail(baseSkill);
     expect(html).toContain('href="/plugins/my-plugin"');
+    expect(html).toContain('← Back to my-plugin');
+  });
+
+  it('links back to /agents for an agent type', () => {
+    const agent = { ...baseSkill, type: 'agent' };
+    const html = renderSkillDetail(agent);
+    expect(html).toContain('href="/agents"');
+    expect(html).toContain('← All agents');
+  });
+
+  it('links back to hub for an enterprise skill', () => {
+    const enterprise = { ...baseSkill, source: 'enterprise', plugin: 'skills-registry' };
+    const html = renderSkillDetail(enterprise);
+    expect(html).toContain('href="/"');
+    expect(html).toContain('← Back to hub');
   });
 });
 

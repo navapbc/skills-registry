@@ -64,6 +64,8 @@ export function renderSkillCard(skill, showPlugin = true) {
 
   const skillData = escapeHtml(JSON.stringify({ slug: skill.slug, name: skill.name, plugin: skill.plugin, type: skill.type, description: skill.description, compatibility: skill.compatibility }));
 
+  const detailHref = skill.type === 'agent' ? `/agents/${escapeHtml(skill.slug)}` : `/skills/${escapeHtml(skill.slug)}`;
+
   return `<div class="relative h-full">
     <button
       class="fav-btn absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center text-gray-300 hover:text-amber-400 transition-colors rounded"
@@ -74,7 +76,7 @@ export function renderSkillCard(skill, showPlugin = true) {
       title="Favorite"
     ><span aria-hidden="true" class="fav-star text-base leading-none">☆</span></button>
   <a
-    href="/skills/${escapeHtml(skill.slug)}"
+    href="${detailHref}"
     class="h-full flex flex-col gap-3 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300 transition-all no-underline text-gray-900"
     data-name="${escapeHtml(skill.name)}"
     data-description="${escapeHtml(skill.description)}"
@@ -174,8 +176,19 @@ export function renderSkillDetail(skill) {
       ${skill.human_in_loop ? `<div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"><strong>Human in the loop:</strong> ${escapeHtml(skill.human_in_loop)}</div>` : ''}
     </section>` : '';
 
+  const backHref = skill.type === 'agent'
+    ? '/agents'
+    : skill.source === 'enterprise' || skill.plugin === 'skills-registry'
+      ? '/'
+      : `/plugins/${escapeHtml(skill.plugin)}`;
+  const backLabel = skill.type === 'agent'
+    ? '← All agents'
+    : skill.source === 'enterprise' || skill.plugin === 'skills-registry'
+      ? '← Back to hub'
+      : `← Back to ${escapeHtml(skill.plugin)}`;
+
   return `
-    <a href="/plugins/${escapeHtml(skill.plugin)}" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">← Back to ${escapeHtml(skill.plugin)}</a>
+    <a href="${backHref}" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">${backLabel}</a>
 
     <div class="mb-8">
       <div class="flex items-center gap-2 flex-wrap mb-2">
