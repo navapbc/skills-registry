@@ -26,9 +26,22 @@ describe('parseFrontmatter', () => {
     expect(meta.sensitive_data).toBe(false);
   });
 
-  it('parses array values', () => {
+  it('parses inline array values', () => {
     const { meta } = parseFrontmatter('---\ncompatibility: [claude-code, claude-chat]\n---\nbody');
     expect(meta.compatibility).toEqual(['claude-code', 'claude-chat']);
+  });
+
+  it('parses YAML block sequence into an array', () => {
+    const content = `---\nname: My Skill\ncompatibility:\n  - claude-chat\n  - claude-cowork\n---\nbody`;
+    const { meta } = parseFrontmatter(content);
+    expect(meta.compatibility).toEqual(['claude-chat', 'claude-cowork']);
+  });
+
+  it('parses block sequence and continues reading subsequent fields', () => {
+    const content = `---\ncompatibility:\n  - claude-code\n  - cursor\nversion: 2.0\n---\nbody`;
+    const { meta } = parseFrontmatter(content);
+    expect(meta.compatibility).toEqual(['claude-code', 'cursor']);
+    expect(meta.version).toBe('2.0');
   });
 
   it('strips quotes from string values', () => {

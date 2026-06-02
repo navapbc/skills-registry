@@ -24,8 +24,21 @@ export function parseFrontmatter(content) {
       }
       value = blockLines.join(' ').trim();
     } else if (value.startsWith('[') && value.endsWith(']')) {
+      // Inline array: compatibility: [claude-chat, claude-cowork]
       value = value.slice(1, -1).split(',').map(v => v.trim().replace(/["']/g, ''));
       i++;
+    } else if (value === '' && i + 1 < lines.length && /^\s+-\s/.test(lines[i + 1])) {
+      // Block sequence:
+      //   compatibility:
+      //     - claude-chat
+      //     - claude-cowork
+      const listItems = [];
+      i++;
+      while (i < lines.length && /^\s+-\s/.test(lines[i])) {
+        listItems.push(lines[i].replace(/^\s+-\s+/, '').trim().replace(/["']/g, ''));
+        i++;
+      }
+      value = listItems;
     } else {
       value = value.replace(/["']/g, '');
       if (value === 'true') value = true;
