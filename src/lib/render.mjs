@@ -124,7 +124,7 @@ export function renderFavoriteButton(slug, isFav = false) {
 }
 
 function renderNavaMetaSection(skill) {
-  const hasAny = skill.nava_team || skill.nava_problem || skill.nava_impact_type?.length
+  const hasAny = skill.nava_team || skill.nava_problem || (Array.isArray(skill.nava_impact_type) && skill.nava_impact_type.length > 0)
     || skill.nava_estimated_impact || skill.nava_usage_frequency
     || skill.nava_expected_audience || skill.nava_data_sources;
   if (!hasAny) return '';
@@ -136,7 +136,7 @@ function renderNavaMetaSection(skill) {
       </div>`
     : '';
 
-  const impactChips = skill.nava_impact_type?.length
+  const impactChips = Array.isArray(skill.nava_impact_type) && skill.nava_impact_type.length
     ? `<div class="flex flex-col gap-0.5">
         <dt class="text-xs text-gray-400">Impact type</dt>
         <dd class="flex flex-wrap gap-1 m-0">
