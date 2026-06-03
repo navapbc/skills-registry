@@ -171,6 +171,13 @@ function buildSkillRecord(content, path, repo, meta, body) {
     type: 'skill',
     content,
     last_updated: repo.pushed_at,
+    ...(meta.nava_team && { nava_team: meta.nava_team }),
+    ...(meta.nava_problem && { nava_problem: meta.nava_problem }),
+    ...(meta.nava_impact_type && { nava_impact_type: Array.isArray(meta.nava_impact_type) ? meta.nava_impact_type : [meta.nava_impact_type] }),
+    ...(meta.nava_estimated_impact && { nava_estimated_impact: meta.nava_estimated_impact }),
+    ...(meta.nava_usage_frequency && { nava_usage_frequency: meta.nava_usage_frequency }),
+    ...(meta.nava_expected_audience && { nava_expected_audience: meta.nava_expected_audience }),
+    ...(meta.nava_data_sources && { nava_data_sources: meta.nava_data_sources }),
   };
 }
 
@@ -196,6 +203,13 @@ function buildAgentRecord(content, path, repo, meta, body) {
     human_in_loop: meta.human_in_loop || '',
     content,
     last_updated: repo.pushed_at,
+    ...(meta.nava_team && { nava_team: meta.nava_team }),
+    ...(meta.nava_problem && { nava_problem: meta.nava_problem }),
+    ...(meta.nava_impact_type && { nava_impact_type: Array.isArray(meta.nava_impact_type) ? meta.nava_impact_type : [meta.nava_impact_type] }),
+    ...(meta.nava_estimated_impact && { nava_estimated_impact: meta.nava_estimated_impact }),
+    ...(meta.nava_usage_frequency && { nava_usage_frequency: meta.nava_usage_frequency }),
+    ...(meta.nava_expected_audience && { nava_expected_audience: meta.nava_expected_audience }),
+    ...(meta.nava_data_sources && { nava_data_sources: meta.nava_data_sources }),
   };
 }
 
