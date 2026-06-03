@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { RegistrySchema } from '../src/lib/registry-schema.mjs';
+import { RegistrySchema, SkillSchema } from '../src/lib/registry-schema.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const raw = readFileSync(join(__dirname, '../public/registry/index.json'), 'utf8');
@@ -85,5 +85,43 @@ describe('Registry consistency', () => {
       const missing = plugin.skills.filter(s => !skillSlugs.has(s));
       expect(missing, `Plugin "${plugin.slug}" references missing skills: ${missing.join(', ')}`).toEqual([]);
     }
+  });
+});
+
+describe('SkillSchema — nava_ optional fields', () => {
+  const baseValid = {
+    slug: 'test', name: 'Test', description: 'desc',
+    plugin: 'p', repo: 'org/repo', path: 'SKILL.md',
+    author: 'a', version: '1.0.0', compatibility: [],
+    sensitive_data: false, type: 'skill', content: '',
+    last_updated: null,
+  };
+
+  it('passes with no nava_ fields present', () => {
+    expect(SkillSchema.safeParse(baseValid).success).toBe(true);
+  });
+
+  it('passes with all nava_ fields present', () => {
+    const full = {
+      ...baseValid,
+      nava_team: 'Engineering',
+      nava_problem: 'Manual reporting took 2 hours',
+      nava_impact_type: ['Time saved per use', 'Reduced error rate or rework'],
+      nava_estimated_impact: 'Saves ~45 min per use',
+      nava_usage_frequency: 'Daily',
+      nava_expected_audience: '16+ people / org-wide',
+      nava_data_sources: 'Google Docs, Jira',
+    };
+    expect(SkillSchema.safeParse(full).success).toBe(true);
+  });
+
+  it('passes with some nava_ fields present', () => {
+    const partial = { ...baseValid, nava_team: 'Design', nava_estimated_impact: 'Saves 1 hour' };
+    expect(SkillSchema.safeParse(partial).success).toBe(true);
+  });
+
+  it('fails when nava_impact_type is not an array', () => {
+    const bad = { ...baseValid, nava_impact_type: 42 };
+    expect(SkillSchema.safeParse(bad).success).toBe(false);
   });
 });
