@@ -522,7 +522,7 @@ describe('POST /api/skills — nava_ optional fields round-trip', () => {
       .mockImplementationOnce((cmd) => { capturedItem = cmd.params?.Item; return {}; })
       .mockResolvedValueOnce({});
 
-    await app.request('/api/skills', {
+    const res = await app.request('/api/skills', {
       method: 'POST',
       headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -539,6 +539,7 @@ describe('POST /api/skills — nava_ optional fields round-trip', () => {
       }),
     });
 
+    expect(res.status).toBe(201);
     expect(capturedItem?.nava_team).toBe('Engineering');
     expect(capturedItem?.nava_problem).toBe('Manual reporting took hours');
     expect(capturedItem?.nava_impact_type).toEqual(['Time saved per use']);
