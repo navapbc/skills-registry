@@ -123,6 +123,43 @@ export function renderFavoriteButton(slug, isFav = false) {
   </button>`;
 }
 
+function renderNavaMetaSection(skill) {
+  const hasAny = skill.nava_team || skill.nava_problem || skill.nava_impact_type?.length
+    || skill.nava_estimated_impact || skill.nava_usage_frequency
+    || skill.nava_expected_audience || skill.nava_data_sources;
+  if (!hasAny) return '';
+
+  const row = (label, value) => value
+    ? `<div class="flex flex-col gap-0.5">
+        <dt class="text-xs text-gray-400">${label}</dt>
+        <dd class="text-xs text-gray-700 m-0">${escapeHtml(value)}</dd>
+      </div>`
+    : '';
+
+  const impactChips = skill.nava_impact_type?.length
+    ? `<div class="flex flex-col gap-0.5">
+        <dt class="text-xs text-gray-400">Impact type</dt>
+        <dd class="flex flex-wrap gap-1 m-0">
+          ${skill.nava_impact_type.map(t => `<span class="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">${escapeHtml(t)}</span>`).join('')}
+        </dd>
+      </div>`
+    : '';
+
+  return `
+    <div class="bg-white border border-gray-200 rounded-lg p-4" data-testid="nava-detail-section">
+      <h3 class="text-sm font-semibold text-gray-900 mb-3">Submission Details</h3>
+      <dl class="space-y-2 m-0">
+        ${row('Team', skill.nava_team)}
+        ${row('Problem solved', skill.nava_problem)}
+        ${impactChips}
+        ${row('Estimated impact', skill.nava_estimated_impact)}
+        ${row('Usage frequency', skill.nava_usage_frequency)}
+        ${row('Expected audience', skill.nava_expected_audience)}
+        ${row('Data sources', skill.nava_data_sources)}
+      </dl>
+    </div>`;
+}
+
 export function renderSkillDetail(skill) {
   const hasClaudeCode = skill.compatibility.includes('claude-code');
   const hasClaudeChat = skill.compatibility.includes('claude-chat') || skill.compatibility.includes('claude-cowork');
@@ -251,6 +288,7 @@ export function renderSkillDetail(skill) {
             </div>
           </dl>
         </div>
+        ${renderNavaMetaSection(skill)}
       </aside>
     </div>`;
 }
