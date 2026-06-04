@@ -439,6 +439,40 @@ describe('renderSkillDetail — empty compatibility', () => {
   });
 });
 
+describe('submitter identity precedence over GitHub committer', () => {
+  const committer = { login: 'gh-bot', name: 'GH Bot', avatar_url: null, date: '2026-01-01T00:00:00Z' };
+
+  it('detail: shows author_name + email and an "Author" card, not the GitHub handle', () => {
+    const skill = { ...baseSkill, committer, author: 'diana@navapbc.com', author_name: 'Diana Olympia' };
+    const html = renderSkillDetail(skill);
+    expect(html).toContain('Diana Olympia');
+    expect(html).toContain('diana@navapbc.com');
+    expect(html).toContain('>Author<');
+    expect(html).not.toContain('@gh-bot');
+    expect(html).not.toContain('Last Committer');
+  });
+
+  it('detail: falls back to "Last Committer" + GitHub handle when no author_name', () => {
+    const skill = { ...baseSkill, committer, author: 'navapbc' };
+    const html = renderSkillDetail(skill);
+    expect(html).toContain('Last Committer');
+    expect(html).toContain('@gh-bot');
+  });
+
+  it('card: uses author_name over the committer login', () => {
+    const skill = { ...baseSkill, committer, author: 'diana@navapbc.com', author_name: 'Diana Olympia' };
+    const html = renderSkillCard(skill);
+    expect(html).toContain('Diana Olympia');
+    expect(html).not.toContain('gh-bot');
+  });
+
+  it('card: still shows the committer login when no author_name', () => {
+    const skill = { ...baseSkill, committer, author: 'navapbc' };
+    const html = renderSkillCard(skill);
+    expect(html).toContain('gh-bot');
+  });
+});
+
 describe('renderSkillDetail — optional submission fields', () => {
   const navaSkill = {
     ...baseSkill,

@@ -21,9 +21,7 @@ function formatDateShort(iso) {
   return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function avatarHtml(committer, author, size = '5') {
-  const displayName = committer?.login || committer?.name || author;
-  const avatarUrl = committer?.avatar_url || null;
+function avatarHtml(displayName, avatarUrl, size = '5') {
   const initial = (displayName || '?').slice(0, 1).toUpperCase();
   if (avatarUrl) {
     return `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(displayName)}" class="w-${size} h-${size} rounded-full flex-shrink-0" />`;
@@ -31,10 +29,22 @@ function avatarHtml(committer, author, size = '5') {
   return `<span class="w-${size} h-${size} rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0">${escapeHtml(initial)}</span>`;
 }
 
+// A frontmatter-provided submitter identity (author_name + email, e.g. from the
+// Google Form via Zapier) takes precedence over the GitHub committer name/login.
+function authorDisplayName(skill) {
+  return skill.author_name || skill.committer?.login || skill.committer?.name || skill.author;
+}
+
+// The email to attribute a submission to, when the file carries a frontmatter identity.
+function submitterEmail(skill) {
+  return skill.author && skill.author.includes('@') ? skill.author : null;
+}
+
 export function renderSkillCard(skill, showPlugin = true) {
   const committer = skill.committer;
-  const displayName = committer?.login || committer?.name || skill.author;
-  const githubUrl = committer?.login ? `https://github.com/${committer.login}` : null;
+  const displayName = authorDisplayName(skill);
+  // Frontmatter identity has no GitHub profile — only link out for committer-sourced attribution.
+  const githubUrl = (!skill.author_name && committer?.login) ? `https://github.com/${committer.login}` : null;
   const preview = skill.description.length > 110
     ? skill.description.slice(0, 110) + '...'
     : skill.description;
@@ -96,7 +106,7 @@ export function renderSkillCard(skill, showPlugin = true) {
       <span class="flex items-center gap-1.5 cursor-pointer"
         data-github-url="${escapeHtml(githubUrl || '')}"
         title="${escapeHtml(githubUrl ? '@' + displayName : displayName)}">
-        ${avatarHtml(committer, skill.author, '5')}
+        ${avatarHtml(displayName, committer?.avatar_url, '5')}
         <span class="text-xs text-gray-400">${escapeHtml(displayName)}</span>
       </span>
       <span class="text-xs text-gray-400 truncate ml-2">${escapeHtml(compatStr)}</span>
@@ -165,8 +175,7 @@ export function renderSkillDetail(skill) {
   const hasClaudeChat = skill.compatibility.includes('claude-chat') || skill.compatibility.includes('claude-cowork');
   const claudeCodeCommand = `claude mcp add ${skill.slug} --from-github ${skill.repo}`;
   const committer = skill.committer;
-  const displayName = committer?.login || committer?.name || skill.author;
-  const githubUrl = committer?.login ? `https://github.com/${committer.login}` : null;
+  const authorName = authorDisplayName(skill);
   const addedDate = formatDate(skill.last_updated);
 
   const compatBadges = skill.compatibility.map(c =>
@@ -192,14 +201,31 @@ export function renderSkillDetail(skill) {
       <p class="text-xs text-gray-500 mb-0 m-0">Open Claude, then go to <strong class="text-gray-700">Customize → Skills</strong> in the sidebar and add this skill from there.</p>
     </div>` : '';
 
-  const committerCard = `
+  // Frontmatter (form/Zapier) submissions surface the human author + email;
+  // GitHub-sourced skills keep the git "Last Committer" provenance.
+  const email = submitterEmail(skill);
+  const committerName = committer?.name || committer?.login || skill.author;
+  const committerUrl = committer?.login ? `https://github.com/${committer.login}` : null;
+  const committerCard = skill.author_name
+    ? `
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
+      <h3 class="text-sm font-semibold text-gray-900 mb-3">Author</h3>
+      <div class="flex items-center gap-3">
+        ${avatarHtml(skill.author_name, committer?.avatar_url, '8')}
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-gray-900 m-0">${escapeHtml(skill.author_name)}</p>
+          ${email ? `<a href="mailto:${escapeHtml(email)}" class="text-xs text-plum-600 hover:text-plum-700 no-underline">${escapeHtml(email)}</a>` : ''}
+        </div>
+      </div>
+    </div>`
+    : `
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <h3 class="text-sm font-semibold text-gray-900 mb-3">Last Committer</h3>
       <div class="flex items-center gap-3">
-        ${avatarHtml(committer, skill.author, '8')}
+        ${avatarHtml(committerName, committer?.avatar_url, '8')}
         <div class="min-w-0">
-          <p class="text-sm font-medium text-gray-900 m-0">${escapeHtml(committer?.name || displayName)}</p>
-          ${githubUrl ? `<a href="${escapeHtml(githubUrl)}" target="_blank" rel="noopener" class="text-xs text-plum-600 hover:text-plum-700 no-underline">@${escapeHtml(committer.login)}</a>` : ''}
+          <p class="text-sm font-medium text-gray-900 m-0">${escapeHtml(committerName)}</p>
+          ${committerUrl ? `<a href="${escapeHtml(committerUrl)}" target="_blank" rel="noopener" class="text-xs text-plum-600 hover:text-plum-700 no-underline">@${escapeHtml(committer.login)}</a>` : ''}
         </div>
       </div>
     </div>`;
@@ -235,7 +261,7 @@ export function renderSkillDetail(skill) {
         ${skill.type === 'agent' ? '<span class="px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>' : ''}
       </div>
       <div class="flex items-center gap-2 text-sm text-gray-400">
-        ${avatarHtml(committer, skill.author, '6')}
+        ${avatarHtml(authorName, committer?.avatar_url, '6')}
         ${addedDate ? `<span class="text-gray-300">·</span><span>Added ${escapeHtml(addedDate)}</span>` : ''}
         <span class="text-gray-300">·</span>
         <a href="https://github.com/${escapeHtml(skill.repo)}/blob/main/${escapeHtml(skill.path)}" target="_blank" rel="noopener" class="text-plum-600 hover:text-plum-700 no-underline">View on GitHub ↗</a>
