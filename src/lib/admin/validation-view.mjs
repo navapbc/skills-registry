@@ -57,11 +57,11 @@ export function renderValidationResults(analysis) {
     ${warningsBlock}
     <div class="mt-4">
       <h3 class="text-sm font-semibold text-gray-900 mb-2">Extracted fields</h3>
-      <table class="w-full text-left"><tbody>${fieldRows(authored)}</tbody></table>
+      <table class="admin-table w-full text-left"><tbody>${fieldRows(authored)}</tbody></table>
     </div>
     <div class="mt-4">
       <h3 class="text-sm font-semibold text-gray-500 mb-2">Set by the pipeline, not your file</h3>
-      <table class="w-full text-left opacity-70"><tbody>${fieldRows(pipeline)}</tbody></table>
+      <table class="admin-table w-full text-left opacity-70"><tbody>${fieldRows(pipeline)}</tbody></table>
     </div>
     ${ignoredBlock}
     <div class="mt-4">

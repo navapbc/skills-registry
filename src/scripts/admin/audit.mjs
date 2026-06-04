@@ -8,7 +8,7 @@ export async function load(panel) {
     return;
   }
   panel.innerHTML = `
-    <table class="w-full text-sm border-collapse">
+    <table class="admin-table w-full text-sm border-collapse">
       <thead><tr class="text-left text-xs text-gray-500 border-b border-gray-200">
         <th class="pb-2 font-medium">Time</th>
         <th class="pb-2 font-medium">Actor</th>

@@ -13,7 +13,7 @@ export async function load(panel, ctx) {
         <h2 class="text-base font-semibold text-gray-700 m-0">Anthropic Built-ins</h2>
         <span class="text-xs text-gray-400">Synced weekly — read only</span>
       </div>
-      <table class="w-full text-sm border-collapse">
+      <table class="admin-table w-full text-sm border-collapse">
         <thead><tr class="text-left text-xs text-gray-500 border-b border-gray-200">
           <th class="pb-2 font-medium">Skill</th><th class="pb-2 font-medium">Version</th><th class="pb-2 font-medium">Last synced</th>
         </tr></thead>
@@ -34,7 +34,7 @@ export async function load(panel, ctx) {
         <button id="add-enterprise-btn" class="px-3 py-1.5 text-xs bg-plum-600 text-white rounded hover:bg-plum-700 transition-colors">+ Add Skill</button>
       </div>
       <div id="org-skills-list">
-        ${org.length ? `<table class="w-full text-sm border-collapse">
+        ${org.length ? `<table class="admin-table w-full text-sm border-collapse">
           <thead><tr class="text-left text-xs text-gray-500 border-b border-gray-200">
             <th class="pb-2 font-medium">Name</th><th class="pb-2 font-medium">Slug</th><th class="pb-2 font-medium">Tags</th><th class="pb-2 font-medium">Actions</th>
           </tr></thead>
