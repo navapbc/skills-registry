@@ -15,7 +15,8 @@ import { writeFileSync } from 'fs';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
-import { parseFrontmatter, getDescription, slugify } from './utils.mjs';
+import { parseFrontmatter, slugify } from './utils.mjs';
+import { buildSkillRecord } from '../src/lib/parse-skill.mjs';
 
 // AWS SDK lives in functions/api/node_modules
 const _req = createRequire(resolve(dirname(fileURLToPath(import.meta.url)), '../functions/api/package.json'));
@@ -59,13 +60,6 @@ const octokit = new Octokit({
 });
 
 
-// Filenames that are generic containers — use parent directory name as the skill name instead.
-const GENERIC_FILENAMES = new Set([
-  'SKILL.md', 'skill.md', 'CLAUDE.md', 'claude.md',
-  'AGENTS.md', 'agents.md', 'AGENT.md', 'agent.md',
-  'GEMINI.md', 'gemini.md', 'APPEND_SYSTEM.md', 'append_system.md',
-]);
-
 // Paths to exclude — plan documents, templates, and other non-skill files.
 const EXCLUDE_PATH_PATTERNS = [
   /^docs\/plans\//,
@@ -73,14 +67,6 @@ const EXCLUDE_PATH_PATTERNS = [
   /\.template$/,
   /\.example$/,
 ];
-
-// Infer compatibility from path when frontmatter doesn't specify it.
-function inferCompatibility(path, type) {
-  if (type === 'skill') return ['claude-code'];
-  if (path.includes('.cursor/') || path.endsWith('.mdc') || path.includes('.cursorrules')) return ['cursor'];
-  if (path.includes('copilot-instructions')) return ['github-copilot'];
-  return ['claude-code'];
-}
 
 // After all records are built, resolve slug collisions:
 //  - Same slug, same plugin → merge (combine compatibility, keep richer content)
@@ -119,49 +105,6 @@ function deduplicateRecords(records) {
   }
 
   return result;
-}
-
-function buildRecord(content, path, repo, meta, body, type, committer) {
-  const parts = path.split('/');
-  const filename = parts[parts.length - 1];
-  const dirName = parts.slice(-2, -1)[0] || '';
-  // For generic filenames use the parent dir; for specific filenames (e.g. reference.md) use the stem.
-  const stem = (GENERIC_FILENAMES.has(filename) || filename.startsWith('.'))
-    ? dirName
-    : filename.replace(/\.[^.]+$/, '');
-  const name = meta.name || (stem && stem !== repo.name ? stem : repo.name);
-  const record = {
-    slug: slugify(name),
-    name,
-    description: meta.description || getDescription(body),
-    plugin: slugify(repo.name),
-    repo: `${ORG}/${repo.name}`,
-    path,
-    author: meta.author || repo.owner?.login || ORG,
-    committer: committer || null,
-    version: meta.version || '1.0.0',
-    compatibility: Array.isArray(meta.compatibility) && meta.compatibility.length
-      ? meta.compatibility
-      : meta.compatibility
-        ? [meta.compatibility]
-        : inferCompatibility(path, type),
-    sensitive_data: meta.sensitive_data === true || meta.sensitive_data === 'true',
-    type,
-    content,
-    last_updated: committer?.date || repo.pushed_at || null,
-  };
-  if (type === 'agent') {
-    record.tools_used = Array.isArray(meta.tools_used) ? meta.tools_used
-      : meta.tools_used ? [meta.tools_used] : [];
-    record.human_in_loop = meta.human_in_loop || '';
-  }
-  if (path.startsWith('enterprise/')) {
-    record.source = 'enterprise';
-    record.category = meta.category ?? '';
-  } else {
-    record.category = meta.category ?? '';
-  }
-  return record;
 }
 
 async function sleep(ms) {
@@ -285,7 +228,7 @@ async function main() {
 
     const { meta, body } = parseFrontmatter(content);
     const committer = await fetchLastCommitter(repo.name, path);
-    const record = buildRecord(content, path, repo, meta, body, type, committer);
+    const record = buildSkillRecord({ meta, body, content, repo, path, committer, type, org: ORG });
     skillMap.set(`${ORG}/${repo.name}::${path}`, record);
 
     const pluginKey = `${ORG}/${repo.name}`;
@@ -325,7 +268,7 @@ async function main() {
       if (!content) continue;
       const { meta, body } = parseFrontmatter(content);
       const committer = await fetchLastCommitter(REGISTRY_REPO, file.path);
-      const record = buildRecord(content, file.path, repoData, meta, body, 'skill', committer);
+      const record = buildSkillRecord({ meta, body, content, repo: repoData, path: file.path, committer, type: 'skill', org: ORG });
       skillMap.set(`${ORG}/${REGISTRY_REPO}::${file.path}`, record);
       updatedPlugins.add(`${ORG}/${REGISTRY_REPO}`);
       console.log(`  ✓ ${record.slug} (source: ${record.source}, category: ${record.category || 'none'})`);
