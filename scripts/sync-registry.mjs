@@ -10,6 +10,7 @@ import { Octokit } from '@octokit/rest';
 import { readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { buildSkillRecord as buildSharedRecord } from '../src/lib/parse-skill.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -65,12 +66,6 @@ function parseFrontmatter(content) {
   }
 
   return { meta, body: content.slice(match[0].length).trim() };
-}
-
-function getDescription(body) {
-  // Use first non-empty line after frontmatter as description fallback
-  const lines = body.split('\n').filter(l => l.trim() && !l.startsWith('#'));
-  return lines[0]?.trim() || '';
 }
 
 function slugify(str) {
@@ -154,63 +149,11 @@ const AGENT_DIR_LIST = [
 ];
 
 function buildSkillRecord(content, path, repo, meta, body) {
-  const name = meta.name || path.split('/').slice(-2, -1)[0] || repo.name;
-  return {
-    slug: slugify(name),
-    name,
-    description: meta.description || getDescription(body),
-    plugin: slugify(repo.name),
-    repo: `${ORG}/${repo.name}`,
-    path,
-    author: meta.author || repo.owner?.login || ORG,
-    version: meta.version || '1.0.0',
-    compatibility: Array.isArray(meta.compatibility)
-      ? meta.compatibility
-      : meta.compatibility ? [meta.compatibility] : [],
-    sensitive_data: meta.sensitive_data === true || meta.sensitive_data === 'true',
-    type: 'skill',
-    content,
-    last_updated: repo.pushed_at,
-    ...(meta.nava_team && { nava_team: meta.nava_team }),
-    ...(meta.nava_problem && { nava_problem: meta.nava_problem }),
-    ...(meta.nava_impact_type && { nava_impact_type: Array.isArray(meta.nava_impact_type) ? meta.nava_impact_type : [meta.nava_impact_type] }),
-    ...(meta.nava_estimated_impact && { nava_estimated_impact: meta.nava_estimated_impact }),
-    ...(meta.nava_usage_frequency && { nava_usage_frequency: meta.nava_usage_frequency }),
-    ...(meta.nava_expected_audience && { nava_expected_audience: meta.nava_expected_audience }),
-    ...(meta.nava_data_sources && { nava_data_sources: meta.nava_data_sources }),
-  };
+  return buildSharedRecord({ meta, body, content, repo, path, type: 'skill', org: ORG });
 }
 
 function buildAgentRecord(content, path, repo, meta, body) {
-  const name = meta.name || path.split('/').slice(-2, -1)[0] || repo.name;
-  return {
-    slug: slugify(name),
-    name,
-    description: meta.description || getDescription(body),
-    plugin: slugify(repo.name),
-    repo: `${ORG}/${repo.name}`,
-    path,
-    author: meta.author || repo.owner?.login || ORG,
-    version: meta.version || '1.0.0',
-    compatibility: Array.isArray(meta.compatibility)
-      ? meta.compatibility
-      : meta.compatibility ? [meta.compatibility] : [],
-    sensitive_data: meta.sensitive_data === true || meta.sensitive_data === 'true',
-    type: 'agent',
-    tools_used: Array.isArray(meta.tools_used)
-      ? meta.tools_used
-      : meta.tools_used ? [meta.tools_used] : [],
-    human_in_loop: meta.human_in_loop || '',
-    content,
-    last_updated: repo.pushed_at,
-    ...(meta.nava_team && { nava_team: meta.nava_team }),
-    ...(meta.nava_problem && { nava_problem: meta.nava_problem }),
-    ...(meta.nava_impact_type && { nava_impact_type: Array.isArray(meta.nava_impact_type) ? meta.nava_impact_type : [meta.nava_impact_type] }),
-    ...(meta.nava_estimated_impact && { nava_estimated_impact: meta.nava_estimated_impact }),
-    ...(meta.nava_usage_frequency && { nava_usage_frequency: meta.nava_usage_frequency }),
-    ...(meta.nava_expected_audience && { nava_expected_audience: meta.nava_expected_audience }),
-    ...(meta.nava_data_sources && { nava_data_sources: meta.nava_data_sources }),
-  };
+  return buildSharedRecord({ meta, body, content, repo, path, type: 'agent', org: ORG });
 }
 
 // --- Main scan ---
