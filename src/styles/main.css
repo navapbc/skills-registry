@@ -72,3 +72,26 @@ body {
 code, pre {
   font-family: var(--font-mono);
 }
+
+/* ── Collapsible sidebar ──────────────────────────────────────────────
+   Rail (icon-only) is the default. At md+ the sidebar expands to its full
+   labeled width unless the user collapsed it (data-sidebar-collapsed on
+   <html>). Phones are always rail because the media query never applies. */
+#app-sidebar { width: 3.5rem; }            /* w-14 rail */
+.sidebar-label { display: none; }          /* text labels hidden on the rail */
+.sidebar-tip { display: block; }           /* hover tooltips available on rail */
+.sidebar-nav-link { justify-content: center; }
+.sidebar-footer { flex-direction: column; align-items: center; }
+
+@media (min-width: 768px) {
+  html:not([data-sidebar-collapsed]) #app-sidebar { width: 14rem; }       /* w-56 */
+  html:not([data-sidebar-collapsed]) .sidebar-label { display: inline; }
+  html:not([data-sidebar-collapsed]) .sidebar-tip { display: none; }
+  html:not([data-sidebar-collapsed]) .sidebar-nav-link { justify-content: flex-start; }
+  html:not([data-sidebar-collapsed]) .sidebar-footer { flex-direction: row; align-items: center; }
+}
+
+/* ── Admin: wide data tables scroll horizontally on small screens ────── */
+@media (max-width: 767px) {
+  .admin-table { display: block; overflow-x: auto; white-space: nowrap; }
+}
