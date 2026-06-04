@@ -16,7 +16,7 @@ export const OPTIONAL_SYNC_FIELDS = [
   'tools_used', 'human_in_loop',
 ];
 
-export function buildSkillUpdateParams(skill, { table, now }) {
+export function buildSkillUpdateParams(skill, { table, now, force = false }) {
   const setClauses = [
     '#name = :name',
     'description = :desc',
@@ -69,14 +69,21 @@ export function buildSkillUpdateParams(skill, { table, now }) {
     }
   }
 
+  // Normal mode: skip no-op writes — only update if the record is new, or it's a
+  // github/enterprise record whose last_updated differs (content changed).
+  // Force mode (backfill): rewrite every github/enterprise record regardless of
+  // last_updated. Both modes keep the source guard so user-submitted records
+  // (form/API) are never clobbered by a sync.
+  const conditionExpression = force
+    ? 'attribute_not_exists(slug) OR #source = :github OR #source = :enterprise'
+    : 'attribute_not_exists(slug) OR ((#source = :github OR #source = :enterprise) AND (attribute_not_exists(last_updated) OR last_updated <> :updated))';
+
   return {
     TableName: table,
     Key: { slug: skill.slug },
     UpdateExpression: `SET ${setClauses.join(', ')}`,
     ExpressionAttributeNames: names,
     ExpressionAttributeValues: values,
-    // Skip write when content hasn't changed: only update if new record, or source
-    // matches and last_updated differs.
-    ConditionExpression: 'attribute_not_exists(slug) OR ((#source = :github OR #source = :enterprise) AND (attribute_not_exists(last_updated) OR last_updated <> :updated))',
+    ConditionExpression: conditionExpression,
   };
 }

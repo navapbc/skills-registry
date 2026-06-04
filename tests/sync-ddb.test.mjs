@@ -107,6 +107,32 @@ describe('buildSkillUpdateParams — optional submission fields', () => {
   });
 });
 
+describe('buildSkillUpdateParams — force (backfill) mode', () => {
+  it('normal mode keeps the unchanged-content guard', () => {
+    const p = buildSkillUpdateParams(coreSkill, { table: 'skills-x', now: NOW });
+    expect(p.ConditionExpression).toContain('last_updated <> :updated');
+  });
+
+  it('force mode drops the last_updated guard but keeps the source guard', () => {
+    const p = buildSkillUpdateParams(coreSkill, { table: 'skills-x', now: NOW, force: true });
+    expect(p.ConditionExpression).not.toContain('last_updated <> :updated');
+    expect(p.ConditionExpression).not.toContain('attribute_not_exists(last_updated)');
+    // still only writes new records or github/enterprise — protects user-submitted
+    expect(p.ConditionExpression).toContain('attribute_not_exists(slug)');
+    expect(p.ConditionExpression).toContain('#source = :github');
+    expect(p.ConditionExpression).toContain('#source = :enterprise');
+  });
+
+  it('force mode still writes optional fields and has no unused attributes', () => {
+    const skill = { ...coreSkill, team: 'Finance', author_name: 'Jo' };
+    const p = buildSkillUpdateParams(skill, { table: 'skills-x', now: NOW, force: true });
+    expect(p.UpdateExpression).toContain('#team = :team');
+    expect(p.ExpressionAttributeValues[':author_name']).toBe('Jo');
+    assertNoUnusedValues(p);
+    assertNoUnusedNames(p);
+  });
+});
+
 describe('buildSkillUpdateParams — agent fields', () => {
   it('writes tools_used and human_in_loop for agents', () => {
     const agent = {

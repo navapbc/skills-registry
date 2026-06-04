@@ -17,6 +17,11 @@ on:
         description: 'Reason for manual sync'
         required: false
         default: 'Manual trigger'
+      force:
+        description: 'Force backfill: rewrite all github/enterprise records, ignoring the unchanged-content guard (does not touch user-submitted skills)'
+        required: false
+        type: boolean
+        default: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -54,4 +59,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.REGISTRY_SCAN_TOKEN }}
           GITHUB_ORG: navapbc
           SYNC_ENV: ${{ github.event_name == 'workflow_dispatch' && (inputs.environment == 'production' && 'prod' || 'staging') || 'staging' }}
-        run: node scripts/sync-registry-v2.mjs --env $SYNC_ENV
+          FORCE_FLAG: ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
+        run: node scripts/sync-registry-v2.mjs --env "$SYNC_ENV" $FORCE_FLAG

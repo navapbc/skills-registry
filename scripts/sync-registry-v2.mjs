@@ -36,6 +36,10 @@ function getArg(flag) {
 const ORG = getArg('--org') || process.env.GITHUB_ORG || 'navapbc';
 const JSON_OUTPUT = getArg('--json-output'); // optional local JSON backup
 const VERBOSE = args.includes('--verbose');
+// --force re-writes all github/enterprise records, ignoring the unchanged-content
+// guard (backfills newly-added fields onto existing records). User-submitted
+// records are still left untouched.
+const FORCE = args.includes('--force');
 
 const ENV = getArg('--env') || process.env.SYNC_ENV;
 if (!ENV || !['staging', 'prod'].includes(ENV)) {
@@ -295,7 +299,7 @@ async function main() {
 
   process.stdout.write('\n');
   console.log(`\nRegistry: ${plugins.length} plugins, ${skills.length} skills/agents`);
-  console.log(`Writing to DynamoDB (${ENV})...\n`);
+  console.log(`Writing to DynamoDB (${ENV})${FORCE ? ' [--force: rewriting all github/enterprise records]' : ''}...\n`);
 
   const now = new Date().toISOString();
   let skillOk = 0, skillSkipped = 0, skillErr = 0;
@@ -306,7 +310,7 @@ async function main() {
       // Records with source=user-submitted are skipped (ConditionalCheckFailed).
       // Optional submission fields (team, problem, author_name, tags, …) are
       // written only when present — see buildSkillUpdateParams.
-      await ddb.send(new UpdateCommand(buildSkillUpdateParams(skill, { table: SKILLS_TABLE, now })));
+      await ddb.send(new UpdateCommand(buildSkillUpdateParams(skill, { table: SKILLS_TABLE, now, force: FORCE })));
       skillOk++;
       process.stdout.write('.');
     } catch (err) {
