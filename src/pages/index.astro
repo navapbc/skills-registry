@@ -41,6 +41,16 @@ import Tooltip from '../components/Tooltip.astro';
     </div>
   </div>
 
+  <!-- Org-wide skills callout — populated by client script; hidden until org-wide skills load -->
+  <div id="orgwide-section" class="hidden mb-10 p-5 bg-violet-50 border border-violet-200 rounded-xl">
+    <div class="flex items-center gap-2 mb-1">
+      <span class="px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-700 rounded">Org-wide</span>
+      <h2 class="text-sm font-semibold text-gray-700 m-0">Available to all Nava staff</h2>
+    </div>
+    <p class="text-xs text-gray-500 mb-4 m-0">These skills are available in Claude Chat and Claude for Work — no installation needed.</p>
+    <div id="orgwide-grid"></div>
+  </div>
+
   <!-- Search -->
   <div class="mt-8 mb-8">
     <div class="relative">
@@ -141,7 +151,7 @@ import Tooltip from '../components/Tooltip.astro';
 
 <script>
 import { fetchApi } from '../lib/api.mjs';
-import { renderSkillCard, escapeHtml, renderCategoryGrid, renderNewThisWeek } from '../lib/render.mjs';
+import { renderSkillCard, escapeHtml, renderCategoryGrid, renderNewThisWeek, renderSkillGrid } from '../lib/render.mjs';
 import { CATEGORIES } from '../lib/categories.mjs';
 import { getFavorites, initFavoriteButtons, initFromUser } from '../lib/favorites.mjs';
 
@@ -203,14 +213,17 @@ Promise.all([
   const mergedCategories = CATEGORIES; // categories hidden, use static config for New This Week
   document.getElementById('new-this-week').innerHTML = renderNewThisWeek(skills, mergedCategories);
 
-  // Enterprise (org-wide) skills surfaced first in the skills grid
-  const allSkills = skills
-    .filter(s => s.type === 'skill')
-    .sort((a, b) => {
-      if (a.source === 'enterprise' && b.source !== 'enterprise') return -1;
-      if (b.source === 'enterprise' && a.source !== 'enterprise') return 1;
-      return 0;
-    });
+  // Org-wide (enterprise) skills get their own callout, matching the /skills route.
+  const orgWide = skills.filter(s => s.type === 'skill' && s.source === 'enterprise');
+  const orgSection = document.getElementById('orgwide-section');
+  const orgGrid = document.getElementById('orgwide-grid');
+  if (orgSection && orgGrid && orgWide.length) {
+    orgGrid.innerHTML = renderSkillGrid(orgWide);
+    orgSection.classList.remove('hidden');
+  }
+
+  // Community skills only in the main grid (org-wide shown separately above)
+  const allSkills = skills.filter(s => s.type === 'skill' && s.source !== 'enterprise');
   const allAgents = skills.filter(s => s.type === 'agent');
 
   // Plugins — section hidden, guard against missing DOM elements
@@ -258,7 +271,7 @@ Promise.all([
       meta: `${p.skills_count || 0} skills`,
       keywords: '',
     })),
-    ...allSkills.map(s => ({
+    ...[...orgWide, ...allSkills].map(s => ({
       type: 'skill',
       name: s.name,
       description: s.description || '',

@@ -2,12 +2,13 @@
 import UserFooter from './UserFooter.astro';
 
 // Each nav item: href, short icon glyph, label, accessible name, and whether
-// it's an external resource link.
+// it's an external resource link (rendered with target="_blank").
 const mainNav = [
   { id: 'nav-marketplace', href: '/',          icon: '⊞', label: 'Marketplace' },
-  { id: 'nav-my-skills',   href: '/my-skills', icon: '◈', label: 'My Skills' },
-  { id: 'nav-whats-new',   href: '/whats-new', icon: '★', label: "What's New" },
-  { id: 'nav-contribute',  href: '/contribute',icon: '+', label: 'Add a Skill' },
+  { id: 'nav-my-skills',   href: '/my-skills', icon: '★', label: 'My Skills' },
+  { id: 'nav-whats-new',   href: '/whats-new', icon: '◈', label: "What's New" },
+  { id: 'nav-org-wide',    href: '/skills',    icon: '◆', label: 'Org-Wide Skills' },
+  { id: 'nav-contribute',  href: 'https://docs.google.com/forms/d/e/1FAIpQLSdW3RSdwVvbFDFz_OBdZ1CzyNq_pYq_z8zsR0NdOknRApcR6A/viewform', icon: '+', label: 'Add a Skill', external: true },
 ];
 
 const resources = [
@@ -20,9 +21,9 @@ const resources = [
 
   <!-- Logo -->
   <div class="px-2 md:px-4 py-4 border-b border-gray-200">
-    <a href="/" class="sidebar-nav-link flex items-center gap-2 no-underline text-gray-900 hover:text-plum-700" aria-label="Nava Skills home">
-      <span class="text-plum-600 font-bold text-base leading-none" aria-hidden="true">✦</span>
-      <span class="sidebar-label font-semibold text-sm">Nava Skills</span>
+    <a href="/" class="sidebar-nav-link flex items-center gap-2 no-underline text-gray-900 hover:text-plum-700" aria-label="Nava Hub home">
+      <img src="/favicon.svg" alt="" aria-hidden="true" class="w-4 h-4 flex-shrink-0 rounded-sm" />
+      <span class="sidebar-label font-semibold text-sm">Nava Hub</span>
     </a>
   </div>
 
@@ -45,7 +46,7 @@ const resources = [
       <ul class="space-y-0.5 list-none p-0 m-0">
         {mainNav.map((item) => (
           <li>
-            <a href={item.href} id={item.id} aria-label={item.label} class="sidebar-nav-link group/nav relative flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
+            <a href={item.href} id={item.id} aria-label={item.label} target={item.external ? '_blank' : undefined} rel={item.external ? 'noopener' : undefined} class="sidebar-nav-link group/nav relative flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
               <span aria-hidden="true" class="text-gray-400 text-xs">{item.icon}</span>
               <span class="sidebar-label">{item.label}</span>
               <span class="sidebar-tip pointer-events-none absolute left-12 top-1/2 -translate-y-1/2 z-20 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 group-hover/nav:opacity-100 transition-opacity shadow-lg">{item.label}</span>
