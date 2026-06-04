@@ -26,6 +26,7 @@ import Base from '../../layouts/Base.astro';
       <button data-tab="plugins"     class="tab-btn px-4 py-2 text-sm font-medium text-gray-600 border-b-2 border-transparent hover:text-gray-900 hover:border-gray-300 transition-colors">Plugins</button>
       <button data-tab="enterprise"  class="tab-btn px-4 py-2 text-sm font-medium text-gray-600 border-b-2 border-transparent hover:text-gray-900 hover:border-gray-300 transition-colors">Enterprise Skills</button>
       <button data-tab="categories"  class="tab-btn px-4 py-2 text-sm font-medium text-gray-600 border-b-2 border-transparent hover:text-gray-900 hover:border-gray-300 transition-colors">Categories</button>
+      <button data-tab="validate"    class="tab-btn px-4 py-2 text-sm font-medium text-gray-600 border-b-2 border-transparent hover:text-gray-900 hover:border-gray-300 transition-colors">Validate</button>
       <button data-tab="users"       class="tab-btn admin-only hidden px-4 py-2 text-sm font-medium text-gray-600 border-b-2 border-transparent hover:text-gray-900 hover:border-gray-300 transition-colors">Users</button>
       <button data-tab="audit"       class="tab-btn admin-only hidden px-4 py-2 text-sm font-medium text-gray-600 border-b-2 border-transparent hover:text-gray-900 hover:border-gray-300 transition-colors">Audit Log</button>
     </nav>
@@ -37,6 +38,7 @@ import Base from '../../layouts/Base.astro';
   <div id="tab-plugins"     class="tab-panel hidden"><p class="text-sm text-gray-400">Loading...</p></div>
   <div id="tab-enterprise"  class="tab-panel hidden"><p class="text-sm text-gray-400">Loading...</p></div>
   <div id="tab-categories"  class="tab-panel hidden"><p class="text-sm text-gray-400">Loading...</p></div>
+  <div id="tab-validate"    class="tab-panel hidden"><p class="text-sm text-gray-400">Loading...</p></div>
   <div id="tab-users"       class="tab-panel hidden"><p class="text-sm text-gray-400">Loading...</p></div>
   <div id="tab-audit"       class="tab-panel hidden"><p class="text-sm text-gray-400">Loading...</p></div>
 </Base>
@@ -44,6 +46,7 @@ import Base from '../../layouts/Base.astro';
 <script>
 import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
+import { analyzeSkillFile } from '../../lib/parse-skill.mjs';
 
 async function apiPost(path, body) {
   const res = await fetch(`/api${path}`, {
@@ -226,6 +229,7 @@ async function loadTab(tabId) {
     if (tabId === 'plugins')     await loadPlugins(panel);
     if (tabId === 'enterprise')  await loadEnterprise(panel);
     if (tabId === 'categories')  await loadCategories(panel);
+    if (tabId === 'validate')    await loadValidate(panel);
     if (tabId === 'users')       await loadUsers(panel);
     if (tabId === 'audit')       await loadAudit(panel);
   } catch (err) {
@@ -504,6 +508,110 @@ async function loadCategories(panel) {
       }
     });
   });
+}
+
+function renderValidationResults(analysis) {
+  const { fields, ignored, validation, warnings } = analysis;
+
+  const sourceLabel = {
+    frontmatter: '<span class="text-green-700">from frontmatter</span>',
+    derived: '<span class="text-blue-700">⚙️ derived</span>',
+    defaulted: '<span class="text-amber-700">⚙️ defaulted</span>',
+    pipeline: '<span class="text-gray-400">set by pipeline</span>',
+  };
+  const fmtValue = (v) => Array.isArray(v)
+    ? (v.length ? v.map(x => `<span class="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded mr-1">${escapeHtml(String(x))}</span>`).join('') : '<span class="text-gray-300">[]</span>')
+    : v === null ? '<span class="text-gray-300">null</span>'
+    : v === '' ? '<span class="text-gray-300">(empty)</span>'
+    : escapeHtml(String(v));
+
+  const authored = fields.filter(f => f.source !== 'pipeline');
+  const pipeline = fields.filter(f => f.source === 'pipeline');
+
+  const banner = validation.valid
+    ? `<div class="p-3 rounded bg-green-50 border border-green-200 text-sm text-green-800">✅ Valid skill file — passes SkillSchema.</div>`
+    : `<div class="p-3 rounded bg-red-50 border border-red-200 text-sm text-red-800">
+        ❌ Invalid — ${validation.errors.length} issue(s):
+        <ul class="mt-1 ml-4 list-disc">
+          ${validation.errors.map(e => `<li><code>${escapeHtml(e.path || '(root)')}</code>: ${escapeHtml(e.message)}</li>`).join('')}
+        </ul>
+      </div>`;
+
+  const warningsBlock = warnings.length
+    ? `<div class="mt-4 p-3 rounded bg-amber-50 border border-amber-200">
+        <h3 class="text-sm font-semibold text-amber-900 mb-2 mt-0">Form conformance — ${warnings.length} thing(s) to check</h3>
+        <ul class="text-xs text-amber-800 space-y-1 m-0 ml-4 list-disc">
+          ${warnings.map(w => `<li><code>${escapeHtml(w.field)}</code>: ${escapeHtml(w.message)}</li>`).join('')}
+        </ul>
+      </div>`
+    : `<div class="mt-4 p-3 rounded bg-green-50 border border-green-200 text-sm text-green-800">✅ Matches the submission form's expected inputs.</div>`;
+
+  const fieldRows = (list) => list.map(f => `
+    <tr class="border-b border-gray-100">
+      <td class="py-1 pr-3 font-mono text-xs text-gray-700 align-top">${escapeHtml(f.key)}</td>
+      <td class="py-1 pr-3 text-xs align-top">${fmtValue(f.value)}</td>
+      <td class="py-1 text-xs whitespace-nowrap align-top">${sourceLabel[f.source] || f.source}</td>
+    </tr>`).join('');
+
+  const ignoredBlock = ignored.length
+    ? `<div class="mt-4">
+        <h3 class="text-sm font-semibold text-gray-900 mb-2">⚠️ Ignored / unrecognized keys</h3>
+        <ul class="text-xs text-amber-800 space-y-1">
+          ${ignored.map(i => `<li><code>${escapeHtml(i.key)}</code> — not a recognized field; will be dropped${i.suggestion ? ` — did you mean <code>${escapeHtml(i.suggestion)}</code>?` : ''}</li>`).join('')}
+        </ul>
+      </div>`
+    : '';
+
+  return `
+    ${banner}
+    ${warningsBlock}
+    <div class="mt-4">
+      <h3 class="text-sm font-semibold text-gray-900 mb-2">Extracted fields</h3>
+      <table class="w-full text-left"><tbody>${fieldRows(authored)}</tbody></table>
+    </div>
+    <div class="mt-4">
+      <h3 class="text-sm font-semibold text-gray-500 mb-2">Set by the pipeline, not your file</h3>
+      <table class="w-full text-left opacity-70"><tbody>${fieldRows(pipeline)}</tbody></table>
+    </div>
+    ${ignoredBlock}
+    <div class="mt-4">
+      <button id="copy-record-btn" class="text-xs px-2 py-1 bg-plum-600 text-white rounded hover:bg-plum-700 transition-colors">Copy as JSON</button>
+      <span id="copy-status" class="text-xs text-green-600 ml-2 hidden">Copied ✓</span>
+    </div>`;
+}
+
+async function loadValidate(panel) {
+  panel.innerHTML = `
+    <p class="text-xs text-gray-500 mb-3">Paste a SKILL.md file below to preview exactly what the registry would extract — captured fields, defaults, ignored keys, schema validation, and how well it matches the submission form. Nothing is submitted.</p>
+    <textarea id="validate-input" class="w-full h-64 text-xs font-mono border border-gray-200 rounded p-2 focus:outline-none focus:ring-2 focus:ring-plum-300" placeholder="---&#10;name: my-skill&#10;description: ...&#10;---&#10;&#10;# My Skill"></textarea>
+    <div class="mt-2"><button id="validate-btn" class="text-sm px-3 py-1.5 bg-plum-600 text-white rounded hover:bg-plum-700 transition-colors">Validate</button></div>
+    <div id="validate-results" class="mt-4"></div>`;
+
+  const input = panel.querySelector('#validate-input');
+  const results = panel.querySelector('#validate-results');
+  let lastAnalysis = null;
+
+  const run = () => {
+    const text = input.value.trim();
+    if (!text) { results.innerHTML = ''; lastAnalysis = null; return; }
+    try {
+      lastAnalysis = analyzeSkillFile(text);
+      results.innerHTML = renderValidationResults(lastAnalysis);
+      const copyBtn = results.querySelector('#copy-record-btn');
+      copyBtn?.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(JSON.stringify(lastAnalysis.record, null, 2));
+        const status = results.querySelector('#copy-status');
+        status.classList.remove('hidden');
+        setTimeout(() => status.classList.add('hidden'), 2000);
+      });
+    } catch (e) {
+      results.innerHTML = `<p class="text-sm text-red-500">Could not parse: ${escapeHtml(e.message)}</p>`;
+    }
+  };
+
+  let debounce;
+  input.addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(run, 300); });
+  panel.querySelector('#validate-btn').addEventListener('click', run);
 }
 
 async function loadUsers(panel) {
