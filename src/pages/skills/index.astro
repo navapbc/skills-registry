@@ -58,13 +58,13 @@ if (!slug) {
         <h2 class="text-sm font-semibold text-gray-700 m-0">Available to all Nava staff</h2>
       </div>
       <p class="text-xs text-gray-500 mb-4 m-0">These skills are available in Claude Chat and Claude for Work — no installation needed.</p>
-      <div id="orgwide-grid"><div class="grid grid-cols-3 gap-3 animate-pulse">${Array(3).fill(skeletonCard).join('')}</div></div>
+      <div id="orgwide-grid"><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">${Array(3).fill(skeletonCard).join('')}</div></div>
     </div>
 
     <!-- Community skills -->
     <div>
       <h2 class="text-base font-semibold text-gray-700 mb-3 m-0" id="community-heading">Community Skills</h2>
-      <div id="skills-list-grid"><div class="grid grid-cols-3 gap-3 animate-pulse">${Array(9).fill(skeletonCard).join('')}</div></div>
+      <div id="skills-list-grid"><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">${Array(9).fill(skeletonCard).join('')}</div></div>
     </div>`;
 
   fetchApi('/skills?type=skill')

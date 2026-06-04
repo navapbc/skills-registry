@@ -73,7 +73,7 @@ import Tooltip from '../components/Tooltip.astro';
         </a>
       </div>
       <div id="skills-grid">
-        <div class="grid grid-cols-3 gap-3 animate-pulse">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">
           <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div><div class="h-3 bg-gray-100 rounded w-full mb-1"></div><div class="h-3 bg-gray-100 rounded w-4/5"></div></div>
           <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div><div class="h-3 bg-gray-100 rounded w-full mb-1"></div><div class="h-3 bg-gray-100 rounded w-3/5"></div></div>
           <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div><div class="h-3 bg-gray-100 rounded w-5/6 mb-1"></div><div class="h-3 bg-gray-100 rounded w-4/5"></div></div>
@@ -97,7 +97,7 @@ import Tooltip from '../components/Tooltip.astro';
         </a>
       </div>
       <div id="agents-grid">
-        <div class="grid grid-cols-3 gap-3 animate-pulse">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">
           <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div><div class="h-3 bg-gray-100 rounded w-full mb-1"></div><div class="h-3 bg-gray-100 rounded w-4/5"></div></div>
           <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div><div class="h-3 bg-gray-100 rounded w-full mb-1"></div><div class="h-3 bg-gray-100 rounded w-3/5"></div></div>
           <div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div><div class="h-3 bg-gray-100 rounded w-5/6 mb-1"></div><div class="h-3 bg-gray-100 rounded w-4/5"></div></div>
@@ -157,7 +157,7 @@ function renderHomepageFavorites() {
     return;
   }
   section.classList.remove('hidden');
-  grid.innerHTML = `<div class="grid grid-cols-3 gap-3">
+  grid.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     ${favs.map(f => `<div class="h-full"><a href="/${f.type === 'agent' ? 'agents' : 'skills'}/${escapeHtml(f.slug)}" class="h-full flex flex-col gap-3 p-4 bg-white border border-amber-200 rounded-lg hover:shadow-md hover:border-amber-300 transition-all no-underline text-gray-900">
       <div class="flex items-start justify-between gap-2">
         <span class="font-semibold text-sm text-gray-900">${escapeHtml(f.name)}</span>
@@ -223,7 +223,7 @@ Promise.all([
   // Uncomment HTML section above to re-enable
   /*
   document.getElementById('plugins-count').textContent = `(${plugins.length})`;
-  document.getElementById('plugins-list').innerHTML = `<div class="grid grid-cols-4 gap-2">
+  document.getElementById('plugins-list').innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
     ${sortedPlugins.map(p => {
       const skills = p.skills_count || 0;
       const agents = p.agents_count || 0;
@@ -288,7 +288,7 @@ function renderGrid(gridId, expandBtnId, items) {
   const grid = document.getElementById(gridId);
   const expandLink = document.getElementById(expandBtnId);
 
-  grid.innerHTML = `<div class="grid grid-cols-3 gap-3">
+  grid.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     ${items.slice(0, PREVIEW_COUNT).map(skill => `<div>${renderSkillCard(skill)}</div>`).join('')}
   </div>`;
 

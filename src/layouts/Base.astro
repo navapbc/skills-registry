@@ -16,6 +16,16 @@ const { title = 'Skills Registry', description = 'Browse, install, and share reu
     <title>{title} — Nava Skills Registry</title>
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Apply saved sidebar state before paint to avoid a flash. Mirrors
+         isCollapsed() in src/lib/sidebar-state.mjs; kept inline because it
+         must run before the bundle loads. -->
+    <script is:inline>
+      try {
+        if (localStorage.getItem('sidebar-collapsed') === '1') {
+          document.documentElement.setAttribute('data-sidebar-collapsed', '');
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body class="bg-gray-50 text-gray-900">
     <!-- Skip link: lets keyboard users jump past sidebar -->
@@ -23,7 +33,7 @@ const { title = 'Skills Registry', description = 'Browse, install, and share reu
     <div class="flex h-screen overflow-hidden">
       <Sidebar />
       <main id="main-content" class="flex-1 overflow-y-auto" tabindex="-1">
-        <div class="max-w-5xl mx-auto px-8 py-8">
+        <div class="max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
           <slot />
         </div>
       </main>
