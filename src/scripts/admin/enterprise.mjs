@@ -57,7 +57,7 @@ export async function load(panel, ctx) {
     <div id="enterprise-form" class="hidden mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
       <h3 class="text-sm font-semibold text-gray-700 mb-3" id="enterprise-form-title">Add Org Skill</h3>
       <input type="hidden" id="enterprise-edit-slug" />
-      <div class="grid grid-cols-2 gap-3 mb-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <div>
           <label class="text-xs text-gray-600 block mb-1">Name *</label>
           <input id="ent-name" type="text" class="w-full text-sm border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-plum-300" />

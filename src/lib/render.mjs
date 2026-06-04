@@ -116,7 +116,7 @@ export function renderSkillCard(skill, showPlugin = true) {
 
 export function renderSkillGrid(skills, showPlugin = true) {
   if (!skills.length) return '<p class="text-sm text-gray-400 italic">No skills found.</p>';
-  return `<div class="grid grid-cols-3 gap-3">
+  return `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     ${skills.map(s => `<div class="h-full">${renderSkillCard(s, showPlugin)}</div>`).join('')}
   </div>`;
 }
@@ -486,7 +486,7 @@ export function renderCategoryGrid(categories, allSkills) {
 
   return `
     <section class="mb-6">
-      <div class="grid grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         ${categoryCards}
         ${submitCell}
       </div>
@@ -537,7 +537,7 @@ export function renderCategoryDetail(category, allSkills) {
         <span class="text-xs font-semibold text-plum-600 uppercase tracking-wider">Featured</span>
         <div class="flex-1 border-t border-gray-200"></div>
       </div>
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         ${featured.map(skill => `
           <div style="border-top:2px solid ${escapeHtml(category.borderColor)}">${renderSkillCard(skill)}</div>
         `).join('')}
@@ -546,7 +546,7 @@ export function renderCategoryDetail(category, allSkills) {
 
   const allSection = skills.length ? `
     <section>
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         ${skills.map(skill => renderSkillCard(skill)).join('')}
       </div>
     </section>` : '<p class="text-sm text-gray-400 italic">No skills in this category yet.</p>';
