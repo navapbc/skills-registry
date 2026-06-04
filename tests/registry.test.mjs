@@ -88,7 +88,7 @@ describe('Registry consistency', () => {
   });
 });
 
-describe('SkillSchema — nava_ optional fields', () => {
+describe('SkillSchema — optional submission + author/tags fields', () => {
   const baseValid = {
     slug: 'test', name: 'Test', description: 'desc',
     plugin: 'p', repo: 'org/repo', path: 'SKILL.md',
@@ -97,31 +97,38 @@ describe('SkillSchema — nava_ optional fields', () => {
     last_updated: null,
   };
 
-  it('passes with no nava_ fields present', () => {
+  it('passes with no optional fields present', () => {
     expect(SkillSchema.safeParse(baseValid).success).toBe(true);
   });
 
-  it('passes with all nava_ fields present', () => {
+  it('passes with all optional fields present', () => {
     const full = {
       ...baseValid,
-      nava_team: 'Engineering',
-      nava_problem: 'Manual reporting took 2 hours',
-      nava_impact_type: ['Time saved per use', 'Reduced error rate or rework'],
-      nava_estimated_impact: 'Saves ~45 min per use',
-      nava_usage_frequency: 'Daily',
-      nava_expected_audience: '16+ people / org-wide',
-      nava_data_sources: 'Google Docs, Jira',
+      author_name: 'Diana Olympia',
+      tags: ['writing', 'meeting-prep'],
+      team: 'Business Development',
+      problem: 'Manual reporting took 2 hours',
+      impact_type: ['Time saved per use', 'Reduced error rate or rework'],
+      estimated_impact: 'Saves ~45 min per use',
+      usage_frequency: 'A few times per week',
+      expected_audience: '6-15 people',
+      data_sources: 'Google Docs, Jira',
     };
     expect(SkillSchema.safeParse(full).success).toBe(true);
   });
 
-  it('passes with some nava_ fields present', () => {
-    const partial = { ...baseValid, nava_team: 'Design', nava_estimated_impact: 'Saves 1 hour' };
+  it('passes with some optional fields present', () => {
+    const partial = { ...baseValid, team: 'Design', estimated_impact: 'Saves 1 hour' };
     expect(SkillSchema.safeParse(partial).success).toBe(true);
   });
 
-  it('fails when nava_impact_type is not an array', () => {
-    const bad = { ...baseValid, nava_impact_type: 42 };
+  it('fails when impact_type is not an array', () => {
+    const bad = { ...baseValid, impact_type: 42 };
+    expect(SkillSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it('fails when tags is not an array', () => {
+    const bad = { ...baseValid, tags: 'writing' };
     expect(SkillSchema.safeParse(bad).success).toBe(false);
   });
 });

@@ -25,14 +25,17 @@ export const SkillSchema = z.object({
   // agent-only optional fields
   tools_used: z.array(z.string()).optional(),
   human_in_loop: z.string().optional(),
-  // nava submission metadata — optional, set by Google Form → Zapier → SKILL.md frontmatter
-  nava_team: z.string().optional(),
-  nava_problem: z.string().optional(),
-  nava_impact_type: z.array(z.string()).optional(),
-  nava_estimated_impact: z.string().optional(),
-  nava_usage_frequency: z.string().optional(),
-  nava_expected_audience: z.string().optional(),
-  nava_data_sources: z.string().optional(),
+  // author display name + tags — optional, read from SKILL.md frontmatter
+  author_name: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  // submission metadata — optional, from SKILL.md frontmatter (Google Form → Zapier)
+  team: z.string().optional(),
+  problem: z.string().optional(),
+  impact_type: z.array(z.string()).optional(),
+  estimated_impact: z.string().optional(),
+  usage_frequency: z.string().optional(),
+  expected_audience: z.string().optional(),
+  data_sources: z.string().optional(),
 });
 
 export const PluginSchema = z.object({
