@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { parseFrontmatter, slugify } from './utils.mjs';
 import { buildSkillRecord } from '../src/lib/parse-skill.mjs';
+import { buildSkillUpdateParams } from './sync-ddb.mjs';
 
 // AWS SDK lives in functions/api/node_modules
 const _req = createRequire(resolve(dirname(fileURLToPath(import.meta.url)), '../functions/api/package.json'));
@@ -303,49 +304,9 @@ async function main() {
     try {
       // Update github-sourced fields; create new record if slug is unseen.
       // Records with source=user-submitted are skipped (ConditionalCheckFailed).
-      await ddb.send(new UpdateCommand({
-        TableName: SKILLS_TABLE,
-        Key: { slug: skill.slug },
-        UpdateExpression: `SET
-          #name        = :name,
-          description  = :desc,
-          plugin       = :plugin,
-          repo         = :repo,
-          #path        = :path,
-          author       = :author,
-          committer    = :committer,
-          version      = :version,
-          compatibility = :compat,
-          sensitive_data = :sensitive,
-          category     = :category,
-          #type        = :type,
-          content      = :content,
-          last_updated = :updated,
-          updated_at   = :now,
-          #source      = if_not_exists(#source,      :src),
-          #status      = if_not_exists(#status,      :approved),
-          visibility   = if_not_exists(visibility,   :public),
-          created_by   = if_not_exists(created_by,   :system),
-          created_at   = if_not_exists(created_at,   :now)`,
-        ExpressionAttributeNames: {
-          '#name': 'name', '#path': 'path', '#type': 'type',
-          '#status': 'status', '#source': 'source',
-        },
-        ExpressionAttributeValues: {
-          ':name': skill.name, ':desc': skill.description, ':plugin': skill.plugin,
-          ':repo': skill.repo, ':path': skill.path, ':author': skill.author,
-          ':committer': skill.committer || null, ':version': skill.version || '1.0.0',
-          ':compat': skill.compatibility, ':sensitive': skill.sensitive_data ?? false,
-          ':type': skill.type, ':content': skill.content,
-          ':updated': skill.last_updated || now, ':now': now,
-          ':github': 'github', ':approved': 'approved', ':public': 'public', ':system': 'system',
-          ':src': skill.source ?? 'github',
-          ':enterprise': 'enterprise',
-          ':category': skill.category ?? '',
-        },
-        // Skip write when content hasn't changed: only update if new record, or source matches and last_updated differs.
-        ConditionExpression: 'attribute_not_exists(slug) OR ((#source = :github OR #source = :enterprise) AND (attribute_not_exists(last_updated) OR last_updated <> :updated))',
-      }));
+      // Optional submission fields (team, problem, author_name, tags, …) are
+      // written only when present — see buildSkillUpdateParams.
+      await ddb.send(new UpdateCommand(buildSkillUpdateParams(skill, { table: SKILLS_TABLE, now })));
       skillOk++;
       process.stdout.write('.');
     } catch (err) {
