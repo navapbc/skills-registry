@@ -514,8 +514,8 @@ describe('PUT /api/skills/:slug — provenance field protection', () => {
   });
 });
 
-describe('POST /api/skills — nava_ optional fields round-trip', () => {
-  it('stores nava_ fields when provided in submission', async () => {
+describe('POST /api/skills — optional submission fields round-trip', () => {
+  it('stores submission fields when provided in submission', async () => {
     let capturedItem;
     mockSend
       .mockResolvedValueOnce({ Item: USER_RECORD })
@@ -529,27 +529,27 @@ describe('POST /api/skills — nava_ optional fields round-trip', () => {
         slug: 'nava-skill', name: 'Nava Skill', description: 'desc',
         plugin: 'p', repo: 'org/repo', path: 'SKILL.md',
         author: 'user@navapbc.com', compatibility: ['claude-code'], type: 'skill',
-        nava_team: 'Engineering',
-        nava_problem: 'Manual reporting took hours',
-        nava_impact_type: ['Time saved per use'],
-        nava_estimated_impact: 'Saves ~45 min',
-        nava_usage_frequency: 'Daily',
-        nava_expected_audience: '16+ people / org-wide',
-        nava_data_sources: 'Google Docs',
+        team: 'Engineering',
+        problem: 'Manual reporting took hours',
+        impact_type: ['Time saved per use'],
+        estimated_impact: 'Saves ~45 min',
+        usage_frequency: 'Daily',
+        expected_audience: '16+ people / org-wide',
+        data_sources: 'Google Docs',
       }),
     });
 
     expect(res.status).toBe(201);
-    expect(capturedItem?.nava_team).toBe('Engineering');
-    expect(capturedItem?.nava_problem).toBe('Manual reporting took hours');
-    expect(capturedItem?.nava_impact_type).toEqual(['Time saved per use']);
-    expect(capturedItem?.nava_estimated_impact).toBe('Saves ~45 min');
-    expect(capturedItem?.nava_usage_frequency).toBe('Daily');
-    expect(capturedItem?.nava_expected_audience).toBe('16+ people / org-wide');
-    expect(capturedItem?.nava_data_sources).toBe('Google Docs');
+    expect(capturedItem?.team).toBe('Engineering');
+    expect(capturedItem?.problem).toBe('Manual reporting took hours');
+    expect(capturedItem?.impact_type).toEqual(['Time saved per use']);
+    expect(capturedItem?.estimated_impact).toBe('Saves ~45 min');
+    expect(capturedItem?.usage_frequency).toBe('Daily');
+    expect(capturedItem?.expected_audience).toBe('16+ people / org-wide');
+    expect(capturedItem?.data_sources).toBe('Google Docs');
   });
 
-  it('succeeds without any nava_ fields (all optional)', async () => {
+  it('succeeds without any submission fields (all optional)', async () => {
     mockSend
       .mockResolvedValueOnce({ Item: USER_RECORD })
       .mockResolvedValueOnce({})
