@@ -439,62 +439,62 @@ describe('renderSkillDetail — empty compatibility', () => {
   });
 });
 
-describe('renderSkillDetail — nava_ optional fields', () => {
+describe('renderSkillDetail — optional submission fields', () => {
   const navaSkill = {
     ...baseSkill,
-    nava_team: 'Engineering',
-    nava_problem: 'Spent 2 hours formatting reports manually',
-    nava_impact_type: ['Time saved per use', 'Reduced error rate or rework'],
-    nava_estimated_impact: 'Saves ~45 min per deliverable',
-    nava_usage_frequency: 'Daily',
-    nava_expected_audience: '16+ people / org-wide',
-    nava_data_sources: 'Google Docs, Jira',
+    team: 'Engineering',
+    problem: 'Spent 2 hours formatting reports manually',
+    impact_type: ['Time saved per use', 'Reduced error rate or rework'],
+    estimated_impact: 'Saves ~45 min per deliverable',
+    usage_frequency: 'Daily',
+    expected_audience: '16+ people / org-wide',
+    data_sources: 'Google Docs, Jira',
   };
 
-  it('renders nava_team when present', () => {
+  it('renders team when present', () => {
     const html = renderSkillDetail(navaSkill);
     expect(html).toContain('Engineering');
   });
 
-  it('renders nava_problem when present', () => {
+  it('renders problem when present', () => {
     const html = renderSkillDetail(navaSkill);
     expect(html).toContain('Spent 2 hours formatting reports manually');
   });
 
-  it('renders each nava_impact_type chip', () => {
+  it('renders each impact_type chip', () => {
     const html = renderSkillDetail(navaSkill);
     expect(html).toContain('Time saved per use');
     expect(html).toContain('Reduced error rate or rework');
   });
 
-  it('renders nava_estimated_impact when present', () => {
+  it('renders estimated_impact when present', () => {
     const html = renderSkillDetail(navaSkill);
     expect(html).toContain('Saves ~45 min per deliverable');
   });
 
-  it('renders nava_usage_frequency when present', () => {
+  it('renders usage_frequency when present', () => {
     const html = renderSkillDetail(navaSkill);
     expect(html).toContain('Daily');
   });
 
-  it('renders nava_expected_audience when present', () => {
+  it('renders expected_audience when present', () => {
     const html = renderSkillDetail(navaSkill);
     expect(html).toContain('16+ people / org-wide');
   });
 
-  it('renders nava_data_sources when present', () => {
+  it('renders data_sources when present', () => {
     const html = renderSkillDetail(navaSkill);
     expect(html).toContain('Google Docs, Jira');
   });
 
-  it('omits the section entirely when no nava_ fields present', () => {
+  it('omits the section entirely when no submission fields present', () => {
     const html = renderSkillDetail(baseSkill);
     expect(html).not.toContain('nava-detail-section');
     expect(html).not.toContain('Submission Details');
   });
 
-  it('escapes XSS in nava_ field values', () => {
-    const xss = { ...baseSkill, nava_team: '<script>alert(1)</script>' };
+  it('escapes XSS in submission field values', () => {
+    const xss = { ...baseSkill, team: '<script>alert(1)</script>' };
     const html = renderSkillDetail(xss);
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
