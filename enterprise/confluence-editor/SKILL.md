@@ -1,27 +1,15 @@
 ---
 name: confluence-editor
 description: >
-  Safely edits Confluence pages using targeted, reviewable changes instead of
-  full-page replacements. Triggered when you say things like "update the
-  Confluence page", "add a section to the wiki", "fix this doc in
-  Confluence", or paste a Confluence URL and describe what to change. It
-  fetches the page in native ADF format, applies precise mutations (replace
-  text, add/delete sections, update table rows), renders a human-readable
-  diff in the chat for your review, then pushes the update only after you
-  approve.
-version: "1.0"
-author: loren@navapbc.com
-author_name: Loren Yu
-team: TS&S
-sensitive_data: false
-problem: Editing Confluence via AI is risky without this skill — the default updateConfluencePage tool replaces the entire page body in one shot with no visibility into what changed, making it easy to accidentally clobber content, wipe formatting, or lose macros. This skill makes all edits as targeted operations on the ADF tree and shows a readable diff before anything goes live, preventing accidental content loss. It is also a lot more token efficient than the updateConfluencePage tool since the updateConfluencePage requires the LLM to regenerate the entire Confluence page as tokens, which is very wasteful. Token efficiency also translates to performance as well. This skill is much faster than using the updateConfluencePage tool for large Confluence pages.
-estimated_impact: Saves ~15–30 min per Confluence edit
-usage_frequency: A few times per week
-expected_audience: 16+ people
-impact_type: [Time saved per use, Reduced error rate or rework, Cost avoidance (fewer tools, vendor hours, etc.)]
-compatibility: [claude-cowork, claude-code]
-tags: [confluence, wiki-editing, document-editing]
-data_sources: Atlassian Confluence (via Atlassian MCP connector)
+  Edit existing Confluence pages with granular, reviewable changes using an ADF-based workflow
+  that preserves macros and formatting. This skill is the ONLY safe way to edit Confluence pages.
+  Never call updateConfluencePage directly without going through this skill's workflow —
+  updateConfluencePage replaces the entire page body, so any partial or malformed body will
+  silently destroy all other content on the page. Always verify you have the full page content
+  before pushing. Use for any edit to a Confluence page, including: bulk edits, batch updates,
+  updating multiple pages, adding fields to all pages, page properties edits, adding rows to
+  tables, and any single-page edit. Do NOT use for creating new pages — use createConfluencePage
+  directly.
 ---
 
 # Confluence Editor
