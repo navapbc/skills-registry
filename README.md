@@ -1,8 +1,12 @@
-# Nava Skills Registry
+# Nava Skills Hub
 
-A skills marketplace for the navapbc org — browses `SKILL.md`, `AGENT.md`, and `agents/*` across all repos and surfaces them in a searchable UI.
+A skills marketplace for the navapbc org — scans `SKILL.md`, `AGENT.md`, and `.claude/skills/*.md` files across all repos and surfaces them in a searchable, authenticated UI.
 
-**Stack:** Astro (static) · AWS S3 + CloudFront · Lambda (Google OAuth) · GitHub Actions · Terraform
+**Stack:** Astro (static frontend) · AWS S3 + CloudFront · API Gateway · Lambda (Auth + API) · DynamoDB · GitHub Actions · Terraform · pnpm
+
+**Live environments:**
+- Staging: https://staging.hub.navapbc.com (deploys from `main`)
+- Prod: https://hub.navapbc.com (deploys from `release`)
 
 ---
 
@@ -10,113 +14,136 @@ A skills marketplace for the navapbc org — browses `SKILL.md`, `AGENT.md`, and
 
 ```
 GitHub Org (navapbc)
-  └── any repo with SKILL.md / agents/*/AGENT.md
+  └── any repo with SKILL.md / AGENT.md / .claude/skills/*.md
         │
-        ▼  (sync-registry workflow, every 6h)
-skills-registry repo
-  └── registry/index.json  ──── S3 ──── CloudFront (edge auth) ──── Browser
-                                              │
-                               Lambda Function URL (Google OAuth)
+        ▼  (sync-registry workflow, every 4h)
+     DynamoDB (skills-registry-skills-{env})
+        │
+        ▼
+Browser → CloudFront (edge JWT check)
+               │
+               ├─ /auth/*   → Auth Lambda (Google OAuth, issues __session cookie)
+               ├─ /api/*    → API Gateway → API Lambda → DynamoDB
+               └─ /*        → S3 (static Astro build)
 ```
 
-- **CloudFront** is the only public endpoint — S3 is never exposed directly
-- A **CloudFront Function** runs on every viewer request and validates the `__session` JWT before serving anything. Unauthenticated users hit `/login`.
-- A **Lambda Function URL** handles the Google OAuth flow and issues the signed JWT cookie
-- No containers, no servers
+- **CloudFront Function** runs on every viewer request and validates the `__session` JWT. Unauthenticated requests are redirected to `/login`.
+- **Auth Lambda** handles `/auth/login`, `/auth/callback`, and `/auth/logout`. Restricts to `@navapbc.com` accounts. Issues an 8-hour JWT cookie. Proxied through CloudFront so the cookie lands on the hub domain.
+- **API Lambda** (Hono router) handles all `/api/*` routes — CRUD for skills, plugins, users, and audit log. Validates the same JWT on every request.
+- **S3** hosts the compiled Astro build output.
+- No containers, no servers.
+
+---
+
+## Database (DynamoDB)
+
+Four tables per environment (`skills-registry-{table}-{env}`):
+
+| Table | What's stored |
+|---|---|
+| `skills` | All skill and agent records — from GitHub repos, the `enterprise/` folder in this repo, Anthropic built-ins, and user-submitted. Fields: `slug`, `name`, `description`, `type` (skill/agent), `plugin`, `repo`, `path`, `author`, `compatibility`, `source`, `status` (pending/approved/rejected), `visibility`, `content`, `tags`, `category`, `created_by`, `created_at`, `updated_at`. |
+| `plugins` | Plugin groupings (e.g. a tool namespace containing multiple skills). Fields: `slug`, `name`, `description`, `repo`, `author`, `skills_count`, `status`, `visibility`. |
+| `users` | One record per authenticated user, created on first API call. Fields: `user_id` (email), `role` (user/maintain/admin), `name`, `avatar_url`, `favorites` (skill slugs), `installed`, `created_at`, `last_seen_at`. |
+| `audit-log` | Append-only log of create/update/delete/approve/reject/role-change events. Fields: `user_id`, `event_key` (ISO timestamp + UUID), `action`, `resource_type`, `resource_id`, `metadata`. |
+
+**Not stored in DynamoDB:** JWT session state (stateless signed cookies), Google OAuth tokens (discarded after callback), raw GitHub file content beyond what's in the `content` field.
+
+**Admin promotion:** The first admin must be set directly via DynamoDB CLI. Subsequent role changes go through the admin UI (`PUT /api/users/:id/role`).
+
+```bash
+aws dynamodb update-item \
+  --table-name skills-registry-users-staging \
+  --key '{"user_id":{"S":"your@navapbc.com"}}' \
+  --update-expression "SET #r = :r" \
+  --expression-attribute-names '{"#r":"role"}' \
+  --expression-attribute-values '{":r":{"S":"admin"}}' \
+  --region us-east-1
+```
 
 ---
 
 ## Prerequisites
 
-- AWS account with permissions to create S3, CloudFront, Lambda, SSM, IAM
+- AWS account with permissions to create S3, CloudFront, Lambda, API Gateway, DynamoDB, SSM, IAM
 - Terraform >= 1.7
-- Node.js >= 20
+- Node.js >= 22
+- pnpm >= 10
 - A Google Cloud project with OAuth 2.0 credentials configured
+
+See [docs/DEPLOY.md](docs/DEPLOY.md) for complete first-time setup instructions. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a full technical deep-dive. See [docs/api.md](docs/api.md) for the API reference ([OpenAPI spec](docs/openapi.yaml)) and [SECURITY.md](SECURITY.md) for the security model.
 
 ---
 
-## First-time Setup
+## Deploying
 
-### 1. Google OAuth
+Deploys are triggered automatically by CI:
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials
-2. Create an OAuth 2.0 Client ID (Web application)
-3. Leave Authorized Redirect URIs blank for now — you'll add the Lambda URL after Terraform runs
-4. Copy the client ID and secret
+| Branch | Environment | Domain |
+|---|---|---|
+| `main` | staging | `staging.hub.navapbc.com` |
+| `release` | prod | `hub.navapbc.com` |
 
-### 2. AWS Bootstrap (Terraform state bucket)
+Each deploy: runs tests → builds Astro site → syncs to S3 → invalidates CloudFront → deploys auth Lambda → deploys API Lambda.
 
-Create an S3 bucket for Terraform state before the first apply:
-
+To deploy to prod:
 ```bash
-aws s3 mb s3://navapbc-terraform-state --region us-east-1
-aws s3api put-bucket-versioning \
-  --bucket navapbc-terraform-state \
-  --versioning-configuration Status=Enabled
+git checkout release
+git merge main
+git push origin release
 ```
 
-### 3. Configure Terraform
+The `production` GitHub environment requires reviewer approval before the deploy runs.
 
-```bash
-cd terraform
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your values
+---
 
-terraform init \
-  -backend-config="bucket=navapbc-terraform-state" \
-  -backend-config="key=skills-registry/terraform.tfstate" \
-  -backend-config="region=us-east-1"
+## GitHub Actions secrets
 
-terraform plan
-terraform apply
-```
+Two GitHub environments (`staging`, `production`) each need:
 
-After apply, note the outputs:
-```
-cloudfront_domain     = "https://d1234abcd.cloudfront.net"
-oauth_redirect_uri    = "https://xxxx.lambda-url.us-east-1.on.aws/auth/callback"
-login_url             = "https://xxxx.lambda-url.us-east-1.on.aws/auth/login"
-```
+| Secret | Source |
+|---|---|
+| `AWS_DEPLOY_ROLE_ARN` | `terraform output github_deploy_role_arn` |
+| `AWS_S3_BUCKET_NAME` | `terraform output s3_bucket_name` |
+| `AWS_CLOUDFRONT_DISTRIBUTION_ID` | `terraform output cloudfront_distribution_id` |
+| `AWS_AUTH_LAMBDA_FUNCTION_NAME` | `terraform output lambda_auth_function_name` |
+| `AWS_API_LAMBDA_FUNCTION_NAME` | `terraform output api_lambda_function_name` |
+| `AUTH_LAMBDA_URL` | `terraform output login_url` (used as `PUBLIC_LOGIN_URL` in Astro build) |
 
-### 4. Register OAuth Redirect URI
+Repository-level (not environment-scoped):
 
-In Google Cloud Console, add the `oauth_redirect_uri` output value to your OAuth client's **Authorized Redirect URIs**.
+| Secret | Purpose |
+|---|---|
+| `REGISTRY_SCAN_TOKEN` | Fine-grained PAT with `Contents: Read` + `Metadata: Read` on navapbc repos |
+| `ANTHROPIC_API_KEY` | Used by the weekly Anthropic built-in skills sync |
 
-### 5. Set up GitHub Actions secrets
+---
 
-In the skills-registry repo Settings → Secrets and variables → Actions, add:
+## IAM Role for GitHub Actions (OIDC)
 
-| Secret | Value |
-|--------|-------|
-| `AWS_DEPLOY_ROLE_ARN` | IAM role ARN with S3/CloudFront/Lambda deploy permissions |
-| `S3_BUCKET_NAME` | From Terraform output `s3_bucket_name` |
-| `CLOUDFRONT_DISTRIBUTION_ID` | From Terraform output `cloudfront_distribution_id` |
-| `AUTH_LAMBDA_FUNCTION_NAME` | From Terraform output `lambda_auth_function_name` |
-| `AUTH_LAMBDA_URL` | From Terraform output `lambda_auth_function_url` |
-| `REGISTRY_SCAN_TOKEN` | Fine-grained PAT with `read:org` + `contents:read` on navapbc |
+Create an IAM role trusted by GitHub Actions OIDC with a policy allowing:
+- `s3:PutObject`, `s3:DeleteObject`, `s3:GetObject`, `s3:ListBucket` on the site bucket
+- `cloudfront:CreateInvalidation`, `cloudfront:GetInvalidation`, `cloudfront:ListInvalidations`
+- `lambda:UpdateFunctionCode`, `lambda:GetFunction`, `lambda:GetFunctionConfiguration` on both auth and API Lambdas
+- `dynamodb:PutItem`, `dynamodb:GetItem`, `dynamodb:UpdateItem` on the skills and plugins tables (for sync scripts)
 
-### 6. IAM Role for GitHub Actions (OIDC)
+See [AWS docs on GitHub OIDC](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html). Terraform provisions this automatically via `terraform/iam.tf`.
 
-Create an IAM role trusted by GitHub Actions OIDC with a policy that allows:
-- `s3:PutObject`, `s3:DeleteObject`, `s3:ListBucket` on the site bucket
-- `cloudfront:CreateInvalidation` on the distribution
-- `lambda:UpdateFunctionCode` on the auth Lambda
+---
 
-See [AWS docs on GitHub OIDC](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html).
+## Scheduled workflows
 
-### 7. Deploy
+| Schedule | Workflow | What it does |
+|---|---|---|
+| Every 4 hours | `sync.yml` | Scans GitHub org for SKILL.md/AGENT.md files + `enterprise/` folder, writes to DynamoDB |
+| Mondays 9am UTC | `sync-anthropic.yml` | Fetches Anthropic built-in skills via API, writes to DynamoDB |
 
-```bash
-git push origin main
-```
-
-This triggers the deploy workflow. After it completes, your site is live at the CloudFront domain.
+Trigger either manually from the Actions tab (`workflow_dispatch`). The sync workflow defaults to staging; select `production` for prod.
 
 ---
 
 ## Adding skills to a repo
 
-Add a `SKILL.md` at the root of any navapbc repo with this frontmatter:
+Add a `SKILL.md` at the root of any navapbc repo (or in `.claude/skills/`, `.agents/skills/`, etc.) with this frontmatter:
 
 ```yaml
 ---
@@ -146,22 +173,25 @@ human_in_loop: Describe where human review happens in the loop
 ---
 ```
 
-The registry syncs every 6 hours. Trigger it manually from the Actions tab if you need it immediately.
+Enterprise-only skills (not sourced from a public GitHub repo) go in `enterprise/<slug>/SKILL.md` in this repository. They're synced directly via the Git Trees API, bypassing GitHub's search indexing delay.
+
+The sync runs every 4 hours. Trigger it manually from the Actions tab for immediate pickup.
 
 ---
 
 ## Local Development
 
 ```bash
-npm install
-npm run dev          # Astro dev server at http://localhost:4321
-npm run sync         # Rebuild registry/index.json from live GitHub org
+pnpm install
+pnpm dev          # Astro dev server at http://localhost:4321
+pnpm sync:v2      # Sync GitHub org skills into DynamoDB (requires AWS + GITHUB_TOKEN)
+pnpm test         # Run vitest test suite
 ```
 
-The dev server doesn't enforce auth — the CloudFront Function only runs in AWS.
+The dev server doesn't enforce auth — CloudFront auth only runs in AWS. API calls from the local dev server will fail unless you have a valid `__session` cookie or run against a deployed environment.
 
 ---
 
 ## Styles
 
-The site ships with unstyled HTML structure and semantic class names. Drop your CSS into `public/styles/main.css`. See `src/layouts/Base.astro` for the class naming conventions used throughout.
+The site uses Tailwind CSS v4 (via `@tailwindcss/vite`). Global styles are in `public/styles/main.css`. See `src/layouts/Base.astro` for class naming conventions.
