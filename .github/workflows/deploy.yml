@@ -87,19 +87,18 @@ jobs:
             --exclude "*.html" \
             --exclude "registry/*"
 
-          # HTML + registry JSON — no cache (always revalidate)
+          # HTML — no cache (always revalidate)
           aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET_NAME }} \
             --delete \
             --cache-control "no-cache" \
             --exclude "*" \
-            --include "*.html" \
-            --include "registry/*"
+            --include "*.html"
 
       - name: Invalidate CloudFront cache
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/*.html" "/registry/*"
+            --paths "/*.html"
 
       - name: Deploy auth Lambda
         run: |

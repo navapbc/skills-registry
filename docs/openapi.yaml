@@ -1,0 +1,1218 @@
+openapi: 3.1.0
+
+info:
+  title: Nava Skills Hub API
+  version: 1.0.0
+  description: |
+    REST API for the Nava Skills Hub. All endpoints require a valid `__session` cookie
+    (HS256 JWT issued by the auth flow). Obtain one by completing the Google OAuth flow
+    at `/auth/login`.
+
+    **Base URLs:**
+    - Production: `https://hub.navapbc.com`
+    - Staging: `https://staging.hub.navapbc.com`
+
+    **Roles:** `user` (default) → `maintain` → `admin`. Each role inherits all permissions
+    from the roles below it. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full permission matrix.
+
+servers:
+  - url: https://hub.navapbc.com
+    description: Production
+  - url: https://staging.hub.navapbc.com
+    description: Staging
+
+tags:
+  - name: auth
+    description: Google OAuth flow (Auth Lambda, not API Lambda)
+  - name: skills
+    description: Skill and agent records
+  - name: plugins
+    description: Plugin groupings
+  - name: users
+    description: User profiles and preferences
+  - name: audit
+    description: Audit event log
+  - name: admin
+    description: Admin and moderation endpoints
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __session
+      description: HS256 JWT issued after Google OAuth. 8-hour expiry.
+
+  schemas:
+    Skill:
+      type: object
+      required: [slug, name, description, plugin, repo, path, author, compatibility, type]
+      properties:
+        slug:
+          type: string
+          description: URL-safe unique identifier
+          example: summarize-doc
+        name:
+          type: string
+          example: Summarize Document
+        description:
+          type: string
+          example: When the user wants to summarize a long document...
+        type:
+          type: string
+          enum: [skill, agent]
+        plugin:
+          type: string
+          description: Parent plugin slug
+          example: nava-writing
+        repo:
+          type: string
+          description: "GitHub repo in org/repo format"
+          example: navapbc/platform-tools
+        path:
+          type: string
+          description: Path to the SKILL.md within the repo
+          example: .claude/skills/summarize-doc/SKILL.md
+        author:
+          type: string
+          example: cory-nava
+        version:
+          type: string
+          example: "1.0.0"
+        compatibility:
+          type: array
+          items:
+            type: string
+          example: [claude-code, claude-ai]
+        sensitive_data:
+          type: boolean
+          default: false
+        content:
+          type: string
+          description: Raw SKILL.md body (everything after frontmatter)
+        tags:
+          type: array
+          items:
+            type: string
+          example: [writing, productivity]
+        category:
+          type: string
+          enum: [writing-comms, research-analysis, planning, dev-code, ops-automation]
+        visibility:
+          type: string
+          enum: [public, internal, private]
+          default: public
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        source:
+          type: string
+          enum: [github, enterprise, anthropic-builtin, anthropic-enterprise, user-submitted]
+        created_by:
+          type: string
+          description: user_id (email) of creator
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        updated_by:
+          type: string
+        approved_by:
+          type: string
+        rejected_by:
+          type: string
+        rejection_reason:
+          type: string
+        tools_used:
+          type: array
+          items:
+            type: string
+          description: Agent-only — slugs of composed skills
+        human_in_loop:
+          type: string
+          description: Agent-only — description of human review steps
+
+    SkillCreate:
+      type: object
+      required: [slug, name, description, plugin, repo, path, author, compatibility, type]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [skill, agent]
+        plugin:
+          type: string
+        repo:
+          type: string
+        path:
+          type: string
+        author:
+          type: string
+        version:
+          type: string
+        compatibility:
+          type: array
+          items:
+            type: string
+        sensitive_data:
+          type: boolean
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        visibility:
+          type: string
+          enum: [public, internal, private]
+
+    Plugin:
+      type: object
+      required: [slug, name, description, repo, author]
+      properties:
+        slug:
+          type: string
+          example: nava-writing
+        name:
+          type: string
+          example: Nava Writing
+        description:
+          type: string
+        repo:
+          type: string
+          example: navapbc/platform-tools
+        author:
+          type: string
+        skills_count:
+          type: integer
+          default: 0
+        visibility:
+          type: string
+          enum: [public, internal, private]
+          default: public
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        source:
+          type: string
+          enum: [github, user-submitted]
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: Google account email
+          example: user@navapbc.com
+        email:
+          type: string
+        name:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        role:
+          type: string
+          enum: [user, maintain, admin]
+          default: user
+        favorites:
+          type: array
+          items:
+            type: string
+          description: Array of skill slugs
+        installed:
+          type: array
+          items:
+            type: string
+          description: Array of skill slugs
+        created_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+
+    AuditEvent:
+      type: object
+      properties:
+        user_id:
+          type: string
+        event_key:
+          type: string
+          description: "{ISO timestamp}#{UUID}"
+          example: "2026-06-08T12:00:00.000Z#a1b2c3d4-..."
+        action:
+          type: string
+          enum: [created, updated, deleted, approved, rejected, role-changed, copied]
+        resource_type:
+          type: string
+          enum: [skill, agent, plugin, user, enterprise-skill, category]
+        resource_id:
+          type: string
+        resource_key:
+          type: string
+          description: "{resource_type}#{resource_id} — used by byResource GSI"
+        metadata:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          enum: [writing-comms, research-analysis, planning, dev-code, ops-automation]
+        label:
+          type: string
+          example: Writing & Comms
+        featuredSlugs:
+          type: array
+          items:
+            type: string
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: Forbidden
+
+security:
+  - sessionCookie: []
+
+paths:
+
+  # ── Auth (Auth Lambda, proxied via CloudFront /auth/*) ─────────────────────
+
+  /auth/login:
+    get:
+      tags: [auth]
+      summary: Initiate Google OAuth
+      description: Redirects to Google's OAuth consent screen. Not authenticated.
+      security: []
+      parameters:
+        - name: return_to
+          in: query
+          description: Path to redirect to after successful login (must start with /)
+          schema:
+            type: string
+            default: /
+      responses:
+        "302":
+          description: Redirect to Google OAuth
+
+  /auth/callback:
+    get:
+      tags: [auth]
+      summary: OAuth callback
+      description: |
+        Google redirects here after user consent. Exchanges the auth code, validates
+        `@navapbc.com` domain, issues `__session` and `__user` cookies, and redirects
+        to `return_to`. Not authenticated.
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to return_to path on success
+          headers:
+            Set-Cookie:
+              description: Sets __session (HttpOnly) and __user cookies
+              schema:
+                type: string
+        "400":
+          description: Missing code or OAuth error
+        "403":
+          description: Email domain not allowed
+
+  /auth/logout:
+    get:
+      tags: [auth]
+      summary: Log out
+      description: Clears __session and __user cookies, redirects to /login.
+      security: []
+      responses:
+        "302":
+          description: Redirect to /login
+
+  # ── Skills ─────────────────────────────────────────────────────────────────
+
+  /api/skills:
+    get:
+      tags: [skills]
+      summary: List skills
+      description: |
+        Returns all skills visible to the authenticated user. Users see approved public/internal
+        skills plus their own skills regardless of status. Admins and maintainers see all.
+      parameters:
+        - name: type
+          in: query
+          description: Filter by type
+          schema:
+            type: string
+            enum: [skill, agent]
+        - name: plugin
+          in: query
+          description: Filter by plugin slug
+          schema:
+            type: string
+        - name: slugs
+          in: query
+          description: Comma-separated list of slugs for batch fetch (max 100). Used by category grids.
+          schema:
+            type: string
+            example: summarize-doc,write-pr-description
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skills:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Skill"
+        "401":
+          description: Missing or invalid session cookie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags: [skills]
+      summary: Create a skill
+      description: |
+        Creates a new skill. Status is forced to `pending` for `user` role; `admin` role
+        creates directly as `approved`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillCreate"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Skill"
+        "400":
+          description: Missing required fields or invalid JSON
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/skills/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags: [skills]
+      summary: Get a skill
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Skill"
+        "403":
+          description: Skill exists but is not visible to this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags: [skills]
+      summary: Update a skill
+      description: |
+        Owners can edit their own skills. Maintainers and admins can edit any skill.
+        If a non-admin edits an approved skill, status resets to `pending`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillCreate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Skill"
+        "403":
+          description: Not the owner or insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags: [skills]
+      summary: Delete a skill
+      description: Admin only.
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: string
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/skills/{slug}/approve:
+    post:
+      tags: [skills]
+      summary: Approve a skill
+      description: Maintain+ only. Optionally set visibility.
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visibility:
+                  type: string
+                  enum: [public, internal, private]
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Skill"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/skills/{slug}/reject:
+    post:
+      tags: [skills]
+      summary: Reject a skill
+      description: Maintain+ only.
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Skill"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── Plugins ────────────────────────────────────────────────────────────────
+
+  /api/plugins:
+    get:
+      tags: [plugins]
+      summary: List plugins
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plugins:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Plugin"
+
+    post:
+      tags: [plugins]
+      summary: Create a plugin
+      description: Admin only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Plugin"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plugin"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/plugins/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags: [plugins]
+      summary: Get a plugin
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plugin"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags: [plugins]
+      summary: Update a plugin
+      description: Admin only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Plugin"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plugin"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags: [plugins]
+      summary: Delete a plugin
+      description: Admin only.
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: string
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── Users ──────────────────────────────────────────────────────────────────
+
+  /api/users/me:
+    get:
+      tags: [users]
+      summary: Get current user
+      description: Returns the authenticated user's record. Creates the record on first call.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /api/users/me/favorites:
+    put:
+      tags: [users]
+      summary: Update favorites
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [favorites]
+              properties:
+                favorites:
+                  type: array
+                  items:
+                    type: string
+                  description: Full replacement list of skill slugs
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  favorites:
+                    type: array
+                    items:
+                      type: string
+
+  /api/users/me/installed:
+    put:
+      tags: [users]
+      summary: Update installed list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [installed]
+              properties:
+                installed:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  installed:
+                    type: array
+                    items:
+                      type: string
+
+  /api/users:
+    get:
+      tags: [users]
+      summary: List all users
+      description: Admin only.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/users/{id}/role:
+    put:
+      tags: [users]
+      summary: Update a user's role
+      description: Admin only. URL-encode the user_id (email) in the path.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: user%40navapbc.com
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [user, maintain, admin]
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── Audit ──────────────────────────────────────────────────────────────────
+
+  /api/audit:
+    get:
+      tags: [audit]
+      summary: Full audit log
+      description: Admin only.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditEvent"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/audit/me:
+    get:
+      tags: [audit]
+      summary: My audit events
+      description: Returns up to 100 most recent events for the current user.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditEvent"
+
+  # ── Admin ──────────────────────────────────────────────────────────────────
+
+  /api/categories:
+    get:
+      tags: [admin]
+      summary: List homepage categories
+      description: Returns all 5 categories with their featured skill slugs. Used by the homepage grid.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Category"
+
+  /api/admin/queue:
+    get:
+      tags: [admin]
+      summary: Pending approval queue
+      description: Maintain+ only. Returns all skills with status=pending, sorted newest first.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skills:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Skill"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/enterprise-skills:
+    get:
+      tags: [admin]
+      summary: List enterprise and Anthropic built-in skills
+      description: Maintain+ only.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skills:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Skill"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags: [admin]
+      summary: Create an enterprise skill
+      description: Maintain+ only. Creates with source=anthropic-enterprise and status=approved.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, name, description]
+              properties:
+                slug:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+                docs_url:
+                  type: string
+                  format: uri
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Skill"
+        "409":
+          description: Slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/enterprise-skills/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+
+    put:
+      tags: [admin]
+      summary: Update an enterprise skill
+      description: Maintain+ only. Cannot edit anthropic-builtin source records.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+                docs_url:
+                  type: string
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Skill"
+        "403":
+          description: Forbidden or attempting to edit anthropic-builtin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags: [admin]
+      summary: Delete an enterprise skill
+      description: Admin only.
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: string
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/categories:
+    get:
+      tags: [admin]
+      summary: Get categories with featured slugs (admin view)
+      description: Maintain+ only.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Category"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/categories/{id}/featured:
+    put:
+      tags: [admin]
+      summary: Update featured skills for a category
+      description: Maintain+ only. Replaces the full featuredSlugs list.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [writing-comms, research-analysis, planning, dev-code, ops-automation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [featuredSlugs]
+              properties:
+                featuredSlugs:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  featuredSlugs:
+                    type: array
+                    items:
+                      type: string
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Unknown category ID
+
+  /api/admin/users:
+    get:
+      tags: [admin]
+      summary: List all users (admin view)
+      description: Admin only. Returns all users sorted newest first.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/users/{id}/role:
+    put:
+      tags: [admin]
+      summary: Update a user's role (admin view)
+      description: Admin only.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [user, maintain, admin]
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/audit:
+    get:
+      tags: [admin]
+      summary: Full audit log (admin view)
+      description: Admin only. Returns up to 200 events.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditEvent"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

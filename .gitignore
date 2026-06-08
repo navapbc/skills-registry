@@ -41,6 +41,9 @@ inspo/
 # Brainstorm session files
 .superpowers/
 
+# Local bug tracking / scratch notes
+bugs/
+
 # Terraform secrets — never commit real tfvars
 terraform/*.tfvars
 !terraform/*.tfvars.example
