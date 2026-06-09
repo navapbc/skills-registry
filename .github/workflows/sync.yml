@@ -5,14 +5,6 @@ on:
     - cron: '0 */4 * * *'  # every 4 hours
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Target environment'
-        required: true
-        type: choice
-        options:
-          - staging
-          - production
-        default: staging
       reason:
         description: 'Reason for manual sync'
         required: false
@@ -27,9 +19,10 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  sync:
+  sync-staging:
+    name: Sync to staging
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+    environment: staging
     permissions:
       contents: read
       id-token: write   # required for OIDC role assumption
@@ -54,10 +47,45 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
 
-      - name: Sync registry to DynamoDB
+      - name: Sync registry to DynamoDB (staging)
         env:
           GITHUB_TOKEN: ${{ secrets.REGISTRY_SCAN_TOKEN }}
           GITHUB_ORG: navapbc
-          SYNC_ENV: ${{ github.event_name == 'workflow_dispatch' && (inputs.environment == 'production' && 'prod' || 'staging') || 'staging' }}
           FORCE_FLAG: ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
-        run: node scripts/sync-registry-v2.mjs --env "$SYNC_ENV" $FORCE_FLAG
+        run: node scripts/sync-registry-v2.mjs --env staging $FORCE_FLAG
+
+  sync-prod:
+    name: Sync to prod
+    runs-on: ubuntu-latest
+    environment: production
+    needs: sync-staging
+    permissions:
+      contents: read
+      id-token: write   # required for OIDC role assumption
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install API Lambda dependencies
+        run: cd functions/api && pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Sync registry to DynamoDB (prod)
+        env:
+          GITHUB_TOKEN: ${{ secrets.REGISTRY_SCAN_TOKEN }}
+          GITHUB_ORG: navapbc
+          FORCE_FLAG: ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
+        run: node scripts/sync-registry-v2.mjs --env prod $FORCE_FLAG
