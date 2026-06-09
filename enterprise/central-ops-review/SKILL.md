@@ -1,6 +1,6 @@
 ---
 name: central-ops-review
-description: Run the Central Ops Workflow intake review. Reads all unreviewed submissions from the Intake tab (empty Status column), scores each one using the Scoring Guide rubric (Impact, Effort, Readiness), appends scored rows to the Claude Review tab, updates each Intake row Status to "Claude Reviewed", and sends a summary to #central-ops-workflow-review on Slack. Invoke whenever Kelly or Cory says "run the review", "score the intake submissions", "check for new submissions", "review the backlog", "what needs to be reviewed", or any variation of wanting Claude to process pending Central Ops workflow improvement requests. Also invoke proactively if the user asks what's in the backlog without having reviewed it yet this session.
+description: Nava employees can submit workflows to Central Ops backlog; Central Ops then reviews for automation / AI readiness before prioritizing, resourcing solutions.  This provides first-pass review at workflows submitted to the Central Ops team. Claude scores against criteria we have set; then humans (Central Ops team) reviews Claude's assessment and adjusts as necessary.
 ---
 
 # Central Ops Workflow Review
