@@ -4,8 +4,8 @@ import { apiPut } from './api.mjs';
 import { catLabel, catSelectOptions, tagChips, compatChips, COMPAT_OPTIONS } from '../../lib/admin/format.mjs';
 
 export async function load(panel) {
-  const { skills } = await fetchApi('/skills');
-  const items = skills.filter(s => s.source !== 'category-config');
+  const { skills } = await fetchApi('/admin/skills');
+  const items = skills;
 
   let filterType = 'all';
   let searchQuery = '';

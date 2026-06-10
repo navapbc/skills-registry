@@ -278,6 +278,40 @@ describe('GET /api/admin/audit', () => {
   });
 });
 
+// ── GET /api/admin/skills ─────────────────────────────────────────────────
+describe('GET /api/admin/skills', () => {
+  it('returns 403 for user role', async () => {
+    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
+    const res = await app.request('/api/admin/skills', {
+      headers: { Cookie: makeSessionCookie() },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns all skills including private and hidden for maintain role', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
+      .mockResolvedValueOnce({
+        Items: [
+          { slug: 'public-skill',  source: 'github',          visibility: 'public',  status: 'approved' },
+          { slug: 'private-skill', source: 'github',          visibility: 'private', status: 'approved', created_by: 'other@navapbc.com' },
+          { slug: 'hidden-skill',  source: 'github',          visibility: 'hidden',  status: 'approved', created_by: 'other@navapbc.com' },
+          { slug: 'cat-config',    source: 'category-config' },
+        ],
+        LastEvaluatedKey: undefined,
+      });
+    const res = await app.request('/api/admin/skills', {
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com') },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.skills).toHaveLength(3);
+    expect(body.skills.map(s => s.slug)).toContain('private-skill');
+    expect(body.skills.map(s => s.slug)).toContain('hidden-skill');
+    expect(body.skills.map(s => s.slug)).not.toContain('cat-config');
+  });
+});
+
 // ── GET /api/admin/enterprise-skills ─────────────────────────────────────
 describe('GET /api/admin/enterprise-skills', () => {
   it('returns 403 for user role', async () => {

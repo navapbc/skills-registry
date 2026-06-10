@@ -39,6 +39,25 @@ export function adminRoutes(app) {
     });
   });
 
+  // ── All skills for admin panel (maintain+) — no visibility filtering ──
+  app.get('/api/admin/skills', async (c) => {
+    const user = c.get('user');
+    if (!can(user, 'edit:any-skill')) return c.json({ error: 'Forbidden' }, 403);
+
+    const items = [];
+    let lastKey;
+    do {
+      const page = await ddb.send(new ScanCommand({
+        TableName: tables.skills(),
+        ...(lastKey && { ExclusiveStartKey: lastKey }),
+      }));
+      items.push(...(page.Items ?? []));
+      lastKey = page.LastEvaluatedKey;
+    } while (lastKey);
+
+    return c.json({ skills: items.filter(s => s.source !== 'category-config') });
+  });
+
   // ── Skills queue (maintain+) ───────────────────────────────────────────
   app.get('/api/admin/queue', async (c) => {
     const user = c.get('user');

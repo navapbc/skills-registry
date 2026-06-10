@@ -44,7 +44,7 @@ export async function load(panel, ctx) {
                 : s.visibility === 'private' ? 'bg-amber-50 text-amber-700 border border-amber-200'
                 : 'bg-green-50 text-green-700 border border-green-200';
               return `
-              <tr class="border-b border-gray-100" data-slug="${escapeHtml(s.slug)}" data-skill='${JSON.stringify({ name: s.name, description: s.description, tags: s.tags ?? [], docs_url: s.docs_url ?? '', visibility: s.visibility ?? 'public' })}'>
+              <tr class="border-b border-gray-100" data-slug="${escapeHtml(s.slug)}" data-skill="${escapeHtml(JSON.stringify({ name: s.name, description: s.description, tags: s.tags ?? [], docs_url: s.docs_url ?? '', visibility: s.visibility ?? 'public' }))}">
                 <td class="py-2 font-medium text-gray-900">${escapeHtml(s.name)}</td>
                 <td class="py-2 text-gray-500 font-mono text-xs">${escapeHtml(s.slug)}</td>
                 <td class="py-2 text-gray-500">${(s.tags ?? []).map(t => `<span class="text-xs bg-gray-100 rounded px-1">#${escapeHtml(t)}</span>`).join(' ')}</td>
