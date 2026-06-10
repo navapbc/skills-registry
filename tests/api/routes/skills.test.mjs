@@ -72,6 +72,42 @@ describe('GET /api/skills', () => {
     expect(body.skills).toHaveLength(1);
     expect(body.skills[0].slug).toBe('test-skill');
   });
+
+  it('filters out hidden skills from regular users', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({
+        Items: [
+          { slug: 'public-skill',  name: 'Public',  status: 'approved', visibility: 'public',  created_by: 'system' },
+          { slug: 'hidden-skill',  name: 'Hidden',  status: 'approved', visibility: 'hidden',  created_by: 'system' },
+          { slug: 'own-hidden',    name: 'OwnHide', status: 'approved', visibility: 'hidden',  created_by: 'user@navapbc.com' },
+        ],
+        LastEvaluatedKey: undefined,
+      });
+
+    const res = await app.request('/api/skills', { headers: { Cookie: makeSessionCookie() } });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.skills).toHaveLength(1);
+    expect(body.skills[0].slug).toBe('public-skill');
+  });
+
+  it('admin sees hidden skills in list', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
+      .mockResolvedValueOnce({
+        Items: [
+          { slug: 'public-skill', name: 'Public', status: 'approved', visibility: 'public', created_by: 'system' },
+          { slug: 'hidden-skill', name: 'Hidden', status: 'approved', visibility: 'hidden', created_by: 'system' },
+        ],
+        LastEvaluatedKey: undefined,
+      });
+
+    const res = await app.request('/api/skills', { headers: { Cookie: makeSessionCookie('admin@navapbc.com') } });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.skills).toHaveLength(2);
+  });
 });
 
 describe('POST /api/skills', () => {
@@ -387,6 +423,26 @@ describe('GET /api/skills/:slug — edge cases', () => {
       headers: { Cookie: makeSessionCookie() },
     });
     expect(res.status).toBe(403);
+  });
+
+  it('returns 403 for hidden skill even if user is the creator', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'hidden-skill', status: 'approved', visibility: 'hidden', created_by: 'user@navapbc.com' } });
+    const res = await app.request('/api/skills/hidden-skill', {
+      headers: { Cookie: makeSessionCookie() },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('admin can read hidden skill', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'hidden-skill', status: 'approved', visibility: 'hidden', created_by: 'system' } });
+    const res = await app.request('/api/skills/hidden-skill', {
+      headers: { Cookie: makeSessionCookie('admin@navapbc.com') },
+    });
+    expect(res.status).toBe(200);
   });
 });
 

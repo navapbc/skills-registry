@@ -155,6 +155,36 @@ describe('POST /api/admin/enterprise-skills', () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it('accepts visibility on create and defaults to public when omitted', async () => {
+    let captured;
+    mockSend
+      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
+      .mockImplementationOnce((cmd) => { captured = cmd.params?.Item; return {}; })
+      .mockResolvedValueOnce({});
+
+    await app.request('/api/admin/enterprise-skills', {
+      method: 'POST',
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'new-skill', name: 'New', description: 'desc' }),
+    });
+    expect(captured?.visibility).toBe('public');
+  });
+
+  it('stores provided visibility on create', async () => {
+    let captured;
+    mockSend
+      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
+      .mockImplementationOnce((cmd) => { captured = cmd.params?.Item; return {}; })
+      .mockResolvedValueOnce({});
+
+    await app.request('/api/admin/enterprise-skills', {
+      method: 'POST',
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'hidden-skill', name: 'Hidden', description: 'desc', visibility: 'hidden' }),
+    });
+    expect(captured?.visibility).toBe('hidden');
+  });
 });
 
 // ── PUT /api/admin/categories/:id/featured ────────────────────────────────
@@ -269,6 +299,26 @@ describe('GET /api/admin/enterprise-skills', () => {
     const body = await res.json();
     expect(body.skills).toHaveLength(1);
   });
+
+  it('includes source=enterprise (GitHub-synced org skills) in the response', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
+      .mockResolvedValueOnce({
+        Items: [
+          { slug: 'anthropic-skill', source: 'anthropic-enterprise' },
+          { slug: 'github-org-skill', source: 'enterprise' },
+          { slug: 'builtin-skill', source: 'anthropic-builtin' },
+        ],
+        LastEvaluatedKey: undefined,
+      });
+    const res = await app.request('/api/admin/enterprise-skills', {
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com') },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.skills).toHaveLength(3);
+    expect(body.skills.map(s => s.slug)).toContain('github-org-skill');
+  });
 });
 
 // ── PUT /api/admin/enterprise-skills/:slug ────────────────────────────────
@@ -321,6 +371,37 @@ describe('PUT /api/admin/enterprise-skills/:slug', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.name).toBe('New Name');
+  });
+
+  it('updates visibility for enterprise skill', async () => {
+    let capturedItem;
+    mockSend
+      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'daily-briefing', source: 'anthropic-enterprise', name: 'Briefing', visibility: 'public' } })
+      .mockImplementationOnce((cmd) => { capturedItem = cmd.params?.Item; return {}; })
+      .mockResolvedValueOnce({});
+    const res = await app.request('/api/admin/enterprise-skills/daily-briefing', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visibility: 'hidden' }),
+    });
+    expect(res.status).toBe(200);
+    expect(capturedItem?.visibility).toBe('hidden');
+  });
+
+  it('rejects invalid visibility value, preserves existing', async () => {
+    let capturedItem;
+    mockSend
+      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
+      .mockResolvedValueOnce({ Item: { slug: 'daily-briefing', source: 'anthropic-enterprise', name: 'Briefing', visibility: 'public' } })
+      .mockImplementationOnce((cmd) => { capturedItem = cmd.params?.Item; return {}; })
+      .mockResolvedValueOnce({});
+    await app.request('/api/admin/enterprise-skills/daily-briefing', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visibility: 'superuser' }),
+    });
+    expect(capturedItem?.visibility).toBe('public');
   });
 });
 

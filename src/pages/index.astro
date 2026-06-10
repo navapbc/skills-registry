@@ -43,9 +43,12 @@ import Tooltip from '../components/Tooltip.astro';
 
   <!-- Org-wide skills callout — populated by client script; hidden until org-wide skills load -->
   <div id="orgwide-section" class="hidden mb-10 p-5 bg-violet-50 border border-violet-200 rounded-xl">
-    <div class="flex items-center gap-2 mb-1">
-      <span class="px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-700 rounded">Org-wide</span>
-      <h2 class="text-sm font-semibold text-gray-700 m-0">Available to all Nava staff</h2>
+    <div class="flex items-center justify-between gap-2 mb-1">
+      <div class="flex items-center gap-2">
+        <span class="px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-700 rounded">Org-wide</span>
+        <h2 class="text-sm font-semibold text-gray-700 m-0">Available to all Nava staff</h2>
+      </div>
+      <a id="orgwide-view-all" href="/skills" class="text-xs text-plum-600 hover:text-plum-700 no-underline hidden flex-shrink-0">View all org-wide skills →</a>
     </div>
     <p class="text-xs text-gray-500 mb-4 m-0">These skills are available in Claude Chat and Claude for Work — no installation needed.</p>
     <div id="orgwide-grid"></div>
@@ -213,12 +216,18 @@ Promise.all([
   const mergedCategories = CATEGORIES; // categories hidden, use static config for New This Week
   document.getElementById('new-this-week').innerHTML = renderNewThisWeek(skills, mergedCategories);
 
-  // Org-wide (enterprise) skills get their own callout, matching the /skills route.
-  const orgWide = skills.filter(s => s.type === 'skill' && s.source === 'enterprise');
+  // Org-wide (enterprise) skills get their own callout — show 6 most recent with link to /skills.
+  const orgWide = skills.filter(s => s.type === 'skill' && s.source === 'enterprise')
+    .sort((a, b) => new Date(b.last_updated || 0) - new Date(a.last_updated || 0));
   const orgSection = document.getElementById('orgwide-section');
   const orgGrid = document.getElementById('orgwide-grid');
+  const orgViewAll = document.getElementById('orgwide-view-all');
   if (orgSection && orgGrid && orgWide.length) {
-    orgGrid.innerHTML = renderSkillGrid(orgWide);
+    orgGrid.innerHTML = renderSkillGrid(orgWide.slice(0, 6));
+    if (orgViewAll && orgWide.length > 0) {
+      orgViewAll.textContent = `View all ${orgWide.length} org-wide skills →`;
+      orgViewAll.classList.remove('hidden');
+    }
     orgSection.classList.remove('hidden');
   }
 

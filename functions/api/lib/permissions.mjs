@@ -13,6 +13,7 @@ export function can(user, action, resource = null) {
   switch (action) {
     case 'read:skill': {
       if (!resource) return false;
+      if (resource.visibility === 'hidden') return false;
       if (resource.created_by === user.user_id) return true;
       return resource.status === 'approved' &&
         (resource.visibility === 'public' || resource.visibility === 'internal');

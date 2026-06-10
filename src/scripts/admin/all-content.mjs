@@ -21,8 +21,20 @@ export async function load(panel) {
     });
   }
 
+  const VISIBILITY_BADGE = {
+    public:  'bg-green-50 text-green-700 border border-green-200',
+    private: 'bg-amber-50 text-amber-700 border border-amber-200',
+    hidden:  'bg-gray-100 text-gray-500 border border-gray-200',
+  };
+
+  function visibilityBadge(v) {
+    const val = v || 'public';
+    const cls = VISIBILITY_BADGE[val] || VISIBILITY_BADGE.public;
+    return `<span class="text-xs px-1.5 py-0.5 rounded ${cls}">${escapeHtml(val)}</span>`;
+  }
+
   function renderRows(list) {
-    if (!list.length) return '<tr><td colspan="6" class="py-6 text-center text-sm text-gray-400">No results.</td></tr>';
+    if (!list.length) return '<tr><td colspan="7" class="py-6 text-center text-sm text-gray-400">No results.</td></tr>';
     return list.map(s => {
       const tagsVal = (s.tags ?? []).join(', ');
       const currentCompat = s.compatibility ?? [];
@@ -35,11 +47,12 @@ export async function load(panel) {
           <td class="py-2 pr-2 whitespace-nowrap">${typeBadge}</td>
           <td class="py-2 pr-2 text-xs text-gray-500 whitespace-nowrap">${escapeHtml(catLabel(s.category))}</td>
           <td class="py-2 pr-2">${tagChips(s.tags)}</td>
+          <td class="py-2 pr-2 visibility-display whitespace-nowrap">${visibilityBadge(s.visibility)}</td>
           <td class="py-2 pr-2 compat-display">${compatChips(s.compatibility)}</td>
           <td class="py-2 whitespace-nowrap"><button class="edit-content-btn text-xs text-plum-600 hover:text-plum-800 px-2 py-1 border border-plum-200 rounded hover:bg-plum-50 transition-colors">Edit</button></td>
         </tr>
         <tr class="edit-content-row hidden bg-violet-50/50 border-b border-gray-100">
-          <td colspan="6" class="py-3 px-2">
+          <td colspan="7" class="py-3 px-2">
             <div class="flex flex-wrap items-end gap-3">
               <div>
                 <label class="text-xs text-gray-600 block mb-1">Category</label>
@@ -50,6 +63,14 @@ export async function load(panel) {
               <div class="flex-1 min-w-56">
                 <label class="text-xs text-gray-600 block mb-1">Tags <span class="text-gray-400">(comma-separated)</span></label>
                 <input type="text" class="content-tags-input w-full text-sm border border-gray-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-plum-300" value="${escapeHtml(tagsVal)}" placeholder="productivity, writing, research" data-slug="${escapeHtml(s.slug)}" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 block mb-1">Visibility</label>
+                <select class="content-visibility-select text-sm border border-gray-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-plum-300">
+                  <option value="public"  ${(s.visibility ?? 'public') === 'public'  ? 'selected' : ''}>Public</option>
+                  <option value="private" ${s.visibility === 'private' ? 'selected' : ''}>Private</option>
+                  <option value="hidden"  ${s.visibility === 'hidden'  ? 'selected' : ''}>Hidden</option>
+                </select>
               </div>
               <div>
                 <label class="text-xs text-gray-600 block mb-1">Compatibility</label>
@@ -97,6 +118,7 @@ export async function load(panel) {
           <th class="pb-2 font-medium pr-2">Type</th>
           <th class="pb-2 font-medium pr-2">Category</th>
           <th class="pb-2 font-medium pr-2">Tags</th>
+          <th class="pb-2 font-medium pr-2">Visibility</th>
           <th class="pb-2 font-medium pr-2">Compatibility</th>
           <th class="pb-2"></th>
         </tr></thead>
@@ -127,17 +149,19 @@ export async function load(panel) {
         const slug = editRow.querySelector('.content-tags-input').dataset.slug;
         const category = editRow.querySelector('.content-cat-select').value;
         const tags = editRow.querySelector('.content-tags-input').value.split(',').map(t => t.trim()).filter(Boolean);
+        const visibility = editRow.querySelector('.content-visibility-select').value;
         const compatibility = [...editRow.querySelectorAll('.content-compat-cb:checked')].map(cb => cb.value);
         const statusEl = editRow.querySelector('.content-save-status');
         btn.disabled = true;
         btn.textContent = 'Saving…';
         try {
-          await apiPut(`/skills/${encodeURIComponent(slug)}`, { category, tags, compatibility });
+          await apiPut(`/skills/${encodeURIComponent(slug)}`, { category, tags, visibility, compatibility });
           // Refresh display cells in data row
           const cells = dataRow.querySelectorAll('td');
           cells[2].textContent = catLabel(category);
           cells[3].innerHTML = tagChips(tags);
-          cells[4].innerHTML = compatChips(compatibility);
+          cells[4].innerHTML = visibilityBadge(visibility);
+          cells[5].innerHTML = compatChips(compatibility);
           statusEl.textContent = 'Saved ✓';
           statusEl.className = 'content-save-status text-xs text-green-600';
           statusEl.classList.remove('hidden');
