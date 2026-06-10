@@ -3,7 +3,7 @@ name: Deploy
 on:
   push:
     branches:
-      - main      # -> staging
+      - main      # -> staging (auto)
       - release   # -> prod
   workflow_dispatch:
     inputs:
@@ -43,12 +43,22 @@ jobs:
         run: pnpm test
 
   deploy:
-    name: Deploy to ${{ github.ref_name == 'release' && 'prod' || 'staging' }}
+    name: >-
+      Deploy to ${{
+        (github.ref_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'prod'))
+        && 'prod' || 'staging'
+      }}
     needs: test
     runs-on: ubuntu-latest
 
-    # Maps branch -> GitHub environment (each has its own scoped secrets + reviewers)
-    environment: ${{ github.ref_name == 'release' && 'production' || 'staging' }}
+    # Maps to a GitHub environment with scoped secrets + optional reviewers.
+    # workflow_dispatch: uses the selected input.
+    # push: release -> production, everything else -> staging.
+    environment: >-
+      ${{
+        (github.ref_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'prod'))
+        && 'production' || 'staging'
+      }}
 
     permissions:
       id-token: write   # required for OIDC role assumption
