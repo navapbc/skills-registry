@@ -57,6 +57,7 @@ if (!slug) {
       if (countEl) countEl.textContent = skills.length + ' agents';
       document.getElementById('agents-list-grid').innerHTML = renderSkillGrid(skills);
       initGithubLinks();
+      initFavoriteButtons();
     })
     .catch(err => {
       if (!err.message.startsWith('Unauthorized')) {

@@ -153,7 +153,7 @@ import Tooltip from '../components/Tooltip.astro';
 import { fetchApi } from '../lib/api.mjs';
 import { renderSkillCard, escapeHtml, renderCategoryGrid, renderNewThisWeek, renderSkillGrid } from '../lib/render.mjs';
 import { CATEGORIES } from '../lib/categories.mjs';
-import { getFavorites, initFavoriteButtons, initFromUser } from '../lib/favorites.mjs';
+import { getFavorites, initFavoriteButtons, initFromUser, removeFavorite } from '../lib/favorites.mjs';
 
 const PREVIEW_COUNT = 6;
 
@@ -168,15 +168,31 @@ function renderHomepageFavorites() {
   }
   section.classList.remove('hidden');
   grid.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-    ${favs.map(f => `<div class="h-full"><a href="/${f.type === 'agent' ? 'agents' : 'skills'}/${escapeHtml(f.slug)}" class="h-full flex flex-col gap-3 p-4 bg-white border border-amber-200 rounded-lg hover:shadow-md hover:border-amber-300 transition-all no-underline text-gray-900">
-      <div class="flex items-start justify-between gap-2">
-        <span class="font-semibold text-sm text-gray-900">${escapeHtml(f.name)}</span>
-        <span class="text-amber-500 text-sm flex-shrink-0" aria-hidden="true">★</span>
-      </div>
-      <p class="text-xs text-gray-500 leading-relaxed m-0 flex-1">${escapeHtml(f.description ? (f.description.length > 110 ? f.description.slice(0, 110) + '...' : f.description) : '')}</p>
-      <span class="text-xs text-gray-400">${escapeHtml(f.plugin || '')}</span>
-    </a></div>`).join('')}
+    ${favs.map(f => `<div class="relative h-full">
+      <a href="/${f.type === 'agent' ? 'agents' : 'skills'}/${escapeHtml(f.slug)}" class="h-full flex flex-col gap-3 p-4 bg-white border border-amber-200 rounded-lg hover:shadow-md hover:border-amber-300 transition-all no-underline text-gray-900">
+        <div class="flex items-start pr-6 gap-2">
+          <span class="font-semibold text-sm text-gray-900">${escapeHtml(f.name)}</span>
+        </div>
+        <p class="text-xs text-gray-500 leading-relaxed m-0 flex-1">${escapeHtml(f.description ? (f.description.length > 110 ? f.description.slice(0, 110) + '...' : f.description) : '')}</p>
+        <span class="text-xs text-gray-400">${escapeHtml(f.plugin || '')}</span>
+      </a>
+      <button
+        class="unfav-homepage-btn absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center text-amber-400 hover:text-amber-600 transition-colors rounded cursor-pointer bg-transparent border-0"
+        data-slug="${escapeHtml(f.slug)}"
+        aria-label="Remove from favorites"
+        title="Remove from favorites"
+      >★</button>
+    </div>`).join('')}
   </div>`;
+
+  grid.querySelectorAll('.unfav-homepage-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      removeFavorite((btn as HTMLElement).dataset.slug || '');
+      renderHomepageFavorites();
+    });
+  });
   initFavoriteButtons();
 }
 
@@ -291,6 +307,13 @@ Promise.all([
 
   initGithubLinks();
   initFavoriteButtons();
+  // Re-render "Your Favorites" section whenever a star is toggled in any grid.
+  // stopPropagation in initFavoriteButtons only blocks bubbling — other listeners
+  // on the same element still fire, and toggleFavorite is synchronous so state
+  // is already updated by the time this runs.
+  document.querySelectorAll('#skills-grid .fav-btn, #agents-grid .fav-btn, #orgwide-grid .fav-btn').forEach(btn => {
+    btn.addEventListener('click', () => renderHomepageFavorites());
+  });
 }).catch(err => {
   if (!err.message.startsWith('Unauthorized')) {
     document.getElementById('skills-grid').innerHTML = '<p class="text-sm text-gray-500">Failed to load skills. Please refresh the page.</p>';

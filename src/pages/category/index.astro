@@ -24,6 +24,7 @@ import Base from '../../layouts/Base.astro';
 import { fetchApi } from '../../lib/api.mjs';
 import { renderCategoryDetail } from '../../lib/render.mjs';
 import { CATEGORIES } from '../../lib/categories.mjs';
+import { initFavoriteButtons } from '../../lib/favorites.mjs';
 
 const NAVA_N = `███╗   ██╗\n████╗  ██║\n██╔██╗ ██║\n██║╚██╗██║\n██║ ╚████║\n╚═╝  ╚═══╝`;
 function notFoundHtml(entity) {
@@ -49,6 +50,7 @@ if (!category) {
     .then(({ skills }) => {
       container.innerHTML = renderCategoryDetail(category, skills);
       initGithubLinks();
+      initFavoriteButtons();
     })
     .catch(err => {
       if (!err.message.startsWith('Unauthorized')) {

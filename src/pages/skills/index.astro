@@ -87,6 +87,7 @@ if (!slug) {
 
       document.getElementById('skills-list-grid').innerHTML = renderSkillGrid(community);
       initGithubLinks();
+      initFavoriteButtons();
     })
     .catch(err => {
       if (!err.message.startsWith('Unauthorized')) {
