@@ -163,6 +163,7 @@ import Base from '../layouts/Base.astro';
       btn.addEventListener('click', () => {
         const slug = (btn as HTMLElement).dataset.slug || '';
         removeFavorite(slug);
+        renderFavorites();
       });
     });
   }

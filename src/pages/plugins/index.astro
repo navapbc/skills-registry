@@ -13,6 +13,7 @@ import Base from '../../layouts/Base.astro';
 <script>
 import { fetchApi } from '../../lib/api.mjs';
 import { renderPluginDetail } from '../../lib/render.mjs';
+import { initFavoriteButtons } from '../../lib/favorites.mjs';
 
 const container = document.getElementById('plugin-content');
 const slug = window.location.pathname.replace(/^\/plugins\//, '').replace(/\/$/, '');
@@ -31,6 +32,7 @@ if (!slug) {
       document.title = plugin.name + ' · Skills Hub';
       initTabs();
       initGithubLinks();
+      initFavoriteButtons();
     })
     .catch(err => {
       if (err.message.startsWith('API 404')) {
