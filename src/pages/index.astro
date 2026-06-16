@@ -307,6 +307,13 @@ Promise.all([
 
   initGithubLinks();
   initFavoriteButtons();
+  // Re-render "Your Favorites" section whenever a star is toggled in any grid.
+  // stopPropagation in initFavoriteButtons only blocks bubbling — other listeners
+  // on the same element still fire, and toggleFavorite is synchronous so state
+  // is already updated by the time this runs.
+  document.querySelectorAll('#skills-grid .fav-btn, #agents-grid .fav-btn, #orgwide-grid .fav-btn').forEach(btn => {
+    btn.addEventListener('click', () => renderHomepageFavorites());
+  });
 }).catch(err => {
   if (!err.message.startsWith('Unauthorized')) {
     document.getElementById('skills-grid').innerHTML = '<p class="text-sm text-gray-500">Failed to load skills. Please refresh the page.</p>';
