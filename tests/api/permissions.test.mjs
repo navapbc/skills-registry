@@ -11,6 +11,8 @@ const ownPending       = { slug: 'x', visibility: 'public',   status: 'pending',
 const otherPending     = { slug: 'x', visibility: 'public',   status: 'pending',  created_by: 'other@navapbc.com' };
 const ownPrivate       = { slug: 'x', visibility: 'private',  status: 'approved', created_by: user.user_id };
 const otherPrivate     = { slug: 'x', visibility: 'private',  status: 'approved', created_by: 'other@navapbc.com' };
+const ownHidden        = { slug: 'x', visibility: 'hidden',   status: 'approved', created_by: user.user_id };
+const otherHidden      = { slug: 'x', visibility: 'hidden',   status: 'approved', created_by: 'other@navapbc.com' };
 
 describe('can — read:skill', () => {
   it('user can read public approved skill', () => {
@@ -31,9 +33,20 @@ describe('can — read:skill', () => {
   it('user cannot read another user private skill', () => {
     expect(can(user, 'read:skill', otherPrivate)).toBe(false);
   });
-  it('admin can read any skill', () => {
+  it('user cannot read hidden skill even if they are the creator', () => {
+    expect(can(user, 'read:skill', ownHidden)).toBe(false);
+  });
+  it('user cannot read hidden skill from another user', () => {
+    expect(can(user, 'read:skill', otherHidden)).toBe(false);
+  });
+  it('maintain cannot read hidden skill from another user', () => {
+    expect(can(maintain, 'read:skill', otherHidden)).toBe(false);
+  });
+  it('admin can read any skill including hidden', () => {
     expect(can(admin, 'read:skill', otherPending)).toBe(true);
     expect(can(admin, 'read:skill', otherPrivate)).toBe(true);
+    expect(can(admin, 'read:skill', otherHidden)).toBe(true);
+    expect(can(admin, 'read:skill', ownHidden)).toBe(true);
   });
 });
 

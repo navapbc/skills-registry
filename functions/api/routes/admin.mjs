@@ -39,6 +39,25 @@ export function adminRoutes(app) {
     });
   });
 
+  // ── All skills for admin panel (maintain+) — no visibility filtering ──
+  app.get('/api/admin/skills', async (c) => {
+    const user = c.get('user');
+    if (!can(user, 'edit:any-skill')) return c.json({ error: 'Forbidden' }, 403);
+
+    const items = [];
+    let lastKey;
+    do {
+      const page = await ddb.send(new ScanCommand({
+        TableName: tables.skills(),
+        ...(lastKey && { ExclusiveStartKey: lastKey }),
+      }));
+      items.push(...(page.Items ?? []));
+      lastKey = page.LastEvaluatedKey;
+    } while (lastKey);
+
+    return c.json({ skills: items.filter(s => s.source !== 'category-config') });
+  });
+
   // ── Skills queue (maintain+) ───────────────────────────────────────────
   app.get('/api/admin/queue', async (c) => {
     const user = c.get('user');
@@ -72,9 +91,9 @@ export function adminRoutes(app) {
     do {
       const page = await ddb.send(new ScanCommand({
         TableName: tables.skills(),
-        FilterExpression: '#src = :e OR #src = :b',
+        FilterExpression: '#src = :e OR #src = :e2 OR #src = :b',
         ExpressionAttributeNames: { '#src': 'source' },
-        ExpressionAttributeValues: { ':e': 'anthropic-enterprise', ':b': 'anthropic-builtin' },
+        ExpressionAttributeValues: { ':e': 'anthropic-enterprise', ':e2': 'enterprise', ':b': 'anthropic-builtin' },
         ...(lastKey && { ExclusiveStartKey: lastKey }),
       }));
       items.push(...(page.Items ?? []));
@@ -94,6 +113,7 @@ export function adminRoutes(app) {
       return c.json({ error: 'slug, name, and description are required' }, 400);
     }
 
+    const VALID_VIS = new Set(['public', 'private', 'hidden']);
     const now = new Date().toISOString();
     const skill = {
       slug: body.slug,
@@ -104,7 +124,7 @@ export function adminRoutes(app) {
       source: 'anthropic-enterprise',
       type: 'skill',
       status: 'approved',
-      visibility: 'public',
+      visibility: VALID_VIS.has(body.visibility) ? body.visibility : 'public',
       created_by: user.user_id,
       created_at: now,
       updated_at: now,
@@ -141,12 +161,14 @@ export function adminRoutes(app) {
     const body = await c.req.json().catch(() => null);
     if (!body) return c.json({ error: 'Invalid JSON' }, 400);
 
+    const VALID_VISIBILITY = new Set(['public', 'private', 'hidden']);
     const updated = {
       ...existing.Item,
       name: body.name ?? existing.Item.name,
       description: body.description ?? existing.Item.description,
       tags: body.tags ?? existing.Item.tags ?? [],
       docs_url: body.docs_url ?? existing.Item.docs_url ?? '',
+      ...(body.visibility != null && VALID_VISIBILITY.has(body.visibility) && { visibility: body.visibility }),
       updated_at: new Date().toISOString(),
       updated_by: user.user_id,
     };

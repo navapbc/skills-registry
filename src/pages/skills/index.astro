@@ -41,42 +41,125 @@ const container = document.getElementById('skill-content');
 const slug = window.location.pathname.replace(/^\/skills\/?/, '').replace(/\/$/, '');
 
 if (!slug) {
-  // List mode — show org-wide skills first, then community skills below
   document.title = 'Skills · Skills Hub';
   const skeletonCard = '<div class="bg-white border border-gray-200 rounded-lg p-4 h-32"><div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div><div class="h-3 bg-gray-100 rounded w-full mb-1"></div><div class="h-3 bg-gray-100 rounded w-4/5"></div></div>';
+
   container.innerHTML = `
-    <div class="mb-8">
+    <div class="mb-6">
       <a href="/" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">&larr; Back to hub</a>
-      <h1 class="text-2xl font-bold text-gray-900 m-0">All Skills</h1>
-      <p class="text-sm text-gray-500 mt-1 m-0" id="skills-count"></p>
-    </div>
-
-    <!-- Org-wide section -->
-    <div class="mb-10 p-5 bg-violet-50 border border-violet-200 rounded-xl">
-      <div class="flex items-center gap-2 mb-1">
-        <span class="px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-700 rounded">Org-wide</span>
-        <h2 class="text-sm font-semibold text-gray-700 m-0">Available to all Nava staff</h2>
+      <div class="flex items-end justify-between gap-4 mt-1">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 m-0">All Skills</h1>
+          <p class="text-sm text-gray-500 mt-1 m-0" id="skills-count"></p>
+        </div>
       </div>
-      <p class="text-xs text-gray-500 mb-4 m-0">These skills are available in Claude Chat and Claude for Work — no installation needed.</p>
-      <div id="orgwide-grid"><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">${Array(3).fill(skeletonCard).join('')}</div></div>
     </div>
 
-    <!-- Community skills -->
-    <div>
-      <h2 class="text-base font-semibold text-gray-700 mb-3 m-0" id="community-heading">Community Skills</h2>
-      <div id="skills-list-grid"><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">${Array(9).fill(skeletonCard).join('')}</div></div>
-    </div>`;
+    <!-- Search + filter bar -->
+    <div class="flex flex-wrap items-center gap-3 mb-6">
+      <div class="relative flex-1 min-w-48">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" aria-hidden="true">🔍</span>
+        <input
+          type="search"
+          id="skills-search"
+          placeholder="Search skills…"
+          autocomplete="off"
+          class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-plum-300 focus:border-plum-400 placeholder:text-gray-400"
+        />
+      </div>
+      <div class="flex gap-1.5">
+        <button data-filter="all"       class="skills-filter-btn active text-xs px-3 py-1.5 rounded-lg border border-plum-600 bg-plum-600 text-white transition-colors">All</button>
+        <button data-filter="org-wide"  class="skills-filter-btn text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-plum-300 transition-colors">Org-wide</button>
+        <button data-filter="community" class="skills-filter-btn text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-plum-300 transition-colors">Community</button>
+      </div>
+    </div>
+
+    <!-- Skills list: sections shown/hidden based on active filter -->
+    <div id="skills-list-view">
+      <!-- Org-wide section -->
+      <div id="orgwide-section" class="mb-10">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-700 rounded">Org-wide</span>
+          <h2 class="text-sm font-semibold text-gray-700 m-0" id="orgwide-heading">Available to all Nava staff</h2>
+        </div>
+        <p class="text-xs text-gray-500 mb-4 m-0">These skills are available in Claude Chat and Claude for Work — no installation needed.</p>
+        <div id="orgwide-grid"><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">${Array(3).fill(skeletonCard).join('')}</div></div>
+      </div>
+
+      <!-- Community skills -->
+      <div id="community-section">
+        <h2 class="text-base font-semibold text-gray-700 mb-3 m-0" id="community-heading">Community Skills</h2>
+        <div id="skills-list-grid"><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">${Array(9).fill(skeletonCard).join('')}</div></div>
+      </div>
+    </div>
+
+    <!-- Search results overlay (shown when query is active) -->
+    <div id="skills-search-results" class="hidden">
+      <p class="text-xs text-gray-400 mb-4" id="skills-search-summary"></p>
+      <div id="skills-search-grid"></div>
+      <p class="text-sm text-gray-400 italic hidden" id="skills-no-results">No skills matched your search.</p>
+    </div>
+  `;
+
+  let orgWide = [];
+  let community = [];
+  let activeFilter = 'all';
+  let searchQuery = '';
+
+  function applyFilter() {
+    const listView = document.getElementById('skills-list-view');
+    const searchResultsView = document.getElementById('skills-search-results');
+    const orgSection = document.getElementById('orgwide-section');
+    const communitySection = document.getElementById('community-section');
+
+    if (searchQuery) {
+      listView.classList.add('hidden');
+      searchResultsView.classList.remove('hidden');
+
+      const q = searchQuery.toLowerCase();
+      const pool = activeFilter === 'org-wide' ? orgWide
+        : activeFilter === 'community' ? community
+        : [...orgWide, ...community];
+      const matches = pool.filter(s =>
+        s.name?.toLowerCase().includes(q) ||
+        s.description?.toLowerCase().includes(q) ||
+        s.plugin?.toLowerCase().includes(q) ||
+        (s.tags ?? []).some(t => t.toLowerCase().includes(q))
+      );
+
+      const summary = document.getElementById('skills-search-summary');
+      const grid = document.getElementById('skills-search-grid');
+      const noResults = document.getElementById('skills-no-results');
+      summary.textContent = `${matches.length} result${matches.length !== 1 ? 's' : ''} for "${searchQuery}"`;
+      noResults.classList.toggle('hidden', matches.length > 0);
+      grid.innerHTML = matches.length ? renderSkillGrid(matches) : '';
+      initGithubLinks();
+      initFavoriteButtons();
+      return;
+    }
+
+    listView.classList.remove('hidden');
+    searchResultsView.classList.add('hidden');
+
+    orgSection.classList.toggle('hidden', activeFilter === 'community');
+    communitySection.classList.toggle('hidden', activeFilter === 'org-wide');
+    initGithubLinks();
+    initFavoriteButtons();
+  }
 
   fetchApi('/skills?type=skill')
     .then(({ skills }) => {
-      const orgWide = skills.filter(s => s.source === 'enterprise');
-      const community = skills.filter(s => s.source !== 'enterprise');
+      orgWide = skills.filter(s => s.source === 'enterprise');
+      community = skills.filter(s => s.source !== 'enterprise');
 
       const countEl = document.getElementById('skills-count');
       if (countEl) countEl.textContent = `${skills.length} skills`;
 
-      const headingEl = document.getElementById('community-heading');
-      if (headingEl) headingEl.textContent = `Community Skills (${community.length})`;
+      const orgHeading = document.getElementById('orgwide-heading');
+      if (orgHeading) orgHeading.textContent = `Available to all Nava staff (${orgWide.length})`;
+
+      const communityHeading = document.getElementById('community-heading');
+      if (communityHeading) communityHeading.textContent = `Community Skills (${community.length})`;
 
       const orgGrid = document.getElementById('orgwide-grid');
       if (orgGrid) {
@@ -85,7 +168,10 @@ if (!slug) {
           : '<p class="text-sm text-gray-400 italic">No org-wide skills yet.</p>';
       }
 
-      document.getElementById('skills-list-grid').innerHTML = renderSkillGrid(community);
+      document.getElementById('skills-list-grid').innerHTML = community.length
+        ? renderSkillGrid(community)
+        : '<p class="text-sm text-gray-400 italic">No community skills yet.</p>';
+
       initGithubLinks();
       initFavoriteButtons();
     })
@@ -95,6 +181,23 @@ if (!slug) {
         if (g) g.innerHTML = '<p class="text-sm text-gray-500">Failed to load skills. Please refresh the page.</p>';
       }
     });
+
+  document.getElementById('skills-search')?.addEventListener('input', e => {
+    searchQuery = e.target.value.trim();
+    applyFilter();
+  });
+
+  document.querySelectorAll('.skills-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeFilter = btn.dataset.filter;
+      document.querySelectorAll('.skills-filter-btn').forEach(b => {
+        const active = b === btn;
+        b.className = `skills-filter-btn text-xs px-3 py-1.5 rounded-lg border transition-colors ${active ? 'border-plum-600 bg-plum-600 text-white' : 'border-gray-200 text-gray-600 hover:border-plum-300'}`;
+      });
+      applyFilter();
+    });
+  });
+
 } else {
   // Detail mode — show one skill
   fetchApi('/skills/' + slug)
@@ -126,7 +229,6 @@ function initCopyButtons(skill) {
     });
   });
 }
-
 
 function initGithubLinks() {
   document.querySelectorAll('[data-github-url]').forEach(el => {

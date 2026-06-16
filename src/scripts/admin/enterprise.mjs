@@ -5,7 +5,7 @@ import { apiPost, apiPut, apiDelete } from './api.mjs';
 export async function load(panel, ctx) {
   const { skills } = await fetchApi('/admin/enterprise-skills');
   const builtins = skills.filter(s => s.source === 'anthropic-builtin');
-  const org = skills.filter(s => s.source === 'anthropic-enterprise');
+  const org = skills.filter(s => s.source === 'anthropic-enterprise' || s.source === 'enterprise');
 
   panel.innerHTML = `
     <div class="mb-8">
@@ -36,19 +36,25 @@ export async function load(panel, ctx) {
       <div id="org-skills-list">
         ${org.length ? `<table class="admin-table w-full text-sm border-collapse">
           <thead><tr class="text-left text-xs text-gray-500 border-b border-gray-200">
-            <th class="pb-2 font-medium">Name</th><th class="pb-2 font-medium">Slug</th><th class="pb-2 font-medium">Tags</th><th class="pb-2 font-medium">Actions</th>
+            <th class="pb-2 font-medium">Name</th><th class="pb-2 font-medium">Slug</th><th class="pb-2 font-medium">Tags</th><th class="pb-2 font-medium">Visibility</th><th class="pb-2 font-medium">Actions</th>
           </tr></thead>
           <tbody>
-            ${org.map(s => `
-              <tr class="border-b border-gray-100" data-slug="${escapeHtml(s.slug)}" data-skill='${JSON.stringify({ name: s.name, description: s.description, tags: s.tags ?? [], docs_url: s.docs_url ?? '' })}'>
+            ${org.map(s => {
+              const visClass = s.visibility === 'hidden' ? 'bg-gray-100 text-gray-500 border border-gray-200'
+                : s.visibility === 'private' ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                : 'bg-green-50 text-green-700 border border-green-200';
+              return `
+              <tr class="border-b border-gray-100" data-slug="${escapeHtml(s.slug)}" data-skill="${escapeHtml(JSON.stringify({ name: s.name, description: s.description, tags: s.tags ?? [], docs_url: s.docs_url ?? '', visibility: s.visibility ?? 'public' }))}">
                 <td class="py-2 font-medium text-gray-900">${escapeHtml(s.name)}</td>
                 <td class="py-2 text-gray-500 font-mono text-xs">${escapeHtml(s.slug)}</td>
                 <td class="py-2 text-gray-500">${(s.tags ?? []).map(t => `<span class="text-xs bg-gray-100 rounded px-1">#${escapeHtml(t)}</span>`).join(' ')}</td>
+                <td class="py-2"><span class="text-xs px-1.5 py-0.5 rounded ${visClass}">${escapeHtml(s.visibility ?? 'public')}</span></td>
                 <td class="py-2 flex gap-2">
                   <button class="edit-enterprise-btn text-xs text-plum-600 hover:text-plum-700">Edit</button>
                   ${ctx.role === 'admin' ? `<button class="delete-enterprise-btn text-xs text-red-500 hover:text-red-700">Delete</button>` : ''}
                 </td>
-              </tr>`).join('')}
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>` : '<p class="text-sm text-gray-400">No org skills yet. Add one above.</p>'}
       </div>
@@ -75,6 +81,14 @@ export async function load(panel, ctx) {
         <label class="text-xs text-gray-600 block mb-1">Tags (comma-separated)</label>
         <input id="ent-tags" type="text" placeholder="productivity, briefing" class="w-full text-sm border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-plum-300" />
       </div>
+      <div class="mb-3">
+        <label class="text-xs text-gray-600 block mb-1">Visibility</label>
+        <select id="ent-visibility" class="text-sm border border-gray-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-plum-300">
+          <option value="public">Public</option>
+          <option value="private">Private</option>
+          <option value="hidden">Hidden</option>
+        </select>
+      </div>
       <div class="flex gap-2">
         <button id="enterprise-form-save" class="px-3 py-1.5 text-xs bg-plum-600 text-white rounded hover:bg-plum-700 transition-colors">Save</button>
         <button id="enterprise-form-cancel" class="px-3 py-1.5 text-xs bg-white text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors">Cancel</button>
@@ -94,6 +108,7 @@ export async function load(panel, ctx) {
     panel.querySelector('#ent-slug').disabled = false;
     panel.querySelector('#ent-desc').value = '';
     panel.querySelector('#ent-tags').value = '';
+    panel.querySelector('#ent-visibility').value = 'public';
     form.classList.remove('hidden');
   });
 
@@ -114,6 +129,7 @@ export async function load(panel, ctx) {
       slug: panel.querySelector('#ent-slug').value.trim(),
       description: panel.querySelector('#ent-desc').value.trim(),
       tags: panel.querySelector('#ent-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+      visibility: panel.querySelector('#ent-visibility').value,
     };
     try {
       if (editSlug) {
@@ -141,6 +157,7 @@ export async function load(panel, ctx) {
       panel.querySelector('#ent-slug').disabled = true;
       panel.querySelector('#ent-desc').value = skillData.description ?? '';
       panel.querySelector('#ent-tags').value = (skillData.tags ?? []).join(', ');
+      panel.querySelector('#ent-visibility').value = skillData.visibility ?? 'public';
       form.classList.remove('hidden');
     });
   });
