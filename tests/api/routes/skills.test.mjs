@@ -92,7 +92,11 @@ describe('GET /api/skills', () => {
     expect(body.skills[0].slug).toBe('public-skill');
   });
 
-  it('admin sees hidden skills in list', async () => {
+  it('admin does NOT see hidden skills via public list endpoint (cache safety)', async () => {
+    // /api/skills is cached by CloudFront without the session cookie in the cache key,
+    // so one cached response is shared by all users. Hidden skills must be excluded
+    // unconditionally to prevent an admin request from leaking them to regular users
+    // via that shared cache. Admins use /api/admin/skills for the full list.
     mockSend
       .mockResolvedValueOnce({ Item: ADMIN_RECORD })
       .mockResolvedValueOnce({
@@ -106,7 +110,8 @@ describe('GET /api/skills', () => {
     const res = await app.request('/api/skills', { headers: { Cookie: makeSessionCookie('admin@navapbc.com') } });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.skills).toHaveLength(2);
+    expect(body.skills).toHaveLength(1);
+    expect(body.skills[0].slug).toBe('public-skill');
   });
 });
 
@@ -435,14 +440,16 @@ describe('GET /api/skills/:slug — edge cases', () => {
     expect(res.status).toBe(403);
   });
 
-  it('admin can read hidden skill', async () => {
+  it('admin gets 403 for hidden skill on public detail endpoint (cache safety)', async () => {
+    // Same CloudFront cache-safety reason as the list endpoint — a cached 200 response
+    // from an admin request would be served to regular users. Admins use /api/admin/skills.
     mockSend
       .mockResolvedValueOnce({ Item: ADMIN_RECORD })
       .mockResolvedValueOnce({ Item: { slug: 'hidden-skill', status: 'approved', visibility: 'hidden', created_by: 'system' } });
     const res = await app.request('/api/skills/hidden-skill', {
       headers: { Cookie: makeSessionCookie('admin@navapbc.com') },
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
   });
 });
 

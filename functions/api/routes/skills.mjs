@@ -41,7 +41,11 @@ export function skillsRoutes(app) {
     if (type) items = items.filter((s) => s.type === type);
     if (plugin) items = items.filter((s) => s.plugin === plugin);
 
-    const visible = items.filter((s) => can(user, 'read:skill', s));
+    // Exclude hidden skills unconditionally — the /api/skills response is cached by
+    // CloudFront without the session cookie in the cache key, so one cached response
+    // is shared by all users. Including hidden skills for admins would leak them to
+    // everyone via that shared cache. Admins use /api/admin/skills for the full list.
+    const visible = items.filter((s) => s.visibility !== 'hidden' && can(user, 'read:skill', s));
     return c.json({ skills: visible });
   });
 
@@ -51,7 +55,9 @@ export function skillsRoutes(app) {
 
     const result = await ddb.send(new GetCommand({ TableName: tables.skills(), Key: { slug } }));
     if (!result.Item) return c.json({ error: 'Not found' }, 404);
-    if (!can(user, 'read:skill', result.Item)) return c.json({ error: 'Forbidden' }, 403);
+    // Block hidden skills on the public endpoint regardless of role — same cache-safety
+    // reason as the list endpoint. Admins use /api/admin/skills/:slug.
+    if (result.Item.visibility === 'hidden' || !can(user, 'read:skill', result.Item)) return c.json({ error: 'Forbidden' }, 403);
 
     return c.json(result.Item);
   });
