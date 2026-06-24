@@ -143,35 +143,40 @@ Trigger either manually from the Actions tab (`workflow_dispatch`). The sync wor
 
 ## Adding skills to a repo
 
-Add a `SKILL.md` at the root of any navapbc repo (or in `.claude/skills/`, `.agents/skills/`, etc.) with this frontmatter:
+Add a `SKILL.md` at the root of any navapbc repo (or in `.claude/skills/`, `.agents/skills/`, etc.). Most frontmatter fields are optional — the pipeline derives what it can from the file path, repo metadata, and the first line of the body. At minimum, just `name` and `description` get a useful record:
 
 ```yaml
 ---
-name: my-skill
-description: When the user wants to... (this is what Claude uses to decide when to load the skill)
+name: plain-language
+description: When the user wants to rewrite government or technical content in plain language for a general audience.
 author: your-github-handle
 version: 1.0.0
-compatibility: [claude-code, claude-ai]
+compatibility: [claude-chat, claude-cowork, claude-code]
 sensitive_data: false
+category: writing
+tags: [plain-language, writing, accessibility]
 ---
 
 Your skill content here...
 ```
 
-For agents, add `agents/my-agent/AGENT.md` with additional fields:
+For agents, add `agents/my-agent/AGENT.md` with the additional agent fields:
 
 ```yaml
 ---
-name: my-agent
-description: When the user wants to...
+name: snap-eligibility-agent
+description: When the user wants to run a full SNAP eligibility review.
 author: your-github-handle
 version: 1.0.0
 compatibility: [claude-code]
 sensitive_data: true
+type: agent
 tools_used: [skill-one, skill-two]
-human_in_loop: Describe where human review happens in the loop
+human_in_loop: Describe where human review happens before outputs are used
 ---
 ```
+
+See [`registry/schema.md`](registry/schema.md) for the complete frontmatter field reference — required vs. optional, defaults, agent-only fields, and submission metadata fields.
 
 Enterprise-only skills (not sourced from a public GitHub repo) go in `enterprise/<slug>/SKILL.md` in this repository. They're synced directly via the Git Trees API, bypassing GitHub's search indexing delay.
 

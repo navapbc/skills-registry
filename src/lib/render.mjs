@@ -211,7 +211,7 @@ export function renderSkillDetail(skill) {
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <h3 class="text-sm font-semibold text-gray-900 mb-3">Author</h3>
       <div class="flex items-center gap-3">
-        ${avatarHtml(skill.author_name, committer?.avatar_url, '8')}
+        ${avatarHtml(skill.author_name, null, '8')}
         <div class="min-w-0">
           <p class="text-sm font-medium text-gray-900 m-0">${escapeHtml(skill.author_name)}</p>
           ${email ? `<a href="mailto:${escapeHtml(email)}" class="text-xs text-plum-600 hover:text-plum-700 no-underline">${escapeHtml(email)}</a>` : ''}
