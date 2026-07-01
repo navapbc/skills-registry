@@ -2,6 +2,20 @@
 name: project-index-search
 description: >
   Search Nava's Project Index spaces to find relevant past performance, similar work, and project capabilities for proposal research. Use this skill whenever someone asks to find past Nava projects, look up similar work for an active opportunity, search for past performance examples, identify which projects match an RFP requirement, find project capabilities by agency or technology, filter by portfolio (FedCiv, FedHealth, VA, State), filter by archetype (Product Team, Data Modernization Team, Enterprise Operations Team, etc.), or asks any variant of "what has Nava done with X?" or "find me projects similar to Y." Triggers on natural language queries using RFP phrasing, federal evaluation language, agency names, technology keywords, dollar thresholds, portfolio names, or archetype labels. Also triggers when someone asks who to talk to about a specific project area.
+usage_frequency: A few times per week
+version: "1.0"
+author: rynbennett@navapbc.com
+author_name: Ryn Bennett
+team: Delivery Operations
+sensitive_data: false
+problem: >
+  Primary: Any Nava employee who wants to find out what past work Nava has done in a given area — by agency, technology, capability, or project type. Ancillary: proposal writers building past performance sections, delivery PMs scoping similar work or identifying reusable approaches, account managers prepping for client conversations, new hires orienting to the portfolio, and leadership doing capability gap analysis.
+estimated_impact: Proposal writers report a 30% reduction in time spent on past performance research, based on pilot observation.
+expected_audience: 16+ people
+impact_type: ["Time saved per use", "Faster turnaround / cycle time", "Increased output volume or consistency"]
+compatibility: [claude-chat, claude-cowork]
+data_sources: Project Indexes in Confluence
+
 ---
 
 # Project Index Search
