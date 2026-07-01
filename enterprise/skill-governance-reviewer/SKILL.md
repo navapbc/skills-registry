@@ -1,7 +1,5 @@
 ---
 name: skills-governance-reviewer
-category: ops-automation
-compatibility: [claude-chat, claude-cowork]
 description: >
   Use this skill to evaluate whether a skill is ready for enterprise-wide publish
   in the Nava Skills Marketplace. Triggers when someone shares a SKILL.md file for
@@ -11,8 +9,19 @@ description: >
   about any skill file. Runs a two-question rubric against the SKILL.md contents,
   cross-references against submitter-provided form data when available, and returns
   a structured verdict with actionable fix instructions.
+version: "1.0"
+author: nava-workflows@navapbc.com
+author_name: Operations and Automation
+team: Operations and Automation
 sensitive_data: false
-author: Ops & Automation
+problem: Reviewing every skill submission by hand doesn't scale and produces inconsistent verdicts — different reviewers catch different things, some skills slip through with sensitive-data references unflagged, and description-vs-implementation gaps aren't consistently checked. This skill runs a consistent two-question rubric against every submission (sensitive data exposure + description accuracy), cross-references submitter self-declarations, and routes to auto-approve or human review with a clear rationale, so the human reviewer only spends time on the submissions that actually need judgment.
+estimated_impact: Reduces manual review time from ~10 minutes per submission to ~30 seconds of skim time for auto-approved skills; catches sensitive-data and description-accuracy issues that manual review misses under load.
+usage_frequency: Weekly
+impact_type: ["Time saved per use", "Faster turnaround / cycle time", "Increased output volume or consistency"]
+compatibility: [claude-chat, claude-cowork]
+tags: [governance, review]
+data_sources: SKILL.md files, Google Form submissions via Google Sheets
+
 ---
  
 # Skills Governance Reviewer
