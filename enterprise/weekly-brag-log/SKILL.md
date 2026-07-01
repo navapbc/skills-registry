@@ -1,6 +1,21 @@
 ---
 name: weekly-brag-log
-description: End-of-week brag-doc capture for any Nava employee pursuing a level-up. Pulls Jira and Slack from the last 7 days, ranks candidate entries against the Nava competency gaps the user is targeting, and writes confirmed entries directly into a .docx brag log on the user's computer. Use when the user says "weekly brag log", "Friday brag log", "log my wins", "update my brag doc", "promotion prep", or when scheduled to run at end-of-week.
+description: >
+  End-of-week brag-doc capture for any Nava employee pursuing a level-up. Pulls Jira and Slack from the last 7 days, ranks candidate entries against the Nava competency gaps the user is targeting, and writes confirmed entries directly into a .docx brag log on the user's computer. Use when the user says "weekly brag log", "Friday brag log", "log my wins", "update my brag doc", "promotion prep", or when scheduled to run at end-of-week.
+version: "1.0"
+author: kaylynvannorstrand@navapbc.com
+author_name: Kaylyn Van Norstrand
+team: Practice - Engineering
+problem: >
+  I often come to review and have a blank on what I've been doing, what I've accomplished, or any hard evidence on what I can use to move up in a level for an engineer.
+estimated_impact: Helpful when reviews come up
+usage_frequency: Weekly
+expected_audience: 16+ people
+impact_type: ["Time saved per use", "Increased output volume or consistency"]
+compatibility: [claude-chat, claude-cowork]
+tags: [brag-document, promotion, engineer]
+data_sources: Slack, Jira
+
 ---
 
 You are running a weekly brag-doc capture for a Nava employee working toward a promotion. Goal: surface candidate entries from this week's work so they can log them before details fade. Keep replies tight — it's Friday afternoon and the user is tired.
