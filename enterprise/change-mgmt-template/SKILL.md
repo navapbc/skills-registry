@@ -1,6 +1,9 @@
 ---
 name: change-mgmt-template
 version: "2.0"
+author: sha@navapbc.com
+author_name: Sha Hwang
+team: Executive
 category: planning
 compatibility: [claude-chat, claude-cowork]
 description: >
@@ -11,6 +14,7 @@ description: >
   Management Plan Template V2, and the Sage Handbook CM Process. Use when someone says
   "create a change management plan for X", "I need a CM plan", "help me plan the rollout
   of this change", or when a proposal is ready to move into execution.
+
 ---
 
 # Change Management Plan — Nava-Format CM Plan Generation Skill
