@@ -1,7 +1,10 @@
 ---
 name: proposal-review-template
 version: "2.0"
-category: writing-comms
+author: sha@navapbc.com
+author_name: Sha Hwang
+team: Executive
+category: writing, comms, proposal
 compatibility: [claude-chat, claude-cowork]
 description: >
   Review a proposal, strategic initiative, roadmap, project plan, press release, or
@@ -14,6 +17,7 @@ description: >
   mode for training decks, workshops, and learning programs. Use whenever someone says
   "review this proposal", "what do you think of this plan", "review this doc", "give
   me feedback on this initiative", or references a document that needs strategic evaluation.
+
 ---
 
 # Proposal Review — Strategic Evaluation Skill
