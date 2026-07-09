@@ -45,7 +45,7 @@ Five tables per environment (`skills-registry-{table}-{env}`):
 | `plugins` | Plugin groupings (e.g. a tool namespace containing multiple skills). Fields: `slug`, `name`, `description`, `repo`, `author`, `skills_count`, `status`, `visibility`. |
 | `users` | One record per authenticated user, created on first API call. Fields: `user_id` (email), `role` (user/maintain/admin), `name`, `avatar_url`, `favorites` (skill slugs), `installed`, `created_at`, `last_seen_at`. |
 | `audit-log` | Append-only log of create/update/delete/approve/reject/role-change events. Fields: `user_id`, `event_key` (ISO timestamp + UUID), `action`, `resource_type`, `resource_id`, `metadata`. |
-| `analytics-events` | Append-only behavioral events (`page_view`, `skill_view`, `search_query`, `filter_applied`). `user_email` and `timestamp` are stamped server-side. Fields: `user_id`, `event_key` (ISO timestamp + UUID), `event`, `props`, `user_email`, `timestamp`. Retained indefinitely (no TTL). |
+| `analytics-events` | Append-only behavioral events (`page_view`, `skill_view`, `search_query`, `filter_applied`). `user_email` and `timestamp` are stamped server-side. Fields: `user_id`, `event_key` (ISO timestamp + UUID), `event`, `props`, `user_email`, `timestamp`, `ttl`. Raw rows expire ~200 days after write (DynamoDB TTL). |
 
 **Not stored in DynamoDB:** JWT session state (stateless signed cookies), Google OAuth tokens (discarded after callback), raw GitHub file content beyond what's in the `content` field.
 

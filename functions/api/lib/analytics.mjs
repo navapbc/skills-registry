@@ -80,11 +80,19 @@ export function aggregateAnalytics(events = [], { topN = 10 } = {}) {
   return { topSkills, topSearches, filterUsage };
 }
 
+// Raw analytics rows expire ~200 days after write (DynamoDB TTL). Comfortably
+// covers the 28-day dashboard window plus ad-hoc multi-month queries while
+// bounding table size (and therefore scan cost). No year-over-year retention.
+const RETENTION_DAYS = 200;
+const TTL_SECONDS = RETENTION_DAYS * 24 * 60 * 60;
+
 // Append one analytics event. Mirrors writeAudit's key scheme (user_id +
 // ISO-timestamp#uuid) but targets the dedicated analytics-events table.
-// user_email and timestamp are authoritative server values.
+// user_email and timestamp are authoritative server values; `ttl` is the
+// Unix-epoch-seconds expiry DynamoDB TTL keys off.
 export async function writeEvent(user, event, props) {
-  const now = new Date().toISOString();
+  const nowMs = Date.now();
+  const now = new Date(nowMs).toISOString();
   const eventKey = `${now}#${randomUUID()}`;
 
   await ddb.send(
@@ -97,6 +105,7 @@ export async function writeEvent(user, event, props) {
         props,
         user_email: user.email ?? user.user_id,
         timestamp: now,
+        ttl: Math.floor(nowMs / 1000) + TTL_SECONDS,
       },
     })
   );

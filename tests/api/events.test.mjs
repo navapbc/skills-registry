@@ -93,6 +93,15 @@ describe('writeEvent', () => {
     expect(item.event_key.startsWith(item.timestamp)).toBe(true);
   });
 
+  it('sets a TTL ~200 days out (epoch seconds)', async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    await writeEvent(USER, 'page_view', { path: '/' });
+    const item = send.mock.calls[0][0].input.Item;
+    const days = (item.ttl - nowSec) / 86400;
+    expect(days).toBeGreaterThan(199);
+    expect(days).toBeLessThan(201);
+  });
+
   it('prefers user.email over user.user_id for user_email', async () => {
     await writeEvent({ user_id: 'guid-123', email: 'bob@navapbc.com' }, 'page_view', { path: '/' });
     const item = send.mock.calls[0][0].input.Item;

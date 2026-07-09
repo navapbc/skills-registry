@@ -75,7 +75,7 @@ Existing user-activity metrics (total / active / new / returning / dormant) stay
 
 ## Data / retention decision
 
-- **Raw per-user event rows are kept indefinitely** — no TTL. Volume is low (internal tool, dozens–hundreds of users) and this keeps content metrics computable over any window without pre-aggregation.
+- **Raw per-user event rows expire ~200 days after write (DynamoDB TTL).** (Revised during implementation from the original "keep indefinitely" — code review flagged that an unbounded, no-TTL table makes the read-time scan grow without bound. 200 days comfortably covers the 28-day dashboard window plus ad-hoc multi-month queries while bounding table size; it forgoes year-over-year retention. See PR #23.)
 - All users are `@navapbc.com`; per-user behavioral history is queryable by admins. This is an accepted, conscious tradeoff for an internal tool. Revisit if the Hub ever serves external users.
 
 ## Dependencies / assumptions

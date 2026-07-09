@@ -186,7 +186,7 @@ Append-only behavioral analytics, kept separate from `audit-log` so event volume
 
 Events: `page_view`, `skill_view`, `search_query`, `filter_applied`. Captured client-side and POSTed to `/api/events`; `user_email` and `timestamp` are stamped server-side from the JWT (the client body carries only `event` + `props`). Key fields: `user_id`, `event_key`, `event`, `props`, `user_email`, `timestamp`.
 
-Retained indefinitely (no TTL). The admin dashboard reads aggregated content metrics (top skills, top searches, filter usage) over a rolling 28-day window via `GET /api/admin/analytics`.
+Raw rows expire ~200 days after write via DynamoDB TTL (attribute `ttl`, Unix-epoch seconds), bounding table size while covering the dashboard window. The admin dashboard reads aggregated content metrics (top skills, top searches, filter usage) over a rolling 28-day window via `GET /api/admin/analytics`.
 
 ---
 

@@ -27,7 +27,7 @@ The Hub has no behavioral instrumentation, so content-usage questions ("which sk
 - R3. Events land in a dedicated `analytics-events` DynamoDB table, isolated from the security audit log. (origin: Decision — Approach A)
 - R4. Admin dashboard shows top viewed skills, top searches, and filter usage over a rolling 28-day window. (origin: Admin surface)
 - R5. Existing user-activity metrics (active/new/returning/dormant) remain sourced from `last_seen_at`, unchanged. (origin: Non-goals)
-- R6. Raw per-user event rows are retained indefinitely (no TTL). (origin: Data / retention decision)
+- R6. Raw per-user event rows expire ~200 days after write via DynamoDB TTL. (revised during implementation from "indefinite"; see origin: Data / retention decision)
 - R7. No SSO/auth work; `session_start` is out of scope. (origin: Non-goals + Dropped from list)
 
 **Origin actors:** admins (read the dashboard); all authenticated `@navapbc.com` users (generate events).
@@ -148,7 +148,7 @@ sequenceDiagram
 
 **Approach:**
 - Copy the `audit_log` table block: `PAY_PER_REQUEST`, hash `user_id`, range `event_key`, PITR enabled, name `${var.project_name}-analytics-events-${var.environment}`, `deletion_protection_enabled = var.environment == "prod"`.
-- No TTL attribute (R6, keep-forever).
+- TTL attribute `ttl` (Unix-epoch seconds), ~200-day expiry (R6). Revised from the original keep-forever decision.
 - No GSI in this iteration.
 - Requires manual `terraform apply` per env (staging state, then prod) — CI does not apply infra.
 
@@ -319,11 +319,11 @@ sequenceDiagram
 
 | Risk | Mitigation |
 |------|------------|
-| Keep-forever + read-time scan → aggregation latency grows unbounded as events accumulate | Volume is low now; deferred GSI/rollup documented. Add a `byEvent` GSI or nightly rollup when scan latency or RCU cost crosses a threshold. |
+| Read-time scan → aggregation latency grows as events accumulate | ~200-day TTL caps table size (and therefore scan cost). Still O(table): add a time-bucketed GSI or nightly rollup if 200-day volume ever strains the 30s Lambda timeout. |
 | Client double-firing inflates counts (SPA-like re-renders, rapid input) | Debounce `search_query`; fire `page_view`/`skill_view` once per load; single filter-click handler. |
 | Stored search queries rendered in admin could carry HTML | `escapeHtml` all user-derived strings in U5 (tested). |
 | `terraform apply` is manual per env — table could lag code deploy | Sequence U1 apply (staging then prod) before deploying U2 code; ingest to a missing table would error server-side only (client fire-and-forget unaffected). |
-| PII (`user_email`) on every row, retained indefinitely | Accepted per origin (internal `@navapbc.com` tool); admin-only read gate; revisit if Hub serves external users. |
+| PII (`user_email`) on every row | Internal `@navapbc.com` tool; admin-only read gate; ~200-day TTL caps retention; revisit if Hub serves external users. |
 
 ---
 
