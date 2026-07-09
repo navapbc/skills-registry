@@ -213,7 +213,7 @@ if (!slug) {
     .then(skill => {
       container.innerHTML = renderSkillDetail(skill);
       document.title = skill.name + ' · Skills Hub';
-      track('skill_view', { skill_id: skill.slug ?? slug, skill_slug: slug, referrer: referrerSource() });
+      track('skill_view', { skill_slug: slug, referrer_source: referrerSource() });
       initCopyButtons(skill);
       initGithubLinks();
       initFavoriteButton(skill);

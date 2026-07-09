@@ -6,7 +6,7 @@ import { ddb, tables, PutCommand } from './dynamo.mjs';
 // are always stamped server-side (see writeEvent), never taken from the client.
 export const EVENT_PROPS = {
   page_view: ['path', 'referrer'],
-  skill_view: ['skill_id', 'skill_slug', 'referrer'],
+  skill_view: ['skill_slug', 'referrer_source'],
   search_query: ['query', 'result_count'],
   filter_applied: ['filter_name', 'filter_value'],
 };

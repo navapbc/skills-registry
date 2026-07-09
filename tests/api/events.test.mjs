@@ -51,14 +51,15 @@ describe('sanitizeEvent', () => {
 
   it('keeps only whitelisted props and drops extras (including identity keys)', () => {
     const { props } = sanitizeEvent('skill_view', {
-      skill_id: 's1',
       skill_slug: 'my-skill',
-      referrer: 'browse',
+      referrer_source: 'browse',
+      skill_id: 's1',       // dropped — not in the allowlist
+      referrer: 'browse',   // dropped — page_view key, not skill_view's
       user_email: 'attacker@evil.com',
       timestamp: '1999-01-01',
       extra: 'nope',
     });
-    expect(props).toEqual({ skill_id: 's1', skill_slug: 'my-skill', referrer: 'browse' });
+    expect(props).toEqual({ skill_slug: 'my-skill', referrer_source: 'browse' });
   });
 
   it('coerces result_count to a number and drops it when non-numeric', () => {
