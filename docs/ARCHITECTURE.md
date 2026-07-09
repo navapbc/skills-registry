@@ -33,7 +33,7 @@ All AWS resources are Terraform-managed. Two independent state files, one per en
 | `cloudfront.tf` | CloudFront distribution, cache behaviors, CloudFront Function, response headers policy |
 | `lambda.tf` | Auth Lambda + API Lambda (placeholder zip; code deployed by CI) |
 | `api_gateway.tf` | HTTP API v2, default stage, Lambda integration, catch-all route |
-| `dynamodb.tf` | Four DynamoDB tables (skills, plugins, users, audit-log) |
+| `dynamodb.tf` | Five DynamoDB tables (skills, plugins, users, audit-log, analytics-events) |
 | `iam.tf` | GitHub Actions OIDC provider, deploy role, Lambda execution roles |
 | `ssm.tf` | SSM parameters for Google OAuth secrets and JWT secret |
 | `outputs.tf` | All values needed for CI secrets and Google Cloud Console |
@@ -125,7 +125,8 @@ On every request: reads `__session` cookie → verifies HS256 JWT → calls `get
 | Plugins | `GET/POST /api/plugins`, `GET/PUT/DELETE /api/plugins/:slug` |
 | Users | `GET /api/users/me`, `GET /api/users`, `PUT /api/users/me/favorites`, `PUT /api/users/me/installed`, `PUT /api/users/:id/role` |
 | Audit | `GET /api/audit`, `GET /api/audit/me` |
-| Admin | `GET /api/admin/skills` (pending queue) |
+| Admin | `GET /api/admin/skills` (pending queue), `GET /api/admin/analytics` (content analytics, admin-only) |
+| Events | `POST /api/events` (behavioral analytics ingest) |
 | Categories | `GET /api/categories` |
 
 ### Permission model
@@ -149,7 +150,7 @@ Three roles: `user` (default), `maintain`, `admin`.
 
 ## DynamoDB
 
-Four tables per environment. All use on-demand billing and point-in-time recovery.
+Five tables per environment. All use on-demand billing and point-in-time recovery.
 
 ### `skills-registry-skills-{env}`
 
@@ -178,6 +179,14 @@ Append-only event log. Primary key: `user_id` + `event_key` (ISO timestamp + UUI
 Key fields: `user_id`, `event_key`, `action`, `resource_type`, `resource_id`, `resource_key` (for GSI), `metadata`.
 
 GSI `byResource`: enables "history of a skill" queries by `resource_key`.
+
+### `skills-registry-analytics-events-{env}`
+
+Append-only behavioral analytics, kept separate from `audit-log` so event volume never pollutes the security trail. Primary key: `user_id` + `event_key` (ISO timestamp + UUID).
+
+Events: `page_view`, `skill_view`, `search_query`, `filter_applied`. Captured client-side and POSTed to `/api/events`; `user_email` and `timestamp` are stamped server-side from the JWT (the client body carries only `event` + `props`). Key fields: `user_id`, `event_key`, `event`, `props`, `user_email`, `timestamp`.
+
+Retained indefinitely (no TTL). The admin dashboard reads aggregated content metrics (top skills, top searches, filter usage) over a rolling 28-day window via `GET /api/admin/analytics`.
 
 ---
 

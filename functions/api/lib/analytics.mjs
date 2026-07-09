@@ -13,13 +13,21 @@ export const EVENT_PROPS = {
 
 // Validate the event name against the allowlist and keep only whitelisted props.
 // Returns null for an unknown event. `raw` is the client-supplied props object.
+const MAX_PROP_LEN = 256;
+
 export function sanitizeEvent(event, raw = {}) {
   const allowed = EVENT_PROPS[event];
   if (!allowed) return null;
 
   const props = {};
   for (const key of allowed) {
-    if (raw?.[key] !== undefined) props[key] = raw[key];
+    const val = raw?.[key];
+    if (val === undefined || val === null) continue;
+    // Reject non-primitive values (objects/arrays) — bounds storage and prevents
+    // downstream type errors when aggregating attacker-supplied payloads.
+    if (typeof val === 'object') continue;
+    // Coerce to string and cap length so a single row can't be inflated.
+    props[key] = String(val).slice(0, MAX_PROP_LEN);
   }
   // result_count is a count — coerce to a finite number or drop it.
   if ('result_count' in props) {
@@ -45,9 +53,10 @@ export function aggregateAnalytics(events = [], { topN = 10 } = {}) {
     } else if (e.event === 'search_query' && p.query) {
       const key = String(p.query).trim().toLowerCase();
       if (!key) continue;
-      const cur = searchCounts.get(key) ?? { query: key, count: 0, result_count: p.result_count };
+      const cur = searchCounts.get(key) ?? { query: key, count: 0, result_count: 0 };
       cur.count += 1;
-      cur.result_count = p.result_count; // representative (most recent)
+      // Scan order is unspecified, so pick a deterministic representative: the max.
+      cur.result_count = Math.max(cur.result_count ?? 0, Number(p.result_count) || 0);
       searchCounts.set(key, cur);
     } else if (e.event === 'filter_applied' && p.filter_value != null) {
       filterCounts.set(p.filter_value, (filterCounts.get(p.filter_value) ?? 0) + 1);
@@ -56,7 +65,7 @@ export function aggregateAnalytics(events = [], { topN = 10 } = {}) {
 
   const topSkills = [...skillCounts.entries()]
     .map(([skill_slug, count]) => ({ skill_slug, count }))
-    .sort((a, b) => b.count - a.count || a.skill_slug.localeCompare(b.skill_slug))
+    .sort((a, b) => b.count - a.count || String(a.skill_slug).localeCompare(String(b.skill_slug)))
     .slice(0, topN);
 
   const topSearches = [...searchCounts.values()]
@@ -65,7 +74,8 @@ export function aggregateAnalytics(events = [], { topN = 10 } = {}) {
 
   const filterUsage = [...filterCounts.entries()]
     .map(([filter_value, count]) => ({ filter_value, count }))
-    .sort((a, b) => b.count - a.count || String(a.filter_value).localeCompare(String(b.filter_value)));
+    .sort((a, b) => b.count - a.count || String(a.filter_value).localeCompare(String(b.filter_value)))
+    .slice(0, topN);
 
   return { topSkills, topSearches, filterUsage };
 }
@@ -85,7 +95,7 @@ export async function writeEvent(user, event, props) {
         event_key: eventKey,
         event,
         props,
-        user_email: user.user_id,
+        user_email: user.email ?? user.user_id,
         timestamp: now,
       },
     })

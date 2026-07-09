@@ -388,14 +388,15 @@ function renderResults(query) {
   return matches.length;
 }
 
+let lastHomeCount = 0;
 const trackHomeSearch = debounce((query: string) => {
   const q = query.trim();
-  if (q) track('search_query', { query: q, result_count: renderResults(query) });
+  if (q) track('search_query', { query: q, result_count: lastHomeCount });
 }, 500);
 
 globalSearch?.addEventListener('input', e => {
   const value = (e.target as HTMLInputElement).value;
-  renderResults(value);
+  lastHomeCount = renderResults(value);
   trackHomeSearch(value);
 });
 </script>

@@ -14,7 +14,13 @@ export function eventsRoutes(app) {
     const sanitized = sanitizeEvent(body.event, body.props);
     if (!sanitized) return c.json({ error: 'Unknown event' }, 400);
 
-    await writeEvent(user, sanitized.event, sanitized.props);
+    // Analytics ingest is best-effort: a missing table (deploy-ordering window)
+    // or a throttled/failed write must never surface as a 5xx. Log and 204.
+    try {
+      await writeEvent(user, sanitized.event, sanitized.props);
+    } catch (err) {
+      console.error('analytics writeEvent failed', err);
+    }
     return c.body(null, 204);
   });
 }

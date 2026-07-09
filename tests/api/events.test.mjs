@@ -65,6 +65,17 @@ describe('sanitizeEvent', () => {
     expect(sanitizeEvent('search_query', { query: 'x', result_count: '5' }).props.result_count).toBe(5);
     expect('result_count' in sanitizeEvent('search_query', { query: 'x', result_count: 'abc' }).props).toBe(false);
   });
+
+  it('drops object/array-valued props (bounds storage, prevents type errors)', () => {
+    const { props } = sanitizeEvent('search_query', { query: { $ne: null }, result_count: 1 });
+    expect('query' in props).toBe(false);
+    expect(props.result_count).toBe(1);
+  });
+
+  it('caps string prop length', () => {
+    const { props } = sanitizeEvent('search_query', { query: 'x'.repeat(1000) });
+    expect(props.query.length).toBe(256);
+  });
 });
 
 describe('writeEvent', () => {
@@ -79,6 +90,13 @@ describe('writeEvent', () => {
     expect(item.props).toEqual({ path: '/skills' });
     expect(item.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(item.event_key.startsWith(item.timestamp)).toBe(true);
+  });
+
+  it('prefers user.email over user.user_id for user_email', async () => {
+    await writeEvent({ user_id: 'guid-123', email: 'bob@navapbc.com' }, 'page_view', { path: '/' });
+    const item = send.mock.calls[0][0].input.Item;
+    expect(item.user_id).toBe('guid-123');
+    expect(item.user_email).toBe('bob@navapbc.com');
   });
 });
 
@@ -109,6 +127,13 @@ describe('POST /api/events handler', () => {
     const res = await handler(fakeCtx(null));
     expect(res.status).toBe(400);
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it('swallows a write failure and still returns 204 (best-effort ingest)', async () => {
+    send.mockRejectedValueOnce(new Error('ResourceNotFoundException'));
+    const handler = buildHandler();
+    const res = await handler(fakeCtx({ event: 'page_view', props: { path: '/' } }));
+    expect(res.status).toBe(204);
   });
 
   it('ignores client-supplied identity — server user wins', async () => {

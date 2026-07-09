@@ -77,9 +77,22 @@ describe('aggregateAnalytics', () => {
     expect(aggregateAnalytics([])).toEqual({ topSkills: [], topSearches: [], filterUsage: [] });
   });
 
-  it('honors topN', () => {
-    const many = Array.from({ length: 15 }, (_, i) => ({ event: 'skill_view', props: { skill_slug: `s${i}` } }));
-    expect(aggregateAnalytics(many, { topN: 5 }).topSkills).toHaveLength(5);
+  it('honors topN for skills, searches, and filters', () => {
+    const many = Array.from({ length: 15 }, (_, i) => [
+      { event: 'skill_view', props: { skill_slug: `s${i}` } },
+      { event: 'filter_applied', props: { filter_value: `f${i}` } },
+    ]).flat();
+    const agg = aggregateAnalytics(many, { topN: 5 });
+    expect(agg.topSkills).toHaveLength(5);
+    expect(agg.filterUsage).toHaveLength(5);
+  });
+
+  it('does not crash on a non-string skill_slug tie-break (adversarial input)', () => {
+    const poisoned = [
+      { event: 'skill_view', props: { skill_slug: 1 } },
+      { event: 'skill_view', props: { skill_slug: 2 } },
+    ];
+    expect(() => aggregateAnalytics(poisoned)).not.toThrow();
   });
 });
 
