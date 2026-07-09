@@ -2,6 +2,32 @@ import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
 import { relTime, actorName, infoTooltip, userSegments } from '../../lib/admin/format.mjs';
 
+// Content-analytics panels (top skills / searches / filters). Pure string builder
+// so it can be unit-tested; all user-derived values are HTML-escaped.
+export function renderAnalyticsPanels(analytics = {}) {
+  const { topSkills = [], topSearches = [], filterUsage = [], window_days = 28 } = analytics;
+
+  const row = (label, count) => `<div class="flex items-center justify-between gap-2 text-xs">
+      <span class="text-gray-600 truncate">${escapeHtml(String(label))}</span>
+      <span class="text-gray-400 tabular-nums flex-shrink-0">${count}</span>
+    </div>`;
+
+  const list = (rows, emptyText) => rows.length
+    ? `<div class="space-y-1.5">${rows.join('')}</div>`
+    : `<p class="text-xs text-gray-400">${escapeHtml(emptyText)}</p>`;
+
+  const panel = (title, inner) => `<div class="bg-white border border-gray-200 rounded-lg p-4">
+      <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">${escapeHtml(title)}</div>
+      ${inner}
+    </div>`;
+
+  return `<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+    ${panel(`Top Skills (${window_days}d)`, list(topSkills.map(s => row(s.skill_slug, s.count)), 'No skill views yet.'))}
+    ${panel(`Top Searches (${window_days}d)`, list(topSearches.map(s => row(s.query, s.count)), 'No searches yet.'))}
+    ${panel(`Filter Usage (${window_days}d)`, list(filterUsage.map(f => row(f.filter_value, f.count)), 'No filters used yet.'))}
+  </div>`;
+}
+
 const ACTIVE_USER_TOOLTIP = 'Active user = ≥1 authenticated activity in the last 28 days. Rolling window (not calendar month).';
 const SEGMENT_TOOLTIPS = {
   new: 'First seen in the last 28 days.',
@@ -13,12 +39,13 @@ export async function load(panel, ctx) {
   const dash = panel;
   if (!dash) return;
 
-  const [skillsRes, pluginsRes, queueRes, usersRes, auditRes] = await Promise.all([
+  const [skillsRes, pluginsRes, queueRes, usersRes, auditRes, analyticsRes] = await Promise.all([
     fetchApi('/skills').catch(() => ({})),
     fetchApi('/plugins').catch(() => ({})),
     fetchApi('/admin/queue').catch(() => ({})),
     ctx.role === 'admin' ? fetchApi('/admin/users').catch(() => ({})) : Promise.resolve({}),
     ctx.role === 'admin' ? fetchApi('/admin/audit?limit=6').catch(() => ({})) : Promise.resolve({}),
+    ctx.role === 'admin' ? fetchApi('/admin/analytics').catch(() => ({})) : Promise.resolve({}),
   ]);
 
   const allItems = (skillsRes.skills ?? []).filter(s => s.source !== 'category-config');
@@ -36,6 +63,7 @@ export async function load(panel, ctx) {
 
   const users = usersRes.users ?? [];
   const events = auditRes.events ?? [];
+  const analytics = analyticsRes ?? {};
   const seg = userSegments(users);
   const activeCount = seg.active;
 
@@ -104,6 +132,8 @@ export async function load(panel, ctx) {
     </div>
   ` : '';
 
+  const analyticsSection = ctx.role === 'admin' ? renderAnalyticsPanels(analytics) : '';
+
   dash.innerHTML = `
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
       ${statCard(skillCount, 'Skills')}
@@ -112,6 +142,7 @@ export async function load(panel, ctx) {
       ${statCard(pendingCount, 'Pending Review', true, 'queue')}
     </div>
     ${adminSection}
+    ${analyticsSection}
   `;
 
   dash.querySelectorAll('[data-tab-target]').forEach(card => {
