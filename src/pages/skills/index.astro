@@ -25,6 +25,7 @@ import Base from '../../layouts/Base.astro';
 import { fetchApi } from '../../lib/api.mjs';
 import { renderSkillDetail, renderSkillGrid, escapeHtml } from '../../lib/render.mjs';
 import { isFavorited, toggleFavorite, initFavoriteButtons, addInstalled } from '../../lib/favorites.mjs';
+import { track, referrerSource, debounce } from '../../lib/analytics.mjs';
 
 const NAVA_N = `███╗   ██╗\n████╗  ██║\n██╔██╗ ██║\n██║╚██╗██║\n██║ ╚████║\n╚═╝  ╚═══╝`;
 function notFoundHtml(entity) {
@@ -105,6 +106,11 @@ if (!slug) {
   let community = [];
   let activeFilter = 'all';
   let searchQuery = '';
+  let lastResultCount = 0;
+
+  const trackSearch = debounce(() => {
+    if (searchQuery) track('search_query', { query: searchQuery, result_count: lastResultCount });
+  }, 500);
 
   function applyFilter() {
     const listView = document.getElementById('skills-list-view');
@@ -130,6 +136,7 @@ if (!slug) {
       const summary = document.getElementById('skills-search-summary');
       const grid = document.getElementById('skills-search-grid');
       const noResults = document.getElementById('skills-no-results');
+      lastResultCount = matches.length;
       summary.textContent = `${matches.length} result${matches.length !== 1 ? 's' : ''} for "${searchQuery}"`;
       noResults.classList.toggle('hidden', matches.length > 0);
       grid.innerHTML = matches.length ? renderSkillGrid(matches) : '';
@@ -185,11 +192,13 @@ if (!slug) {
   document.getElementById('skills-search')?.addEventListener('input', e => {
     searchQuery = e.target.value.trim();
     applyFilter();
+    trackSearch();
   });
 
   document.querySelectorAll('.skills-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeFilter = btn.dataset.filter;
+      track('filter_applied', { filter_name: 'source', filter_value: activeFilter });
       document.querySelectorAll('.skills-filter-btn').forEach(b => {
         const active = b === btn;
         b.className = `skills-filter-btn text-xs px-3 py-1.5 rounded-lg border transition-colors ${active ? 'border-plum-600 bg-plum-600 text-white' : 'border-gray-200 text-gray-600 hover:border-plum-300'}`;
@@ -204,6 +213,7 @@ if (!slug) {
     .then(skill => {
       container.innerHTML = renderSkillDetail(skill);
       document.title = skill.name + ' · Skills Hub';
+      track('skill_view', { skill_id: skill.slug ?? slug, skill_slug: slug, referrer: referrerSource() });
       initCopyButtons(skill);
       initGithubLinks();
       initFavoriteButton(skill);

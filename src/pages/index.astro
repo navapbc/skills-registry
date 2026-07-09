@@ -154,6 +154,7 @@ import Tooltip from '../components/Tooltip.astro';
 
 <script>
 import { fetchApi } from '../lib/api.mjs';
+import { track, debounce } from '../lib/analytics.mjs';
 import { renderSkillCard, escapeHtml, renderCategoryGrid, renderNewThisWeek, renderSkillGrid } from '../lib/render.mjs';
 import { CATEGORIES } from '../lib/categories.mjs';
 import { getFavorites, initFavoriteButtons, initFromUser, removeFavorite } from '../lib/favorites.mjs';
@@ -358,7 +359,7 @@ function renderResults(query) {
   if (!q) {
     browseView.classList.remove('hidden');
     searchResults.classList.add('hidden');
-    return;
+    return 0;
   }
   browseView.classList.add('hidden');
   searchResults.classList.remove('hidden');
@@ -383,7 +384,18 @@ function renderResults(query) {
       <span class="ml-auto text-xs text-gray-400 flex-shrink-0 mt-0.5">${escapeHtml(item.meta)}</span>
     </a>
   `).join('');
+
+  return matches.length;
 }
 
-globalSearch?.addEventListener('input', e => renderResults(e.target.value));
+const trackHomeSearch = debounce((query: string) => {
+  const q = query.trim();
+  if (q) track('search_query', { query: q, result_count: renderResults(query) });
+}, 500);
+
+globalSearch?.addEventListener('input', e => {
+  const value = (e.target as HTMLInputElement).value;
+  renderResults(value);
+  trackHomeSearch(value);
+});
 </script>
