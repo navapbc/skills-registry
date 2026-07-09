@@ -6,6 +6,7 @@ import { pluginsRoutes } from './routes/plugins.mjs';
 import { usersRoutes } from './routes/users.mjs';
 import { auditRoutes } from './routes/audit.mjs';
 import { adminRoutes } from './routes/admin.mjs';
+import { eventsRoutes } from './routes/events.mjs';
 
 export const app = new Hono();
 
@@ -16,5 +17,6 @@ pluginsRoutes(app);
 usersRoutes(app);
 auditRoutes(app);
 adminRoutes(app);
+eventsRoutes(app);
 
 export const handler = handle(app);
