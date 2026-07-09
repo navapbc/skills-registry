@@ -49,6 +49,30 @@ export function actorName(users, uid) {
   return users.find(u => u.user_id === uid)?.name ?? (uid?.split('@')[0] ?? uid ?? '?');
 }
 
+// Rolling 28-day window used for user activity segmentation.
+export const ACTIVE_WINDOW_MS = 28 * 24 * 60 * 60 * 1000;
+
+// Partition users into new / returning / dormant using the rolling window.
+// Derived from existing fields only: created_at (first visit) and last_seen_at
+// (most recent activity). ISO timestamps compare correctly as strings.
+//   new       — first seen within the window
+//   returning — account older than the window, active within it
+//   dormant   — no activity within the window
+// active === new + returning (i.e. any activity within the window).
+export function userSegments(users, now = Date.now()) {
+  const cutoff = new Date(now - ACTIVE_WINDOW_MS).toISOString();
+  const seg = { total: 0, new: 0, returning: 0, dormant: 0, active: 0 };
+  for (const u of users ?? []) {
+    seg.total++;
+    const active = (u.last_seen_at ?? '') >= cutoff;
+    if (!active) { seg.dormant++; continue; }
+    seg.active++;
+    if ((u.created_at ?? '') >= cutoff) seg.new++;
+    else seg.returning++;
+  }
+  return seg;
+}
+
 // Small hover/focus info icon with an explanatory tooltip, for annotating metric labels.
 export function infoTooltip(text) {
   return `<span class="group relative inline-flex align-middle" tabindex="0" aria-label="${escapeHtml(text)}">
