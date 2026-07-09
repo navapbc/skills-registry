@@ -30,6 +30,46 @@ export function sanitizeEvent(event, raw = {}) {
   return { event, props };
 }
 
+// Aggregate raw events into content-analytics summaries for the admin dashboard.
+// Pure: caller supplies the already-windowed event list. `topN` caps the skill
+// and search lists; filter usage is small (bounded by distinct filter values).
+export function aggregateAnalytics(events = [], { topN = 10 } = {}) {
+  const skillCounts = new Map();
+  const searchCounts = new Map();
+  const filterCounts = new Map();
+
+  for (const e of events) {
+    const p = e.props ?? {};
+    if (e.event === 'skill_view' && p.skill_slug) {
+      skillCounts.set(p.skill_slug, (skillCounts.get(p.skill_slug) ?? 0) + 1);
+    } else if (e.event === 'search_query' && p.query) {
+      const key = String(p.query).trim().toLowerCase();
+      if (!key) continue;
+      const cur = searchCounts.get(key) ?? { query: key, count: 0, result_count: p.result_count };
+      cur.count += 1;
+      cur.result_count = p.result_count; // representative (most recent)
+      searchCounts.set(key, cur);
+    } else if (e.event === 'filter_applied' && p.filter_value != null) {
+      filterCounts.set(p.filter_value, (filterCounts.get(p.filter_value) ?? 0) + 1);
+    }
+  }
+
+  const topSkills = [...skillCounts.entries()]
+    .map(([skill_slug, count]) => ({ skill_slug, count }))
+    .sort((a, b) => b.count - a.count || a.skill_slug.localeCompare(b.skill_slug))
+    .slice(0, topN);
+
+  const topSearches = [...searchCounts.values()]
+    .sort((a, b) => b.count - a.count || a.query.localeCompare(b.query))
+    .slice(0, topN);
+
+  const filterUsage = [...filterCounts.entries()]
+    .map(([filter_value, count]) => ({ filter_value, count }))
+    .sort((a, b) => b.count - a.count || String(a.filter_value).localeCompare(String(b.filter_value)));
+
+  return { topSkills, topSearches, filterUsage };
+}
+
 // Append one analytics event. Mirrors writeAudit's key scheme (user_id +
 // ISO-timestamp#uuid) but targets the dedicated analytics-events table.
 // user_email and timestamp are authoritative server values.
