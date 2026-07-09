@@ -216,3 +216,5 @@ Build artifacts go to `dist/` and are synced to S3 on deploy. Hashed `_astro/` c
 | `sync-anthropic.yml` | Cron Mondays 9am + `workflow_dispatch` | Syncs Anthropic built-in skills to DynamoDB |
 
 All workflows use GitHub OIDC to assume AWS roles — no long-lived credentials stored in secrets.
+
+`main` deploys to staging; `release` deploys to prod. `release` is a fast-forward-only pointer to a known-good `main` commit — see [Branching & release model](DEPLOY.md#branching--release-model).
