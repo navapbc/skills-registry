@@ -1,6 +1,8 @@
 import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
-import { relTime, actorName } from '../../lib/admin/format.mjs';
+import { relTime, actorName, infoTooltip } from '../../lib/admin/format.mjs';
+
+const ACTIVE_USER_TOOLTIP = 'Active user = ≥1 authenticated activity in the last 28 days. Rolling window (not calendar month).';
 
 export async function load(panel, ctx) {
   const dash = panel;
@@ -64,7 +66,7 @@ export async function load(panel, ctx) {
           </div>
           <div class="mb-px">
             <div class="text-xl font-bold text-green-600">${activeCount}</div>
-            <div class="text-xs text-gray-400">active this month</div>
+            <div class="text-xs text-gray-400 flex items-center gap-1">active this month ${infoTooltip(ACTIVE_USER_TOOLTIP)}</div>
           </div>
         </div>
       </div>
