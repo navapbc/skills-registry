@@ -31,7 +31,7 @@ export async function load(panel, ctx) {
 
   const users = usersRes.users ?? [];
   const events = auditRes.events ?? [];
-  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
   const activeCount = users.filter(u => (u.last_seen_at ?? '') >= cutoff).length;
 
   function statCard(value, label, highlight = false, tabTarget = null) {
@@ -66,7 +66,7 @@ export async function load(panel, ctx) {
           </div>
           <div class="mb-px">
             <div class="text-xl font-bold text-green-600">${activeCount}</div>
-            <div class="text-xs text-gray-400 flex items-center gap-1">active this month ${infoTooltip(ACTIVE_USER_TOOLTIP)}</div>
+            <div class="text-xs text-gray-400 flex items-center gap-1">active (28d) ${infoTooltip(ACTIVE_USER_TOOLTIP)}</div>
           </div>
         </div>
       </div>
