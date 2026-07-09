@@ -1,6 +1,13 @@
 import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
-import { relTime, actorName } from '../../lib/admin/format.mjs';
+import { relTime, actorName, infoTooltip, userSegments } from '../../lib/admin/format.mjs';
+
+const ACTIVE_USER_TOOLTIP = 'Active user = ≥1 authenticated activity in the last 28 days. Rolling window (not calendar month).';
+const SEGMENT_TOOLTIPS = {
+  new: 'First seen in the last 28 days.',
+  returning: 'Account older than 28 days and active in the last 28 days.',
+  dormant: 'No activity in the last 28 days.',
+};
 
 export async function load(panel, ctx) {
   const dash = panel;
@@ -29,8 +36,8 @@ export async function load(panel, ctx) {
 
   const users = usersRes.users ?? [];
   const events = auditRes.events ?? [];
-  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const activeCount = users.filter(u => (u.last_seen_at ?? '') >= cutoff).length;
+  const seg = userSegments(users);
+  const activeCount = seg.active;
 
   function statCard(value, label, highlight = false, tabTarget = null) {
     const cardCls = highlight && value > 0
@@ -64,7 +71,21 @@ export async function load(panel, ctx) {
           </div>
           <div class="mb-px">
             <div class="text-xl font-bold text-green-600">${activeCount}</div>
-            <div class="text-xs text-gray-400">active this month</div>
+            <div class="text-xs text-gray-400 flex items-center gap-1">active (28d) ${infoTooltip(ACTIVE_USER_TOOLTIP)}</div>
+          </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <div class="text-sm font-semibold text-gray-900">${seg.new}</div>
+            <div class="text-[11px] text-gray-400 flex items-center justify-center gap-1">new ${infoTooltip(SEGMENT_TOOLTIPS.new)}</div>
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-gray-900">${seg.returning}</div>
+            <div class="text-[11px] text-gray-400 flex items-center justify-center gap-1">returning ${infoTooltip(SEGMENT_TOOLTIPS.returning)}</div>
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-gray-900">${seg.dormant}</div>
+            <div class="text-[11px] text-gray-400 flex items-center justify-center gap-1">dormant ${infoTooltip(SEGMENT_TOOLTIPS.dormant)}</div>
           </div>
         </div>
       </div>
