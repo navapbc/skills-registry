@@ -13,10 +13,10 @@ GitHub Org (navapbc)
         ▼  (sync every 4h + weekly Anthropic sync)
      DynamoDB ──────────────────────────────────────────────┐
                                                             │
-Browser → CloudFront (edge JWT check)                      │
+Browser → CloudFront (edge JWT check)                       │
                │                                            │
-               ├─ /auth/*  → Auth Lambda ──> Google OAuth  │
-               ├─ /api/*   → API Gateway → API Lambda ─────┘
+               ├─ /auth/*  → Auth Lambda ──> Google OAuth   │
+               ├─ /api/*   → API Gateway → API Lambda ──────┘
                └─ /*       → S3 (static Astro build)
 ```
 
