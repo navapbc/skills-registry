@@ -186,7 +186,12 @@ The sync runs every 4 hours. Trigger it manually from the Actions tab for immedi
 
 ## Local Development
 
+> **Always branch from `main`.** `main` is the single source of truth; `release` only ever fast-forwards from it (see [Branching & release model](docs/DEPLOY.md#branching--release-model)). Cutting a feature branch from `release` pulls in prod-only merge history and makes the eventual PR diff wrong.
+
 ```bash
+git checkout main && git pull      # start from an up-to-date main
+git checkout -b feat/my-change     # then branch
+
 pnpm install
 pnpm dev          # Astro dev server at http://localhost:4321
 pnpm sync:v2      # Sync GitHub org skills into DynamoDB (requires AWS + GITHUB_TOKEN)

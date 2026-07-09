@@ -54,7 +54,7 @@ If `git merge --ff-only` fails, `release` has diverged from `main` (someone comm
 
 **Rule: never commit directly to `release`.** All changes — including hotfixes — land on `main` first (via PR), then flow to `release` by fast-forward. This keeps `main` the single source of truth and guarantees prod can never contain code that isn't already on `main`. (A true emergency hotfix that must bypass `main` is a deliberate exception, not the workflow; back-merge it to `main` immediately.)
 
-Feature branches must therefore branch from `main`, not `release`.
+> **Reminder: always create feature branches from `main`, never from `release`.** Branching from `release` pulls prod-only merge commits into your branch and produces a misleading PR diff. Start every branch with `git checkout main && git pull` first.
 
 ---
 
