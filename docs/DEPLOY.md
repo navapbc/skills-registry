@@ -211,19 +211,24 @@ You'll get:
 
 ### 8. Terraform apply — prod
 
+Staging and prod share the same `terraform/` directory but use different state files (`staging.tfstate` vs `prod.tfstate`). Terraform caches the last backend in `.terraform/`, so **every time you switch environments in the same directory you must re-init with `-reconfigure`** — including when switching back to staging later. Without it, `init` errors on the backend change; worse, skipping init entirely runs `apply` against the wrong environment.
+
 From the `terraform/` directory:
 
 ```bash
-terraform init \
+terraform init -reconfigure \
   -backend-config="bucket=navapbc-skills-registry-tf-state" \
   -backend-config="key=skills-registry/prod.tfstate" \
-  -backend-config="region=us-east-1" \
-  -reconfigure
+  -backend-config="region=us-east-1"
 
 terraform apply -var-file=terraform.prod.tfvars
 ```
 
+Before every `apply`, confirm you're on the intended environment: run `terraform plan` and check resource names carry the right suffix (`-staging` vs `-prod`).
+
 Capture prod outputs the same way. Add the prod `oauth_redirect_uri` to Google Cloud Console.
+
+> **Switching back to staging?** Re-run the step 6 `init` with `-reconfigure` added and the `staging.tfstate` key before applying.
 
 ---
 

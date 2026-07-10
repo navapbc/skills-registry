@@ -1,3 +1,12 @@
+# NOTE: hash_key/range_key trigger a deprecation warning under aws provider 6.x
+# (use key_schema instead). We intentionally keep the deprecated syntax — key_schema
+# on GSIs has open bugs that cause perpetual drift and destructive GSI recreation
+# (all GSIs destroyed/recreated when one is removed), which would break queries on
+# the skills/audit_log tables below. Maintainers recommend the deprecated form as
+# the workaround. Do NOT migrate until these are fixed:
+#   https://github.com/hashicorp/terraform-provider-aws/issues/46601
+#   https://github.com/hashicorp/terraform-provider-aws/issues/46335
+#   https://github.com/hashicorp/terraform-provider-aws/issues/46513
 resource "aws_dynamodb_table" "skills" {
   name         = "${var.project_name}-skills-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"
