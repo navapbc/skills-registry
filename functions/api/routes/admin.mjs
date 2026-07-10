@@ -1,6 +1,9 @@
 import { ddb, tables, GetCommand, PutCommand, UpdateCommand, DeleteCommand, ScanCommand, BatchGetCommand } from '../lib/dynamo.mjs';
 import { can } from '../lib/permissions.mjs';
 import { writeAudit } from '../lib/audit.mjs';
+import { aggregateAnalytics } from '../lib/analytics.mjs';
+
+const ANALYTICS_WINDOW_DAYS = 28;
 
 const CATEGORY_IDS = ['writing-comms', 'research-analysis', 'planning', 'dev-code', 'ops-automation'];
 const CATEGORY_LABELS = {
@@ -291,5 +294,30 @@ export function adminRoutes(app) {
       String(b.timestamp ?? '').localeCompare(String(a.timestamp ?? ''))
     );
     return c.json({ events });
+  });
+
+  // ── Content analytics (admin only) ────────────────────────────────────
+  app.get('/api/admin/analytics', async (c) => {
+    const user = c.get('user');
+    if (!can(user, 'read:audit')) return c.json({ error: 'Forbidden' }, 403);
+
+    const cutoff = new Date(Date.now() - ANALYTICS_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+    const events = [];
+    let lastKey;
+    do {
+      const page = await ddb.send(new ScanCommand({
+        TableName: tables.analyticsEvents(),
+        FilterExpression: '#ts >= :cutoff',
+        ExpressionAttributeNames: { '#ts': 'timestamp' }, // `timestamp` is a DynamoDB reserved word
+        ExpressionAttributeValues: { ':cutoff': cutoff },
+        ...(lastKey && { ExclusiveStartKey: lastKey }),
+      }));
+      events.push(...(page.Items ?? []));
+      lastKey = page.LastEvaluatedKey;
+    } while (lastKey);
+
+    const agg = aggregateAnalytics(events);
+    return c.json({ ...agg, window_days: ANALYTICS_WINDOW_DAYS });
   });
 }

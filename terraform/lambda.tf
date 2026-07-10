@@ -11,15 +11,15 @@ data "aws_iam_policy_document" "lambda_assume" {
 
 data "aws_iam_policy_document" "lambda_auth_policy" {
   statement {
-    sid     = "Logs"
-    effect  = "Allow"
-    actions = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+    sid       = "Logs"
+    effect    = "Allow"
+    actions   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
     resources = ["arn:aws:logs:*:*:*"]
   }
 
   statement {
-    sid    = "ReadSecrets"
-    effect = "Allow"
+    sid     = "ReadSecrets"
+    effect  = "Allow"
     actions = ["ssm:GetParameter"]
     resources = [
       aws_ssm_parameter.google_client_id.arn,
@@ -71,8 +71,8 @@ resource "aws_lambda_function" "auth" {
       GOOGLE_CLIENT_ID_PARAM     = aws_ssm_parameter.google_client_id.name
       GOOGLE_CLIENT_SECRET_PARAM = aws_ssm_parameter.google_client_secret.name
       JWT_SECRET_PARAM           = aws_ssm_parameter.jwt_secret_lambda.name
-      ALLOWED_EMAIL_DOMAIN = var.allowed_email_domain
-      SITE_URL             = var.site_url
+      ALLOWED_EMAIL_DOMAIN       = var.allowed_email_domain
+      SITE_URL                   = var.site_url
     }
   }
 }
@@ -141,6 +141,8 @@ data "aws_iam_policy_document" "lambda_api_policy" {
       "${aws_dynamodb_table.users.arn}/index/*",
       aws_dynamodb_table.audit_log.arn,
       "${aws_dynamodb_table.audit_log.arn}/index/*",
+      aws_dynamodb_table.analytics_events.arn,
+      "${aws_dynamodb_table.analytics_events.arn}/index/*",
     ]
   }
 }
@@ -177,6 +179,7 @@ resource "aws_lambda_function" "api" {
       PLUGINS_TABLE        = aws_dynamodb_table.plugins.name
       USERS_TABLE          = aws_dynamodb_table.users.name
       AUDIT_TABLE          = aws_dynamodb_table.audit_log.name
+      ANALYTICS_TABLE      = aws_dynamodb_table.analytics_events.name
       ALLOWED_EMAIL_DOMAIN = var.allowed_email_domain
     }
   }

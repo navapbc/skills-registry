@@ -114,3 +114,35 @@ resource "aws_dynamodb_table" "audit_log" {
     enabled = true
   }
 }
+
+# Append-only behavioral analytics events (page_view, skill_view, search_query,
+# filter_applied). Kept separate from audit_log so behavioral volume never
+# pollutes the security trail. Raw rows expire ~200 days after write via TTL,
+# bounding table size (and scan cost) while covering the 28-day dashboard window.
+# Primary key: user_id + event_key (ISO timestamp + UUID), mirroring audit_log.
+resource "aws_dynamodb_table" "analytics_events" {
+  name         = "${var.project_name}-analytics-events-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "event_key"
+
+  deletion_protection_enabled = var.environment == "prod"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+  attribute {
+    name = "event_key"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}

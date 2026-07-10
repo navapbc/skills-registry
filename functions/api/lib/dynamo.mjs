@@ -18,6 +18,7 @@ export const tables = {
   plugins: () => process.env.PLUGINS_TABLE,
   users: () => process.env.USERS_TABLE,
   audit: () => process.env.AUDIT_TABLE,
+  analyticsEvents: () => process.env.ANALYTICS_TABLE,
 };
 
 // Fast path for auth middleware: GetItem (read) on every request, write only on first login.
