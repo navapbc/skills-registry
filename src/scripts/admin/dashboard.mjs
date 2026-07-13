@@ -1,6 +1,6 @@
 import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
-import { relTime, actorName, infoTooltip, userSegments } from '../../lib/admin/format.mjs';
+import { relTime, actorName, infoTooltip, userSegments, weeklyCumulative, sparkline } from '../../lib/admin/format.mjs';
 
 // Content-analytics panels (top skills / searches / filters). Pure string builder
 // so it can be unit-tested; all user-derived values are HTML-escaped.
@@ -49,10 +49,16 @@ export async function load(panel, ctx) {
   ]);
 
   const allItems = (skillsRes.skills ?? []).filter(s => s.source !== 'category-config');
-  const skillCount = allItems.filter(s => s.type !== 'agent').length;
-  const agentCount = allItems.filter(s => s.type === 'agent').length;
-  const pluginCount = (pluginsRes.plugins ?? []).length;
+  const skillItems = allItems.filter(s => s.type !== 'agent');
+  const agentItems = allItems.filter(s => s.type === 'agent');
+  const plugins = pluginsRes.plugins ?? [];
+  const skillCount = skillItems.length;
+  const agentCount = agentItems.length;
+  const pluginCount = plugins.length;
   const pendingCount = (queueRes.skills ?? []).length;
+
+  // 4-week cumulative-growth sparkline, computed from each item's created_at.
+  const spark = (items) => sparkline(weeklyCumulative(items), { className: 'text-gray-400' });
 
   // Update queue tab badge from dashboard data
   const badge = document.getElementById('queue-badge');
@@ -67,7 +73,7 @@ export async function load(panel, ctx) {
   const seg = userSegments(users);
   const activeCount = seg.active;
 
-  function statCard(value, label, highlight = false, tabTarget = null) {
+  function statCard(value, label, highlight = false, tabTarget = null, sparkHtml = '') {
     const cardCls = highlight && value > 0
       ? 'bg-amber-50 border-amber-200 cursor-pointer hover:shadow-sm transition-shadow'
       : 'bg-white border-gray-200';
@@ -76,6 +82,7 @@ export async function load(panel, ctx) {
     return `<div class="${cardCls} border rounded-lg p-4" ${attrs}>
       <div class="text-2xl font-bold ${valCls}">${value}</div>
       <div class="text-xs text-gray-500 mt-0.5">${escapeHtml(label)}</div>
+      ${sparkHtml ? `<div class="mt-2">${sparkHtml}</div>` : ''}
     </div>`;
   }
 
@@ -116,6 +123,7 @@ export async function load(panel, ctx) {
             <div class="text-[11px] text-gray-400 flex items-center justify-center gap-1">dormant ${infoTooltip(SEGMENT_TOOLTIPS.dormant)}</div>
           </div>
         </div>
+        <div class="mt-3 text-gray-400">${sparkline(weeklyCumulative(users), { width: 240, className: 'text-gray-400 w-full' })}</div>
       </div>
       <div class="md:col-span-2 bg-white border border-gray-200 rounded-lg p-4">
         <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Recent Activity</div>
@@ -136,9 +144,9 @@ export async function load(panel, ctx) {
 
   dash.innerHTML = `
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      ${statCard(skillCount, 'Skills')}
-      ${statCard(agentCount, 'Agents')}
-      ${statCard(pluginCount, 'Plugins')}
+      ${statCard(skillCount, 'Skills', false, null, spark(skillItems))}
+      ${statCard(agentCount, 'Agents', false, null, spark(agentItems))}
+      ${statCard(pluginCount, 'Plugins', false, null, spark(plugins))}
       ${statCard(pendingCount, 'Pending Review', true, 'queue')}
     </div>
     ${adminSection}
