@@ -123,6 +123,16 @@ describe('GET /api/admin/analytics', () => {
     expect(scanInput.ExpressionAttributeValues[':cutoff']).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
+  it('degrades to empty aggregates instead of 500 when the scan throws', async () => {
+    const err = new Error('Requested resource not found');
+    err.name = 'ResourceNotFoundException';
+    send.mockRejectedValueOnce(err);
+    const handler = buildRoutes();
+    const res = await handler(fakeCtx(ADMIN));
+    expect(res.status).toBe(200);
+    expect(res.obj).toEqual({ topSkills: [], topSearches: [], filterUsage: [], window_days: 28, degraded: true });
+  });
+
   it('paginates across LastEvaluatedKey', async () => {
     send
       .mockResolvedValueOnce({ Items: [{ event: 'filter_applied', props: { filter_value: 'all' } }], LastEvaluatedKey: { user_id: 'x' } })
