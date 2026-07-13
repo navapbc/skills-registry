@@ -73,6 +73,48 @@ export function userSegments(users, now = Date.now()) {
   return seg;
 }
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+// Cumulative count of `items` at the end of each of the last `weeks` weeks,
+// derived from a timestamp field (default `created_at`). The last element equals
+// the current total, so a sparkline built from this ends at the card's value.
+// Items missing the field are assumed to predate the window (counted in every
+// bucket) — this keeps the final point aligned with the displayed count.
+// Pure: `now` is injectable for tests. ISO timestamps compare correctly as strings.
+export function weeklyCumulative(items, { now = Date.now(), weeks = 4, field = 'created_at' } = {}) {
+  const out = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const cutoff = new Date(now - i * WEEK_MS).toISOString();
+    let count = 0;
+    for (const it of items ?? []) {
+      const ts = it?.[field];
+      if (!ts || String(ts) <= cutoff) count++;
+    }
+    out.push(count);
+  }
+  return out;
+}
+
+// Render a minimal inline-SVG sparkline from a numeric series. Uses currentColor
+// so the caller controls the stroke via a text-* class. Returns '' for series
+// too short to plot. `preserveAspectRatio="none"` lets it stretch to the given
+// box; a small vertical pad keeps the 1.5px stroke from clipping at the edges.
+export function sparkline(values, { width = 64, height = 16, className = '' } = {}) {
+  const vals = (values ?? []).map(v => Number(v) || 0);
+  if (vals.length < 2) return '';
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = max - min || 1;
+  const pad = 2;
+  const stepX = width / (vals.length - 1);
+  const points = vals.map((v, i) => {
+    const x = i * stepX;
+    const y = height - pad - ((v - min) / range) * (height - 2 * pad);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg class="${escapeHtml(className)}" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" preserveAspectRatio="none" aria-hidden="true"><title>Cumulative trend, last ${vals.length} weeks</title><polyline points="${points}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
 // Small hover/focus info icon with an explanatory tooltip, for annotating metric labels.
 export function infoTooltip(text) {
   return `<span class="group relative inline-flex align-middle" tabindex="0" aria-label="${escapeHtml(text)}">

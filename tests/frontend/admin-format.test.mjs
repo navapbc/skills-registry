@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   SKILL_CATEGORIES, COMPAT_OPTIONS,
   catLabel, catSelectOptions, tagChips, compatChips, relTime, actorName,
-  userSegments, ACTIVE_WINDOW_MS,
+  userSegments, ACTIVE_WINDOW_MS, weeklyCumulative, sparkline,
 } from '../../src/lib/admin/format.mjs';
 
 describe('catLabel', () => {
@@ -114,6 +114,66 @@ describe('userSegments', () => {
   it('handles empty or missing input', () => {
     expect(userSegments([], NOW)).toEqual({ total: 0, new: 0, returning: 0, dormant: 0, active: 0 });
     expect(userSegments(undefined, NOW).total).toBe(0);
+  });
+});
+
+describe('weeklyCumulative', () => {
+  const NOW = Date.parse('2026-07-09T00:00:00.000Z');
+  const iso = (daysAgo) => new Date(NOW - daysAgo * 24 * 60 * 60 * 1000).toISOString();
+
+  it('returns one cumulative count per week, ending at the current total', () => {
+    const items = [
+      { created_at: iso(25) }, // >3wk ago → in every bucket
+      { created_at: iso(15) }, // ~2wk ago
+      { created_at: iso(8) },  // ~1wk ago
+      { created_at: iso(1) },  // this week
+    ];
+    const series = weeklyCumulative(items, { now: NOW, weeks: 4 });
+    expect(series).toEqual([1, 2, 3, 4]);
+    expect(series[series.length - 1]).toBe(items.length);
+  });
+
+  it('counts items missing created_at in every bucket (assumed to predate window)', () => {
+    const items = [{}, { created_at: iso(1) }];
+    expect(weeklyCumulative(items, { now: NOW, weeks: 4 })).toEqual([1, 1, 1, 2]);
+  });
+
+  it('supports a custom field and week count', () => {
+    const items = [{ last_seen_at: iso(10) }, { last_seen_at: iso(2) }];
+    expect(weeklyCumulative(items, { now: NOW, weeks: 2, field: 'last_seen_at' })).toEqual([1, 2]);
+  });
+
+  it('handles empty or missing input', () => {
+    expect(weeklyCumulative([], { now: NOW })).toEqual([0, 0, 0, 0]);
+    expect(weeklyCumulative(undefined, { now: NOW })).toEqual([0, 0, 0, 0]);
+  });
+});
+
+describe('sparkline', () => {
+  it('renders a polyline with one point per value', () => {
+    const svg = sparkline([1, 2, 3, 4]);
+    expect(svg).toContain('<polyline');
+    expect(svg.match(/,/g).length).toBeGreaterThanOrEqual(3); // >=4 coord pairs
+    expect(svg).toContain('stroke="currentColor"');
+  });
+
+  it('returns empty string for series too short to plot', () => {
+    expect(sparkline([])).toBe('');
+    expect(sparkline([5])).toBe('');
+    expect(sparkline(undefined)).toBe('');
+  });
+
+  it('keeps a flat series within the padded box', () => {
+    const svg = sparkline([3, 3, 3, 3], { width: 60, height: 16 });
+    // range collapses to 1; all y should sit at the padded baseline, not clip.
+    expect(svg).toContain('<polyline');
+    expect(svg).not.toContain('NaN');
+  });
+
+  it('escapes the className', () => {
+    const svg = sparkline([1, 2], { className: 'text-gray-400"><script>' });
+    expect(svg).not.toContain('<script>');
+    expect(svg).toContain('&lt;script&gt;');
   });
 });
 
