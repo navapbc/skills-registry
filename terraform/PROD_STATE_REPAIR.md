@@ -38,9 +38,11 @@ Until resolved, **do not import the group into prod state** (steps below skip it
 iam.tf `count`), staging=true, prod=false. Prod no longer declares the group, so it
 is excluded from the import set below.
 
-**Staging follow-up (NOT prod — do when staging next applies):** the group was added
-to iam.tf `count`, so its staging state address changed. Before the next staging
-apply, migrate the addresses or staging will destroy+recreate the shared group:
+**Staging follow-up — DONE (2026-07-13):** the group was added to iam.tf `count`, so
+its staging state address changed. Migrated the addresses (backup:
+`~/staging.tfstate.backup-20260713`); `terraform plan -var-file=terraform.staging.tfvars`
+now reports **"No changes. Your infrastructure matches the configuration."** — group
+no longer destroy/recreated.
 ```
 # with backend pointed at staging.tfstate
 terraform state mv 'aws_iam_group.github_automated_deploys' 'aws_iam_group.github_automated_deploys[0]'
@@ -167,8 +169,8 @@ currently pointed at prod.tfstate — re-point to staging before any staging wor
 (see step 1 with key=skills-registry/staging.tfstate).
 
 ### Outstanding follow-ups
-1. **Staging state mv** (before next staging apply) — see "Staging follow-up" above,
-   or staging will destroy+recreate the shared github-automated-deploys group.
+1. ~~**Staging state mv** (before next staging apply)~~ — **DONE 2026-07-13.** Group
+   migrated to `[0]`; staging plan clean. See "Staging follow-up" above.
 2. **Code guard** (branch `fix/admin-analytics-500-degrade`) — deploy so a future
    missing-table/deploy-skew degrades to empty aggregates instead of 500.
 3. **CI gap** — deploy.yml ships Lambda/S3 but never runs `terraform apply`, which is
