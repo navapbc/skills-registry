@@ -110,7 +110,7 @@ describe('writeEvent', () => {
   });
 });
 
-describe('POST /api/events handler', () => {
+describe('POST /api/hub-log handler', () => {
   it('writes a valid event and returns 204', async () => {
     const handler = buildHandler();
     const res = await handler(fakeCtx({ event: 'filter_applied', props: { filter_name: 'source', filter_value: 'org-wide' } }));

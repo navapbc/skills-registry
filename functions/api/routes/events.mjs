@@ -3,7 +3,7 @@ import { sanitizeEvent, writeEvent } from '../lib/analytics.mjs';
 export function eventsRoutes(app) {
   // Behavioral analytics ingest. authMiddleware has already populated c.get('user'),
   // so identity is taken from the JWT — the client body carries only event + props.
-  app.post('/api/events', async (c) => {
+  app.post('/api/hub-log', async (c) => {
     const user = c.get('user');
 
     const body = await c.req.json().catch(() => null);

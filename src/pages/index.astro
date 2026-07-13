@@ -154,7 +154,7 @@ import Tooltip from '../components/Tooltip.astro';
 
 <script>
 import { fetchApi } from '../lib/api.mjs';
-import { track, debounce } from '../lib/analytics.mjs';
+import { track, debounce } from '../lib/usage.mjs';
 import { renderSkillCard, escapeHtml, renderCategoryGrid, renderNewThisWeek, renderSkillGrid } from '../lib/render.mjs';
 import { CATEGORIES } from '../lib/categories.mjs';
 import { getFavorites, initFavoriteButtons, initFromUser, removeFavorite } from '../lib/favorites.mjs';

@@ -1,7 +1,7 @@
 /**
  * Fire-and-forget behavioral analytics.
  *
- * Sends { event, props } to POST /api/events. Identity (user_email) and the
+ * Sends { event, props } to POST /api/hub-log. Identity (user_email) and the
  * authoritative timestamp are stamped server-side from the JWT — the client
  * never supplies them. Must never throw or block navigation: a dropped event
  * is acceptable, a broken page is not.
@@ -11,10 +11,10 @@ export function track(event, props = {}) {
     const body = JSON.stringify({ event, props });
     if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
       const blob = new Blob([body], { type: 'application/json' });
-      if (navigator.sendBeacon('/api/events', blob)) return;
+      if (navigator.sendBeacon('/api/hub-log', blob)) return;
     }
     // Fallback: keepalive fetch survives page unload for terminal events.
-    fetch('/api/events', {
+    fetch('/api/hub-log', {
       method: 'POST',
       credentials: 'include',
       keepalive: true,
