@@ -47,3 +47,8 @@ output "api_gateway_endpoint" {
   description = "API Gateway base URL (internal — use CloudFront /api/* in the browser)"
   value       = aws_apigatewayv2_api.api.api_endpoint
 }
+
+output "terraform_drift_role_arn" {
+  description = "Read-only role ARN for CI drift detection — set as AWS_DRIFT_ROLE_ARN in the GitHub environment secrets"
+  value       = aws_iam_role.terraform_drift.arn
+}

@@ -171,7 +171,34 @@ currently pointed at prod.tfstate — re-point to staging before any staging wor
 ### Outstanding follow-ups
 1. ~~**Staging state mv** (before next staging apply)~~ — **DONE 2026-07-13.** Group
    migrated to `[0]`; staging plan clean. See "Staging follow-up" above.
-2. **Code guard** (branch `fix/admin-analytics-500-degrade`) — deploy so a future
-   missing-table/deploy-skew degrades to empty aggregates instead of 500.
-3. **CI gap** — deploy.yml ships Lambda/S3 but never runs `terraform apply`, which is
-   how prod drifted 6 weeks. Consider a terraform plan/apply gate in the pipeline.
+2. ~~**Code guard** (branch `fix/admin-analytics-500-degrade`)~~ — **DONE.** Merged to
+   main (PR #29); degrades to empty aggregates instead of 500 on future deploy-skew.
+3. **CI drift detection** — **IMPLEMENTED (branch `ci/terraform-drift`), pending GitHub
+   config.** deploy.yml ships Lambda/S3 but never runs terraform, which is how prod
+   drifted 6 weeks. Chose drift detection (not auto-apply) — safe, catches the exact
+   failure mode. Added `terraform/drift.tf` (read-only OIDC role: ReadOnlyAccess +
+   SSM-scoped kms:Decrypt) and `.github/workflows/terraform-drift.yml` (daily
+   `terraform plan -detailed-exitcode` per env; fails on drift). See setup below.
+
+## Drift-detection setup (one-time)
+
+The workflow is inert until these are configured. Steps:
+
+1. **Apply the drift role** to both envs (adds a read-only IAM role — no mutation of
+   existing resources):
+   ```
+   # prod (backend on prod.tfstate), then staging
+   terraform apply -var-file=terraform.prod.tfvars    # targets: aws_iam_role.terraform_drift + attachments
+   terraform apply -var-file=terraform.staging.tfvars
+   terraform output terraform_drift_role_arn          # per env
+   ```
+2. **GitHub environment SECRETS** (Settings → Environments → staging + production):
+   - `AWS_DRIFT_ROLE_ARN` — the per-env output from step 1
+   - `TF_GOOGLE_CLIENT_ID`, `TF_GOOGLE_CLIENT_SECRET`, `TF_JWT_SECRET` — must match the
+     live values in each env's tfvars, or the SSM params show as false drift
+3. **GitHub environment VARIABLES** (non-secret, per env):
+   - `TF_SITE_DOMAIN` — staging `staging.hub.navapbc.com` / prod `hub.navapbc.com`
+   - `TF_ACM_CERTIFICATE_ARN` — each env's cert ARN (see its tfvars)
+   - `TF_SITE_URL` — staging `https://staging.hub.navapbc.com` / prod `https://hub.navapbc.com`
+4. Trigger once via **Actions → Terraform Drift → Run workflow** to confirm both envs
+   report "No drift".
