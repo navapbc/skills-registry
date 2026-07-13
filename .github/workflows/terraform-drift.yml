@@ -1,0 +1,87 @@
+name: Terraform Drift
+
+# Reads terraform state vs live AWS on a schedule so out-of-band drift is caught
+# in days, not the ~6 weeks that let the prod analytics table/env/grant silently
+# go missing (see terraform/PROD_STATE_REPAIR.md). Read-only: assumes the
+# terraform-drift role (ReadOnlyAccess) and never applies.
+
+on:
+  schedule:
+    - cron: '17 13 * * *' # daily 13:17 UTC
+  workflow_dispatch:
+
+permissions:
+  id-token: write # OIDC role assumption
+  contents: read
+
+jobs:
+  drift:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - env: staging
+            gh_environment: staging
+          - env: prod
+            gh_environment: production
+    name: Drift check (${{ matrix.env }})
+    runs-on: ubuntu-latest
+    environment: ${{ matrix.gh_environment }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '~> 1.7'
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DRIFT_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Terraform init (${{ matrix.env }} state)
+        working-directory: terraform
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=navapbc-skills-registry-tf-state" \
+            -backend-config="key=skills-registry/${{ matrix.env }}.tfstate" \
+            -backend-config="region=us-east-1"
+
+      - name: Terraform plan (drift check)
+        id: plan
+        working-directory: terraform
+        # -detailed-exitcode: 0 = no drift, 1 = error, 2 = drift.
+        # -lock=false: read-only, no state-lock write needed.
+        env:
+          TF_VAR_environment: ${{ matrix.env }}
+          TF_VAR_manage_shared_iam: ${{ matrix.env == 'staging' }}
+          # Non-secret, env-specific — set as GitHub environment VARIABLES:
+          TF_VAR_site_domain: ${{ vars.TF_SITE_DOMAIN }}
+          TF_VAR_acm_certificate_arn: ${{ vars.TF_ACM_CERTIFICATE_ARN }}
+          TF_VAR_site_url: ${{ vars.TF_SITE_URL }}
+          # Secret — set as GitHub environment SECRETS (must match live values,
+          # else the SSM parameters show as false drift):
+          TF_VAR_google_client_id: ${{ secrets.TF_GOOGLE_CLIENT_ID }}
+          TF_VAR_google_client_secret: ${{ secrets.TF_GOOGLE_CLIENT_SECRET }}
+          TF_VAR_jwt_secret: ${{ secrets.TF_JWT_SECRET }}
+        run: |
+          set +e
+          terraform plan -input=false -lock=false -detailed-exitcode -no-color | tee plan.txt
+          code=${PIPESTATUS[0]}
+          set -e
+          {
+            echo "## Terraform drift — ${{ matrix.env }}"
+            if [ "$code" = "0" ]; then
+              echo "✅ No drift. State matches live infrastructure."
+            elif [ "$code" = "2" ]; then
+              echo "⚠️ **Drift detected** — live infrastructure differs from state/config."
+              echo '```'
+              grep -E '^  # |^Plan:' plan.txt || true
+              echo '```'
+            else
+              echo "❌ Plan errored (exit $code) — check logs."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $code
