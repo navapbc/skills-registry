@@ -145,7 +145,7 @@ acm_certificate_arn  = "arn:aws:acm:us-east-1:..."  # from step 3
 google_client_id     = "..."                          # from step 4
 google_client_secret = "..."                          # from step 4
 jwt_secret           = ""                             # generate below
-create_oidc_provider = true                           # creates OIDC once
+create_oidc_provider = false                          # see OIDC note below
 site_url             = "https://staging.hub.navapbc.com"
 ```
 
@@ -157,7 +157,7 @@ acm_certificate_arn  = "arn:aws:acm:us-east-1:..."  # from step 3
 google_client_id     = "..."                          # same app, same values
 google_client_secret = "..."
 jwt_secret           = ""                             # generate separately below
-create_oidc_provider = false                          # already created by staging
+create_oidc_provider = false                          # see OIDC note below
 site_url             = "https://hub.navapbc.com"
 ```
 
@@ -165,6 +165,18 @@ Generate JWT secrets (use a different one per environment):
 ```bash
 openssl rand -hex 32  # run twice — one for staging, one for prod
 ```
+
+> **⚠️ `create_oidc_provider` — leave `false` in both files (normal case).**
+> The GitHub OIDC provider is **account-global** (one per account, keyed by URL) and **shared by staging and prod**. It is managed manually, out-of-band — not by Terraform. `false` makes the deploy roles resolve the existing provider's ARN by convention.
+>
+> Never toggle it after the fact: setting `true` when the provider exists fails with `EntityAlreadyExists`, and any later flip back to `false` (count 1→0) **destroys the shared provider and breaks OIDC deploys for both environments**. This has already happened once.
+>
+> **Only exception — a brand-new AWS account with no provider yet:** set `create_oidc_provider = true` in *one* environment for its first `apply` to create it, then immediately set it back to `false` and re-run `apply`. Afterwards it's manually managed. To bring it under Terraform later, `terraform import` it — do not toggle the flag.
+>
+> Verify whether the provider already exists before your first apply:
+> ```bash
+> aws iam list-open-id-connect-providers  # if token.actions.githubusercontent.com is listed, keep false
+> ```
 
 ---
 
