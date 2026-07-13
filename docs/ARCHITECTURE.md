@@ -126,7 +126,7 @@ On every request: reads `__session` cookie → verifies HS256 JWT → calls `get
 | Users | `GET /api/users/me`, `GET /api/users`, `PUT /api/users/me/favorites`, `PUT /api/users/me/installed`, `PUT /api/users/:id/role` |
 | Audit | `GET /api/audit`, `GET /api/audit/me` |
 | Admin | `GET /api/admin/skills` (pending queue), `GET /api/admin/analytics` (content analytics, admin-only) |
-| Events | `POST /api/events` (behavioral analytics ingest) |
+| Events | `POST /api/hub-log` (behavioral analytics ingest) |
 | Categories | `GET /api/categories` |
 
 ### Permission model
@@ -184,7 +184,7 @@ GSI `byResource`: enables "history of a skill" queries by `resource_key`.
 
 Append-only behavioral analytics, kept separate from `audit-log` so event volume never pollutes the security trail. Primary key: `user_id` + `event_key` (ISO timestamp + UUID).
 
-Events: `page_view`, `skill_view`, `search_query`, `filter_applied`. Captured client-side and POSTed to `/api/events`; `user_email` and `timestamp` are stamped server-side from the JWT (the client body carries only `event` + `props`). Key fields: `user_id`, `event_key`, `event`, `props`, `user_email`, `timestamp`.
+Events: `page_view`, `skill_view`, `search_query`, `filter_applied`. Captured client-side and POSTed to `/api/hub-log` (path avoids ad-blocker filter lists); `user_email` and `timestamp` are stamped server-side from the JWT (the client body carries only `event` + `props`). Key fields: `user_id`, `event_key`, `event`, `props`, `user_email`, `timestamp`.
 
 Raw rows expire ~200 days after write via DynamoDB TTL (attribute `ttl`, Unix-epoch seconds), bounding table size while covering the dashboard window. The admin dashboard reads aggregated content metrics (top skills, top searches, filter usage) over a rolling 28-day window via `GET /api/admin/analytics`.
 

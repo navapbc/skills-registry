@@ -25,7 +25,7 @@ import Base from '../../layouts/Base.astro';
 import { fetchApi } from '../../lib/api.mjs';
 import { renderSkillDetail, renderSkillGrid, escapeHtml } from '../../lib/render.mjs';
 import { isFavorited, toggleFavorite, initFavoriteButtons, addInstalled } from '../../lib/favorites.mjs';
-import { track, referrerSource, debounce } from '../../lib/analytics.mjs';
+import { track, referrerSource, debounce } from '../../lib/usage.mjs';
 
 const NAVA_N = `███╗   ██╗\n████╗  ██║\n██╔██╗ ██║\n██║╚██╗██║\n██║ ╚████║\n╚═╝  ╚═══╝`;
 function notFoundHtml(entity) {

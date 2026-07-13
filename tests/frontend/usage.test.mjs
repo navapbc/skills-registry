@@ -23,15 +23,15 @@ afterEach(() => {
 });
 
 async function load() {
-  return import('../../src/lib/analytics.mjs');
+  return import('../../src/lib/usage.mjs');
 }
 
 describe('track', () => {
-  it('sends via sendBeacon to /api/events and does not fall back to fetch', async () => {
+  it('sends via sendBeacon to /api/hub-log and does not fall back to fetch', async () => {
     const { track } = await load();
     track('page_view', { path: '/x' });
     expect(sendBeacon).toHaveBeenCalledOnce();
-    expect(sendBeacon.mock.calls[0][0]).toBe('/api/events');
+    expect(sendBeacon.mock.calls[0][0]).toBe('/api/hub-log');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -41,7 +41,7 @@ describe('track', () => {
     track('page_view', { path: '/x' });
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, opts] = fetchMock.mock.calls[0];
-    expect(url).toBe('/api/events');
+    expect(url).toBe('/api/hub-log');
     expect(opts.method).toBe('POST');
     expect(opts.keepalive).toBe(true);
     expect(JSON.parse(opts.body)).toEqual({ event: 'page_view', props: { path: '/x' } });
