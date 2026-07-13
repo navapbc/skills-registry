@@ -146,8 +146,8 @@ resource "aws_cloudfront_distribution" "site" {
     compress               = true
 
     # AWS managed CachingOptimized policy
-    cache_policy_id             = "658327ea-f89d-4fab-a63d-7e88639e58f6"
-    response_headers_policy_id  = aws_cloudfront_response_headers_policy.security.id
+    cache_policy_id            = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security.id
 
     function_association {
       event_type   = "viewer-request"
@@ -241,14 +241,14 @@ resource "aws_cloudfront_distribution" "site" {
 
   # Astro build output (_astro/ chunk files) - long cache, no auth penalty
   ordered_cache_behavior {
-    path_pattern           = "/_astro/*"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "s3"
-    viewer_protocol_policy = "redirect-to-https"
-    compress               = true
-    cache_policy_id                = "658327ea-f89d-4fab-a63d-7e88639e58f6"
-    response_headers_policy_id     = aws_cloudfront_response_headers_policy.security.id
+    path_pattern               = "/_astro/*"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    target_origin_id           = "s3"
+    viewer_protocol_policy     = "redirect-to-https"
+    compress                   = true
+    cache_policy_id            = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security.id
 
     function_association {
       event_type   = "viewer-request"

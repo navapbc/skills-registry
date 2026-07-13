@@ -303,19 +303,27 @@ export function adminRoutes(app) {
 
     const cutoff = new Date(Date.now() - ANALYTICS_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
+    // Reads mirror the ingest contract (see routes/events.mjs): a missing table
+    // (deploy-ordering window) or a transient scan failure must degrade to empty
+    // aggregates, never a 5xx that breaks the whole admin dashboard.
     const events = [];
-    let lastKey;
-    do {
-      const page = await ddb.send(new ScanCommand({
-        TableName: tables.analyticsEvents(),
-        FilterExpression: '#ts >= :cutoff',
-        ExpressionAttributeNames: { '#ts': 'timestamp' }, // `timestamp` is a DynamoDB reserved word
-        ExpressionAttributeValues: { ':cutoff': cutoff },
-        ...(lastKey && { ExclusiveStartKey: lastKey }),
-      }));
-      events.push(...(page.Items ?? []));
-      lastKey = page.LastEvaluatedKey;
-    } while (lastKey);
+    try {
+      let lastKey;
+      do {
+        const page = await ddb.send(new ScanCommand({
+          TableName: tables.analyticsEvents(),
+          FilterExpression: '#ts >= :cutoff',
+          ExpressionAttributeNames: { '#ts': 'timestamp' }, // `timestamp` is a DynamoDB reserved word
+          ExpressionAttributeValues: { ':cutoff': cutoff },
+          ...(lastKey && { ExclusiveStartKey: lastKey }),
+        }));
+        events.push(...(page.Items ?? []));
+        lastKey = page.LastEvaluatedKey;
+      } while (lastKey);
+    } catch (err) {
+      console.error('admin analytics scan failed', err);
+      return c.json({ ...aggregateAnalytics([]), window_days: ANALYTICS_WINDOW_DAYS, degraded: true });
+    }
 
     const agg = aggregateAnalytics(events);
     return c.json({ ...agg, window_days: ANALYTICS_WINDOW_DAYS });

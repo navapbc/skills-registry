@@ -20,8 +20,8 @@
 resource "aws_iam_openid_connect_provider" "github" {
   count = var.create_oidc_provider ? 1 : 0
 
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
+  url            = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
   # GitHub's OIDC thumbprint — stable, verified by AWS
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
 }
@@ -134,13 +134,21 @@ resource "aws_iam_role_policy" "github_deploy" {
 # GitHub Actions role. Prefer OIDC roles for automation — avoid storing
 # long-lived CLI keys in CI systems.
 # -------------------------------------------------------------------------
+# Account-global (no env suffix) — must be owned by exactly ONE environment's
+# state, gated by manage_shared_iam. If both staging and prod managed it, each
+# apply would rewrite the inline policy to its own env-scoped ARNs, flip-flopping
+# the group on every deploy. Staging is the owner by convention (see tfvars).
 resource "aws_iam_group" "github_automated_deploys" {
+  count = var.manage_shared_iam ? 1 : 0
+
   name = "github-automated-deploys"
   path = "/"
 }
 
 resource "aws_iam_group_policy" "github_automated_deploys" {
+  count = var.manage_shared_iam ? 1 : 0
+
   name   = "deploy-policy"
-  group  = aws_iam_group.github_automated_deploys.name
+  group  = aws_iam_group.github_automated_deploys[0].name
   policy = data.aws_iam_policy_document.github_deploy.json
 }
