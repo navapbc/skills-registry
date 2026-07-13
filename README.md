@@ -37,7 +37,7 @@ Browser → CloudFront (edge JWT check)
 
 ## Database (DynamoDB)
 
-Four tables per environment (`skills-registry-{table}-{env}`):
+Five tables per environment (`skills-registry-{table}-{env}`):
 
 | Table | What's stored |
 |---|---|
@@ -45,6 +45,7 @@ Four tables per environment (`skills-registry-{table}-{env}`):
 | `plugins` | Plugin groupings (e.g. a tool namespace containing multiple skills). Fields: `slug`, `name`, `description`, `repo`, `author`, `skills_count`, `status`, `visibility`. |
 | `users` | One record per authenticated user, created on first API call. Fields: `user_id` (email), `role` (user/maintain/admin), `name`, `avatar_url`, `favorites` (skill slugs), `installed`, `created_at`, `last_seen_at`. |
 | `audit-log` | Append-only log of create/update/delete/approve/reject/role-change events. Fields: `user_id`, `event_key` (ISO timestamp + UUID), `action`, `resource_type`, `resource_id`, `metadata`. |
+| `analytics-events` | Append-only behavioral events (`page_view`, `skill_view`, `search_query`, `filter_applied`). `user_email` and `timestamp` are stamped server-side. Fields: `user_id`, `event_key` (ISO timestamp + UUID), `event`, `props`, `user_email`, `timestamp`, `ttl`. Raw rows expire ~200 days after write (DynamoDB TTL). |
 
 **Not stored in DynamoDB:** JWT session state (stateless signed cookies), Google OAuth tokens (discarded after callback), raw GitHub file content beyond what's in the `content` field.
 
@@ -186,7 +187,12 @@ The sync runs every 4 hours. Trigger it manually from the Actions tab for immedi
 
 ## Local Development
 
+> **Always branch from `main`.** `main` is the single source of truth; `release` only ever fast-forwards from it (see [Branching & release model](docs/DEPLOY.md#branching--release-model)). Cutting a feature branch from `release` pulls in prod-only merge history and makes the eventual PR diff wrong.
+
 ```bash
+git checkout main && git pull      # start from an up-to-date main
+git checkout -b feat/my-change     # then branch
+
 pnpm install
 pnpm dev          # Astro dev server at http://localhost:4321
 pnpm sync:v2      # Sync GitHub org skills into DynamoDB (requires AWS + GITHUB_TOKEN)

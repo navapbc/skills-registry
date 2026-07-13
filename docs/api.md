@@ -246,6 +246,18 @@ Update a user's role. Admin only.
 
 Audit log with optional `?limit=N` (max 200, default 50). Admin only.
 
+### `GET /api/admin/analytics`
+
+Aggregated content analytics over a rolling 28-day window. Admin only. Returns `{ topSkills, topSearches, filterUsage, window_days }` — counts of skill views, searches (query + representative result count), and filter usage, each sorted by count.
+
+---
+
+## Analytics
+
+### `POST /api/hub-log`
+
+Behavioral analytics ingest. Body: `{ event, props }` where `event` is one of `page_view`, `skill_view`, `search_query`, `filter_applied`. `user_email` and `timestamp` are stamped server-side from the session — client-supplied identity is ignored. Unknown event names return 400; write failures are swallowed and still return `204` (best-effort). Any authenticated user may call it. (Path avoids `events`/`analytics` so ad blockers don't drop the request.)
+
 ---
 
 ## Skill object reference

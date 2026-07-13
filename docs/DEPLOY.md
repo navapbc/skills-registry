@@ -33,6 +33,31 @@ Browser → CloudFront (edge JWT check)
 
 ---
 
+## Branching & release model
+
+We use **continuous deployment**: `main` is always kept stable and deployable, and `release` is simply a **pointer to the `main` commit that is currently in production**. There are no long-lived version branches — we rarely need to support multiple older versions at once.
+
+**`release` is only ever fast-forwarded from `main`.** It carries no commits of its own. Cutting a release moves the `release` branch to a chosen, known-good `main` commit:
+
+```bash
+git fetch origin
+git checkout release
+git merge --ff-only origin/main   # fast-forward release up to main
+git push origin release           # triggers the prod deploy (with approval)
+```
+
+If `git merge --ff-only` fails, `release` has diverged from `main` (someone committed directly to `release`) — stop and reconcile rather than force-pushing. The workflow below assumes that never happens.
+
+**Why this model:**
+- **Simplicity** — releasing is just moving a branch pointer (or tagging); no cherry-picking or release branches to maintain.
+- **Traceability** — every `release` commit *is* a `main` commit, so it is always obvious which `main` state is in production (`git diff main release` is empty on a fresh release).
+
+**Rule: never commit directly to `release`.** All changes — including hotfixes — land on `main` first (via PR), then flow to `release` by fast-forward. This keeps `main` the single source of truth and guarantees prod can never contain code that isn't already on `main`. (A true emergency hotfix that must bypass `main` is a deliberate exception, not the workflow; back-merge it to `main` immediately.)
+
+> **Reminder: always create feature branches from `main`, never from `release`.** Branching from `release` pulls prod-only merge commits into your branch and produces a misleading PR diff. Start every branch with `git checkout main && git pull` first.
+
+---
+
 ## First-time deploy
 
 Work through these sections in order. Some steps have dependencies on outputs from earlier steps.
@@ -120,7 +145,7 @@ acm_certificate_arn  = "arn:aws:acm:us-east-1:..."  # from step 3
 google_client_id     = "..."                          # from step 4
 google_client_secret = "..."                          # from step 4
 jwt_secret           = ""                             # generate below
-create_oidc_provider = true                           # creates OIDC once
+create_oidc_provider = false                          # see OIDC note below
 site_url             = "https://staging.hub.navapbc.com"
 ```
 
@@ -132,7 +157,7 @@ acm_certificate_arn  = "arn:aws:acm:us-east-1:..."  # from step 3
 google_client_id     = "..."                          # same app, same values
 google_client_secret = "..."
 jwt_secret           = ""                             # generate separately below
-create_oidc_provider = false                          # already created by staging
+create_oidc_provider = false                          # see OIDC note below
 site_url             = "https://hub.navapbc.com"
 ```
 
@@ -140,6 +165,18 @@ Generate JWT secrets (use a different one per environment):
 ```bash
 openssl rand -hex 32  # run twice — one for staging, one for prod
 ```
+
+> **⚠️ `create_oidc_provider` — leave `false` in both files (normal case).**
+> The GitHub OIDC provider is **account-global** (one per account, keyed by URL) and **shared by staging and prod**. It is managed manually, out-of-band — not by Terraform. `false` makes the deploy roles resolve the existing provider's ARN by convention.
+>
+> Never toggle it after the fact: setting `true` when the provider exists fails with `EntityAlreadyExists`, and any later flip back to `false` (count 1→0) **destroys the shared provider and breaks OIDC deploys for both environments**. This has already happened once.
+>
+> **Only exception — a brand-new AWS account with no provider yet:** set `create_oidc_provider = true` in *one* environment for its first `apply` to create it, then immediately set it back to `false` and re-run `apply`. Afterwards it's manually managed. To bring it under Terraform later, `terraform import` it — do not toggle the flag.
+>
+> Verify whether the provider already exists before your first apply:
+> ```bash
+> aws iam list-open-id-connect-providers  # if token.actions.githubusercontent.com is listed, keep false
+> ```
 
 ---
 
@@ -186,19 +223,24 @@ You'll get:
 
 ### 8. Terraform apply — prod
 
+Staging and prod share the same `terraform/` directory but use different state files (`staging.tfstate` vs `prod.tfstate`). Terraform caches the last backend in `.terraform/`, so **every time you switch environments in the same directory you must re-init with `-reconfigure`** — including when switching back to staging later. Without it, `init` errors on the backend change; worse, skipping init entirely runs `apply` against the wrong environment.
+
 From the `terraform/` directory:
 
 ```bash
-terraform init \
+terraform init -reconfigure \
   -backend-config="bucket=navapbc-skills-registry-tf-state" \
   -backend-config="key=skills-registry/prod.tfstate" \
-  -backend-config="region=us-east-1" \
-  -reconfigure
+  -backend-config="region=us-east-1"
 
 terraform apply -var-file=terraform.prod.tfvars
 ```
 
+Before every `apply`, confirm you're on the intended environment: run `terraform plan` and check resource names carry the right suffix (`-staging` vs `-prod`).
+
 Capture prod outputs the same way. Add the prod `oauth_redirect_uri` to Google Cloud Console.
+
+> **Switching back to staging?** Re-run the step 6 `init` with `-reconfigure` added and the `staging.tfstate` key before applying.
 
 ---
 

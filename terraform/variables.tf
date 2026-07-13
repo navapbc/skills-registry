@@ -70,9 +70,9 @@ variable "github_repo" {
 }
 
 variable "create_oidc_provider" {
-  description = "Create the GitHub OIDC provider in this account. Set to false if another project already created it."
+  description = "Create the account-global GitHub OIDC provider. Keep false: the provider is shared by staging+prod and managed manually out-of-band. Flipping to true fails if it already exists, and any later count 1->0 destroys it for both envs. See iam.tf. Import instead of toggling."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "site_url" {
