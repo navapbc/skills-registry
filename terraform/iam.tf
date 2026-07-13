@@ -1,7 +1,21 @@
 # -------------------------------------------------------------------------
 # GitHub Actions OIDC — allows GitHub to assume AWS roles without stored keys.
-# One OIDC provider per AWS account. Set create_oidc_provider = false if one
-# already exists in this account (e.g., from another project).
+#
+# The provider is account-global: exactly one per account keyed by URL
+# (token.actions.githubusercontent.com). It is shared by BOTH staging and prod
+# deploy roles.
+#
+# GUARD — do NOT flip create_oidc_provider to true. It is intentionally false in
+# every environment because the provider is managed manually (out-of-band), not
+# by Terraform. Consequences of flipping it on:
+#   - true when the provider already exists → apply fails with EntityAlreadyExists.
+#   - true then later back to false (or count 1->0 in any apply) → Terraform
+#     DESTROYS the shared provider, breaking OIDC deploys for staging AND prod.
+# This exact deletion has already happened once. To let Terraform manage it
+# again, `terraform import` it instead of toggling this flag.
+#
+# When false, the role trust below resolves the provider ARN by convention
+# (see local.oidc_provider_arn), so deploys work without Terraform owning it.
 # -------------------------------------------------------------------------
 resource "aws_iam_openid_connect_provider" "github" {
   count = var.create_oidc_provider ? 1 : 0

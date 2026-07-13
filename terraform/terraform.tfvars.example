@@ -24,8 +24,11 @@ jwt_secret = "REPLACE_WITH_32_CHAR_SECRET"
 github_org  = "navapbc"
 github_repo = "skills-registry"
 
-# Set to false if another project in this AWS account already created
-# the GitHub OIDC provider — only one is allowed per account.
+# Keep this false. The GitHub OIDC provider is account-global (one per account),
+# shared by both staging and prod, and managed manually out-of-band — not by
+# Terraform. Do NOT set true: it fails if the provider exists, and any later
+# flip back destroys it for both environments, breaking all OIDC deploys.
+# To let Terraform manage it, `terraform import` it instead. See iam.tf.
 create_oidc_provider = false
 
 # --- Access control ---
