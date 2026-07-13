@@ -75,6 +75,12 @@ variable "create_oidc_provider" {
   default     = false
 }
 
+variable "manage_shared_iam" {
+  description = "Own the account-global, non-env-suffixed IAM resources (the github-automated-deploys group + its policy) in this environment's state. Exactly ONE environment may set this true, else two states double-manage the same group and flip its inline policy on every apply. Staging is the owner by convention; prod keeps this false. Same shared-resource hazard as create_oidc_provider — see iam.tf."
+  type        = bool
+  default     = false
+}
+
 variable "site_url" {
   description = "Full URL of the CloudFront distribution (e.g. https://abc123.cloudfront.net). Required to break the circular dependency between Lambda and CloudFront."
   type        = string
