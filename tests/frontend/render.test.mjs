@@ -296,6 +296,17 @@ describe('renderNewThisWeek', () => {
     const linkCount = (html.match(/href="\/skills\//g) || []).length;
     expect(linkCount).toBeLessThanOrEqual(3);
   });
+
+  it('labels a new skill with its category (via s.category, not slugs)', () => {
+    const html = renderNewThisWeek(catSkills, CATEGORIES); // catSkills[0].category = write-and-review
+    expect(html).toContain('Write &amp; Review');
+  });
+
+  it('renders no category label for an uncategorized new skill', () => {
+    const uncategorized = [{ ...catSkills[0], category: '', last_updated: new Date().toISOString() }];
+    const html = renderNewThisWeek(uncategorized, CATEGORIES);
+    expect(html).not.toContain('Write &amp; Review');
+  });
 });
 
 describe('renderCategoryDetail', () => {

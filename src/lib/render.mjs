@@ -467,13 +467,13 @@ export function renderNewThisWeek(allSkills, categories) {
 
   if (!newSkills.length) return '';
 
-  function getCategoryLabel(slug) {
-    const cat = categories.find(c => c.slugs.includes(slug));
+  function getCategoryLabel(skill) {
+    const cat = categories.find(c => c.id === skill.category);
     return cat ? cat.label : '';
   }
 
   const cards = newSkills.map(skill => {
-    const catLabel = getCategoryLabel(skill.slug);
+    const catLabel = getCategoryLabel(skill);
     return `
       <a href="/skills/${escapeHtml(skill.slug)}"
          class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-1 no-underline hover:border-gray-300 transition-colors">
