@@ -102,6 +102,22 @@ describe('renderSkillCard', () => {
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
   });
+
+  it('does not show committer avatar when author_name is set (org-wide skill)', () => {
+    const orgWide = {
+      ...baseSkill,
+      source: 'enterprise',
+      author_name: 'Michelle Thong',
+      committer: { login: 'yoom', name: 'Yoom', avatar_url: 'https://avatars.example.com/yoom' },
+    };
+    const html = renderSkillCard(orgWide);
+    // The committer (last pusher) avatar must NOT stand in for the author.
+    expect(html).not.toContain('https://avatars.example.com/yoom');
+    expect(html).not.toContain('data-github-url="https://github.com/yoom"');
+    // Falls back to the author's initial-letter avatar and name.
+    expect(html).toContain('Michelle Thong');
+    expect(html).toContain('>M</span>');
+  });
 });
 
 describe('renderSkillDetail', () => {
