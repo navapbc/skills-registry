@@ -4,7 +4,7 @@ version: "2.0"
 author: sha@navapbc.com
 author_name: Sha Hwang
 team: Executive
-category: planning
+category: write-and-review
 compatibility: [claude-chat, claude-cowork]
 description: >
   Generate a Nava-format change management plan from a proposal or initiative description.

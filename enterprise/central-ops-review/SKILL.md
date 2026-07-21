@@ -1,5 +1,6 @@
 ---
 name: central-ops-review
+category: team-automations
 description: >
   Run the Central Ops Workflow intake review. Reads all unreviewed
   submissions from the Intake tab (empty Status column), scores each

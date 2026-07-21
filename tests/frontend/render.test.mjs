@@ -228,11 +228,11 @@ const catSkills = [
 describe('renderCategoryGrid', () => {
   it('renders a card for each category', () => {
     const html = renderCategoryGrid(CATEGORIES, catSkills);
-    expect(html).toContain('Writing &amp; Comms');
-    expect(html).toContain('Research &amp; Analysis');
-    expect(html).toContain('Planning');
-    expect(html).toContain('Dev &amp; Code');
-    expect(html).toContain('Ops &amp; Automation');
+    expect(html).toContain('Write &amp; Review');
+    expect(html).toContain('Research &amp; Analyze');
+    expect(html).toContain('Personal Productivity');
+    expect(html).toContain('Build &amp; Ship');
+    expect(html).toContain('Team Automations');
   });
 
   it('shows curated skill names in the correct card', () => {
@@ -249,7 +249,7 @@ describe('renderCategoryGrid', () => {
 
   it('does not show "new" badge on old skills', () => {
     const html = renderCategoryGrid(CATEGORIES, catSkills);
-    const researchSection = html.split('Research &amp; Analysis')[1]?.split('Planning')[0] || '';
+    const researchSection = html.split('Research &amp; Analyze')[1]?.split('Personal Productivity')[0] || '';
     expect(researchSection).not.toContain('>new<');
   });
 
@@ -261,7 +261,7 @@ describe('renderCategoryGrid', () => {
 
   it('skips curated slugs not in allSkills without erroring', () => {
     const html = renderCategoryGrid(CATEGORIES, []);
-    expect(html).toContain('Writing &amp; Comms');
+    expect(html).toContain('Write &amp; Review');
     expect(html).not.toContain('undefined');
   });
 });
@@ -290,11 +290,17 @@ describe('renderNewThisWeek', () => {
 });
 
 describe('renderCategoryDetail', () => {
-  const cat = CATEGORIES[0]; // writing-comms, has nava-labs-style in slugs
+  const cat = CATEGORIES[0]; // write-and-review, has nava-labs-style in slugs
 
   it('renders the category label', () => {
     const html = renderCategoryDetail(cat, catSkills);
-    expect(html).toContain('Writing &amp; Comms');
+    expect(html).toContain('Write &amp; Review');
+  });
+
+  it('renders the hero description and applies the accent color', () => {
+    const html = renderCategoryDetail(cat, catSkills);
+    expect(html).toContain(escapeHtml(cat.heroDescription));
+    expect(html).toContain(cat.accentColor);
   });
 
   it('renders a skill card for each skill in the category', () => {
@@ -364,7 +370,7 @@ describe('renderSkillCard — org-wide badge', () => {
   const enterprise = {
     slug: 'daily-briefing', name: 'Daily Briefing', description: 'Briefing skill',
     plugin: 'skills-registry', author: 'Nava Ops', compatibility: ['claude-desktop'],
-    type: 'skill', source: 'enterprise', tags: [], category: 'ops-automation',
+    type: 'skill', source: 'enterprise', tags: [], category: 'team-automations',
   };
   it('shows Org-wide badge for enterprise source', () => {
     const html = renderSkillCard(enterprise);
@@ -378,9 +384,9 @@ describe('renderSkillCard — org-wide badge', () => {
 });
 
 describe('renderCategoryGrid — enterprise auto-feature', () => {
-  const cats = [{ id: 'ops-automation', label: 'Ops', borderColor: '#ccc', textColor: '#333', featuredSlugs: [], slugs: ['retro'] }];
+  const cats = [{ id: 'team-automations', label: 'Team Automations', borderColor: '#ccc', textColor: '#333', featuredSlugs: [], slugs: ['retro'] }];
   const retro = { slug: 'retro', name: 'Retro', description: 'Retro skill', source: 'github', type: 'skill', category: '' };
-  const orgSkill = { slug: 'daily-briefing', name: 'Daily Briefing', description: 'Briefing', source: 'enterprise', type: 'skill', category: 'ops-automation' };
+  const orgSkill = { slug: 'daily-briefing', name: 'Daily Briefing', description: 'Briefing', source: 'enterprise', type: 'skill', category: 'team-automations' };
 
   it('auto-features enterprise skills in their category', () => {
     const html = renderCategoryGrid(cats, [retro, orgSkill]);
@@ -394,7 +400,7 @@ describe('renderCategoryGrid — enterprise auto-feature', () => {
   });
 
   it('enterprise skills not in wrong category', () => {
-    const wrongCat = [{ id: 'planning', label: 'Planning', borderColor: '#ccc', textColor: '#333', featuredSlugs: [], slugs: [] }];
+    const wrongCat = [{ id: 'personal-productivity', label: 'Personal Productivity', borderColor: '#ccc', textColor: '#333', featuredSlugs: [], slugs: [] }];
     const html = renderCategoryGrid(wrongCat, [orgSkill]);
     expect(html).not.toContain('Daily Briefing');
   });

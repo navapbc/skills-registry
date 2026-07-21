@@ -4,7 +4,7 @@ version: "1.0"
 author: michellethong@navapbc.com
 author_name: Michelle Thong
 team: Practice - Product Management
-category: planning
+category: personal-productivity
 compatibility: [claude-chat, claude-cowork]
 description: >
  Run a fast daily briefing to orient any Nava employee to their day. Pulls calendar and Slack signals in parallel and delivers a tight, 1–2 minute summary — meeting density, prep needs, urgent Slack items. Triggers when the user says "morning briefing", "daily briefing", "good morning", "what's on my plate today", "start my day", or opens a session with a short, open-ended, greeting-like first message. Invoke proactively at the start of a workday session when no specific task is given.

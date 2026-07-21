@@ -23,7 +23,7 @@ Create a folder and file: `enterprise/your-skill-name/SKILL.md`
 
 | Field | Default if omitted | Notes |
 |---|---|---|
-| `category` | *(empty — skill won't appear in homepage grids)* | One of: `writing-comms`, `research-analysis`, `planning`, `dev-code`, `ops-automation`. Set this or the skill is invisible on the homepage. |
+| `category` | *(empty — skill won't appear in homepage grids)* | One of: `personal-productivity`, `research-and-analyze`, `write-and-review`, `team-automations`, `build-and-ship`. Set this or the skill is invisible on the homepage. |
 | `compatibility` | `[claude-code]` | **Must set this for enterprise skills.** The default `claude-code` is wrong for tools meant for Claude Desktop/Chat. Use `[claude-chat, claude-cowork]` for most enterprise skills. |
 
 ### Optional
@@ -72,7 +72,7 @@ description: >
   meeting density, prep needs, urgent Slack items. Triggers when the user
   says "morning briefing", "daily briefing", "good morning", or "what's on
   my plate today".
-category: ops-automation
+category: personal-productivity
 compatibility:
   - claude-chat
   - claude-cowork

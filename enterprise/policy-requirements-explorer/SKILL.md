@@ -1,5 +1,6 @@
 ---
 name: policy-requirements-explorer
+category: research-and-analyze
 description: >
   Input policy document (links or downloads) to generate a flowchart, service
   blueprint, and plain list of all policy-based delivery requirements. Best
