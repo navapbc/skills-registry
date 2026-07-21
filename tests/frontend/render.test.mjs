@@ -299,8 +299,8 @@ describe('renderCategoryDetail', () => {
 
   it('renders the hero description and applies the accent color', () => {
     const html = renderCategoryDetail(cat, catSkills);
-    expect(html).toContain(escapeHtml(cat.heroDescription));
-    expect(html).toContain(cat.accentColor);
+    expect(html).toContain(escapeHtml(cat.hero_description));
+    expect(html).toContain(cat.accent_color);
   });
 
   it('renders a skill card for each skill in the category', () => {

@@ -196,7 +196,7 @@ The current user's audit events. Returns up to 100 most recent events.
 
 ### `GET /api/categories`
 
-Returns the 5 homepage categories (`personal-productivity`, `research-and-analyze`, `write-and-review`, `team-automations`, `build-and-ship`) with their `featuredSlugs` and metadata (`subtitle`, `heroDescription`, `accentColor`, `icon`). Used by the homepage grid. No special role required beyond authentication.
+Returns the 5 homepage categories (`personal-productivity`, `research-and-analyze`, `write-and-review`, `team-automations`, `build-and-ship`) with their `featuredSlugs` and metadata (`subtitle`, `hero_description`, `accent_color`, `icon`). Used by the homepage grid. No special role required beyond authentication.
 
 ### `GET /api/admin/queue`
 
