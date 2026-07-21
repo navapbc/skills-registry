@@ -299,39 +299,62 @@ describe('renderNewThisWeek', () => {
 });
 
 describe('renderCategoryDetail', () => {
-  const cat = CATEGORIES[0]; // write-and-review, has nava-labs-style in slugs
+  const cat = CATEGORIES[0]; // write-and-review; catSkills[0] has category write-and-review
+  const tagged = [
+    { ...catSkills[0], tags: ['docs', 'writing'] },
+    { slug: 'ux-writing', name: 'UX Writing', description: 'Microcopy', author: 'nava', type: 'skill', compatibility: ['claude-chat'], category: 'write-and-review', tags: ['writing'] },
+  ];
 
-  it('renders the category label', () => {
+  it('renders a Marketplace breadcrumb with the category label', () => {
     const html = renderCategoryDetail(cat, catSkills);
+    expect(html).toContain('href="/"');
+    expect(html).toContain('Marketplace');
     expect(html).toContain('Write &amp; Review');
   });
 
-  it('renders the hero description and applies the accent color', () => {
+  it('renders the hero with icon, description and skill count', () => {
     const html = renderCategoryDetail(cat, catSkills);
+    expect(html).toContain('<svg'); // category icon
     expect(html).toContain(escapeHtml(cat.hero_description));
+    expect(html).toContain('1 skill in this category');
     expect(html).toContain(cat.accent_color);
   });
 
-  it('renders a skill card for each skill in the category', () => {
+  it('filters membership by s.category === cat.id and renders full-width rows', () => {
     const html = renderCategoryDetail(cat, catSkills);
+    expect(html).toContain('data-skill-row');
     expect(html).toContain('href="/skills/nava-labs-style"');
+    expect(html).toContain('Writing style guide'); // full description, untruncated
+    expect(html).not.toContain('href="/skills/diagram"'); // research-and-analyze skill excluded
   });
 
-  it('renders empty state when no skills match', () => {
-    const html = renderCategoryDetail(cat, []);
-    expect(html).toContain('No skills in this category yet');
+  it('renders a tag filter bar from the union of skill tags', () => {
+    const html = renderCategoryDetail(cat, tagged);
+    expect(html).toContain('data-tag-filter');
+    expect(html).toContain('>All<');
+    expect(html).toContain('data-tag="docs"');
+    expect(html).toContain('data-tag="writing"');
   });
 
-  it('renders featured section when featuredSlugs has entries', () => {
-    const catWithFeatured = { ...cat, featuredSlugs: ['nava-labs-style'], slugs: ['nava-labs-style'] };
-    const html = renderCategoryDetail(catWithFeatured, catSkills);
-    expect(html).toContain('Featured');
+  it('omits the tag filter bar when no skill has tags', () => {
+    const html = renderCategoryDetail(cat, catSkills); // catSkills[0] has no tags
+    expect(html).not.toContain('data-tag-filter');
   });
 
-  it('does not render featured section when featuredSlugs is empty', () => {
-    const catNoFeatured = { ...cat, featuredSlugs: [] };
-    const html = renderCategoryDetail(catNoFeatured, catSkills);
-    expect(html).not.toContain('Featured');
+  it('renders the contribution prompt with category copy and a /contribute CTA', () => {
+    const html = renderCategoryDetail(cat, catSkills);
+    expect(html).toContain(escapeHtml(cat.contribution_prompt));
+    expect(html).toContain('Submit a skill idea');
+    expect(html).toContain('href="/contribute"');
+  });
+
+  it('empty state: hero + contribution prompt only, no filter bar or list', () => {
+    const empty = CATEGORIES.find(c => c.id === 'build-and-ship');
+    const html = renderCategoryDetail(empty, catSkills); // no build-and-ship skills in fixture
+    expect(html).toContain('0 skills in this category');
+    expect(html).toContain('Submit a skill idea');
+    expect(html).not.toContain('data-tag-filter');
+    expect(html).not.toContain('data-skill-list');
   });
 });
 
