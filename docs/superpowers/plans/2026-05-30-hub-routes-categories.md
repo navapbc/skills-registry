@@ -1,5 +1,12 @@
 # Hub Routes & Category Expansion Plan
 
+> ⚠️ **Historical — partially superseded.** The category **membership** model
+> here (the `slugs[]` / `curatedSlugs` arrays and `renderCategoryGrid`'s featured
+> section) was retired in PR #39 (P0-2, issue #33). Membership is now driven by
+> each skill's `category` field (`s.category === cat.id`); `slugs[]` is gone. For
+> the current model see [Categories & Featured Skills — Data Model](../../categories-data-model.md).
+> The routes and `featuredSlugs` storage described below are still accurate.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Expand the hub with full category assignments for all skills, featured enterprise skill slots, new `/skills`, `/agents`, and `/category/[slug]` routes, and a homepage preview mode that links to those routes.

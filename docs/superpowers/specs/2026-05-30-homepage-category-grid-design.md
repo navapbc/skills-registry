@@ -1,5 +1,11 @@
 # Homepage Category Grid Design
 
+> ⚠️ **Historical — superseded.** This describes the original category-card grid
+> with `curatedSlugs`-based membership. PR #39 (P0-2, issue #33) replaced the grid
+> with `renderCategoryTiles` and made membership driven by each skill's `category`
+> field (`s.category === cat.id`), retiring the curated-slug arrays. For the
+> current model see [Categories & Featured Skills — Data Model](../../categories-data-model.md).
+
 **Date:** 2026-05-30  
 **Status:** Approved  
 **Scope:** Add a 5-category grid section ABOVE the existing Skills/Agents/Plugins browse sections on the homepage. The grid surfaces curated enterprise skills by use case for a non-technical audience, without removing the existing engineer-facing browse experience.
