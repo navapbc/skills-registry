@@ -25,12 +25,21 @@ function formatDateShort(iso) {
   return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// Tailwind (rem) sizes keyed by the `size` token. Sizing is emitted as inline
+// styles, not `w-${size}` utility classes: those are built by string
+// interpolation, so Tailwind's scanner never sees them and won't generate the
+// CSS unless the literal happens to appear elsewhere. Inline styles keep the
+// avatar sized regardless of what other files contain.
+const AVATAR_REM = { '5': '1.25rem', '6': '1.5rem', '8': '2rem' };
+
 function avatarHtml(displayName, avatarUrl, size = '5') {
   const initial = (displayName || '?').slice(0, 1).toUpperCase();
+  const dim = AVATAR_REM[size] || AVATAR_REM['5'];
+  const sizeStyle = `width:${dim};height:${dim}`;
   if (avatarUrl) {
-    return `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(displayName)}" class="w-${size} h-${size} rounded-full flex-shrink-0" />`;
+    return `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(displayName)}" style="${sizeStyle};object-fit:cover" class="rounded-full flex-shrink-0" />`;
   }
-  return `<span class="w-${size} h-${size} rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0">${escapeHtml(initial)}</span>`;
+  return `<span style="${sizeStyle}" class="rounded-full bg-plum-100 text-plum-700 text-xs font-semibold flex items-center justify-center flex-shrink-0">${escapeHtml(initial)}</span>`;
 }
 
 // A frontmatter-provided submitter identity (author_name + email, e.g. from the

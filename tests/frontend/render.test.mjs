@@ -96,6 +96,18 @@ describe('renderSkillCard', () => {
     expect(html).toContain('data-github-url="https://github.com/cory"');
   });
 
+  it('sizes the avatar with an inline dimension, not a w-${size} class', () => {
+    const withCommitter = {
+      ...baseSkill,
+      committer: { login: 'cory', name: 'Cory', avatar_url: 'https://avatars.example.com/cory' },
+    };
+    const html = renderSkillCard(withCommitter);
+    // Interpolated `w-5`/`h-5` classes are invisible to Tailwind's scanner, so
+    // the CSS may not exist — sizing must be inline to stay robust.
+    expect(html).toContain('width:1.25rem;height:1.25rem');
+    expect(html).not.toContain('w-5 h-5');
+  });
+
   it('escapes XSS in name', () => {
     const xss = { ...baseSkill, name: '<script>alert(1)</script>' };
     const html = renderSkillCard(xss);
