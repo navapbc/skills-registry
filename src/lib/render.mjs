@@ -555,8 +555,9 @@ export function renderCategoryDetail(category, allSkills) {
     <a href="/" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-6 transition-colors">
       &larr; Back to hub
     </a>
-    <div class="mb-8" style="border-left:4px solid ${escapeHtml(category.borderColor)};padding-left:12px">
+    <div class="mb-8" style="border-left:4px solid ${escapeHtml(category.accentColor || category.borderColor)};padding-left:12px">
       <h1 class="text-2xl font-bold text-gray-900 m-0">${escapeHtml(category.label)}</h1>
+      ${category.heroDescription ? `<p class="text-sm text-gray-600 mt-2 m-0">${escapeHtml(category.heroDescription)}</p>` : ''}
       <p class="text-sm text-gray-500 mt-1 m-0">${skills.length} skill${skills.length !== 1 ? 's' : ''}</p>
     </div>
     ${featuredSection}

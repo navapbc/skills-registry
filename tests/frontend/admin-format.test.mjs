@@ -7,10 +7,10 @@ import {
 
 describe('catLabel', () => {
   it('maps a known id to its label', () => {
-    expect(catLabel('dev-code')).toBe('Dev & Code');
+    expect(catLabel('build-and-ship')).toBe('Build & Ship');
   });
   it('accepts an array and uses the first element', () => {
-    expect(catLabel(['planning'])).toBe('Planning');
+    expect(catLabel(['personal-productivity'])).toBe('Personal Productivity');
   });
   it('falls back to the raw id when unknown', () => {
     expect(catLabel('mystery')).toBe('mystery');
@@ -23,9 +23,9 @@ describe('catLabel', () => {
 
 describe('catSelectOptions', () => {
   it('marks the current category selected', () => {
-    const html = catSelectOptions('planning');
-    expect(html).toContain('<option value="planning" selected>Planning</option>');
-    expect(html).toContain('<option value="dev-code" >Dev &amp; Code</option>');
+    const html = catSelectOptions('personal-productivity');
+    expect(html).toContain('<option value="personal-productivity" selected>Personal Productivity</option>');
+    expect(html).toContain('<option value="build-and-ship" >Build &amp; Ship</option>');
   });
   it('renders one option per category', () => {
     expect(catSelectOptions('').match(/<option/g).length).toBe(SKILL_CATEGORIES.length);

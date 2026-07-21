@@ -63,8 +63,28 @@ describe('GET /api/categories', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.categories).toHaveLength(5);
-    expect(body.categories[0].id).toBe('writing-comms');
+    expect(body.categories[0].id).toBe('personal-productivity');
     expect(body.categories[0].featuredSlugs).toEqual([]);
+  });
+
+  it('includes metadata fields for every category', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: USER_RECORD })   // auth
+      .mockResolvedValueOnce({ Responses: {} });       // BatchGetCommand
+
+    const res = await app.request('/api/categories', {
+      headers: { Cookie: makeSessionCookie() },
+    });
+    const body = await res.json();
+    for (const cat of body.categories) {
+      expect(typeof cat.subtitle).toBe('string');
+      expect(cat.subtitle.length).toBeGreaterThan(0);
+      expect(typeof cat.heroDescription).toBe('string');
+      expect(cat.heroDescription.length).toBeGreaterThan(0);
+      expect(cat.accentColor).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(typeof cat.icon).toBe('string');
+      expect(cat.icon.length).toBeGreaterThan(0);
+    }
   });
 
   it('merges DDB featuredSlugs override', async () => {
@@ -72,7 +92,7 @@ describe('GET /api/categories', () => {
       .mockResolvedValueOnce({ Item: USER_RECORD })
       .mockResolvedValueOnce({
         Responses: {
-          'undefined': [{ slug: 'category::dev-code', featuredSlugs: ['fix-bug', 'test'] }],
+          'undefined': [{ slug: 'category::build-and-ship', featuredSlugs: ['fix-bug', 'test'] }],
         },
       });
 
@@ -80,8 +100,8 @@ describe('GET /api/categories', () => {
       headers: { Cookie: makeSessionCookie() },
     });
     const body = await res.json();
-    const devCode = body.categories.find(c => c.id === 'dev-code');
-    expect(devCode.featuredSlugs).toEqual(['fix-bug', 'test']);
+    const buildShip = body.categories.find(c => c.id === 'build-and-ship');
+    expect(buildShip.featuredSlugs).toEqual(['fix-bug', 'test']);
   });
 });
 
@@ -192,7 +212,7 @@ describe('PUT /api/admin/categories/:id/featured', () => {
   it('returns 403 for user role', async () => {
     mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
 
-    const res = await app.request('/api/admin/categories/dev-code/featured', {
+    const res = await app.request('/api/admin/categories/build-and-ship/featured', {
       method: 'PUT',
       headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ featuredSlugs: ['fix-bug'] }),
@@ -217,7 +237,7 @@ describe('PUT /api/admin/categories/:id/featured', () => {
       .mockResolvedValueOnce({})  // PutCommand
       .mockResolvedValueOnce({}); // writeAudit
 
-    const res = await app.request('/api/admin/categories/dev-code/featured', {
+    const res = await app.request('/api/admin/categories/build-and-ship/featured', {
       method: 'PUT',
       headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
       body: JSON.stringify({ featuredSlugs: ['fix-bug', 'test'] }),
@@ -508,7 +528,7 @@ describe('PUT /api/admin/categories/:id/featured — body validation', () => {
   it('returns 400 when featuredSlugs is missing', async () => {
     mockSend.mockResolvedValueOnce({ Item: MAINTAIN_RECORD });
 
-    const res = await app.request('/api/admin/categories/dev-code/featured', {
+    const res = await app.request('/api/admin/categories/build-and-ship/featured', {
       method: 'PUT',
       headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
       body: JSON.stringify({ other: 'field' }),
@@ -519,7 +539,7 @@ describe('PUT /api/admin/categories/:id/featured — body validation', () => {
   it('returns 400 when featuredSlugs is not an array', async () => {
     mockSend.mockResolvedValueOnce({ Item: MAINTAIN_RECORD });
 
-    const res = await app.request('/api/admin/categories/dev-code/featured', {
+    const res = await app.request('/api/admin/categories/build-and-ship/featured', {
       method: 'PUT',
       headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
       body: JSON.stringify({ featuredSlugs: 'not-an-array' }),

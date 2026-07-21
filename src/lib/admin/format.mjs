@@ -2,11 +2,11 @@ import { escapeHtml } from '../render.mjs';
 
 export const SKILL_CATEGORIES = [
   { id: '', label: '— none —' },
-  { id: 'writing-comms', label: 'Writing & Comms' },
-  { id: 'research-analysis', label: 'Research & Analysis' },
-  { id: 'planning', label: 'Planning' },
-  { id: 'dev-code', label: 'Dev & Code' },
-  { id: 'ops-automation', label: 'Ops & Automation' },
+  { id: 'personal-productivity', label: 'Personal Productivity' },
+  { id: 'research-and-analyze', label: 'Research & Analyze' },
+  { id: 'write-and-review', label: 'Write & Review' },
+  { id: 'team-automations', label: 'Team Automations' },
+  { id: 'build-and-ship', label: 'Build & Ship' },
 ];
 
 export const COMPAT_OPTIONS = ['claude-code', 'claude-chat', 'claude-cowork', 'cursor', 'github-copilot'];

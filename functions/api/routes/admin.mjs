@@ -2,17 +2,9 @@ import { ddb, tables, GetCommand, PutCommand, UpdateCommand, DeleteCommand, Scan
 import { can } from '../lib/permissions.mjs';
 import { writeAudit } from '../lib/audit.mjs';
 import { aggregateAnalytics } from '../lib/analytics.mjs';
+import { CATEGORIES, CATEGORY_IDS } from '../lib/categories.mjs';
 
 const ANALYTICS_WINDOW_DAYS = 28;
-
-const CATEGORY_IDS = ['writing-comms', 'research-analysis', 'planning', 'dev-code', 'ops-automation'];
-const CATEGORY_LABELS = {
-  'writing-comms': 'Writing & Comms',
-  'research-analysis': 'Research & Analysis',
-  'planning': 'Planning',
-  'dev-code': 'Dev & Code',
-  'ops-automation': 'Ops & Automation',
-};
 
 async function getCategoryOverrides() {
   const result = await ddb.send(new BatchGetCommand({
@@ -34,10 +26,9 @@ export function adminRoutes(app) {
   app.get('/api/categories', async (c) => {
     const overrides = await getCategoryOverrides();
     return c.json({
-      categories: CATEGORY_IDS.map(id => ({
-        id,
-        label: CATEGORY_LABELS[id],
-        featuredSlugs: overrides[id] ?? [],
+      categories: CATEGORIES.map(cat => ({
+        ...cat,
+        featuredSlugs: overrides[cat.id] ?? [],
       })),
     });
   });
@@ -201,10 +192,9 @@ export function adminRoutes(app) {
 
     const overrides = await getCategoryOverrides();
     return c.json({
-      categories: CATEGORY_IDS.map(id => ({
-        id,
-        label: CATEGORY_LABELS[id],
-        featuredSlugs: overrides[id] ?? [],
+      categories: CATEGORIES.map(cat => ({
+        ...cat,
+        featuredSlugs: overrides[cat.id] ?? [],
       })),
     });
   });

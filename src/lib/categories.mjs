@@ -5,8 +5,13 @@
 // Ops team: edit slugs/featuredSlugs to curate the hub's categories.
 export const CATEGORIES = [
   {
-    id: 'writing-comms',
-    label: 'Writing & Comms',
+    id: 'write-and-review',
+    label: 'Write & Review',
+    subtitle: 'Produce and review documents',
+    heroDescription:
+      'Produce and review documents. Skills that draft, structure, translate, or evaluate written deliverables against Nava templates and standards.',
+    accentColor: '#D4537E',
+    icon: 'file-text',
     borderColor: '#c4b5fd',
     textColor: '#7c3aed',
     featuredSlugs: [],
@@ -18,8 +23,13 @@ export const CATEGORIES = [
     ],
   },
   {
-    id: 'research-analysis',
-    label: 'Research & Analysis',
+    id: 'research-and-analyze',
+    label: 'Research & Analyze',
+    subtitle: 'Look up, understand, extract',
+    heroDescription:
+      'Look up, understand, extract. Skills that search, analyze, or synthesize source material — policy docs, past work, company knowledge.',
+    accentColor: '#1D9E75',
+    icon: 'search',
     borderColor: '#94a3b8',
     textColor: '#475569',
     featuredSlugs: [],
@@ -33,8 +43,13 @@ export const CATEGORIES = [
     ],
   },
   {
-    id: 'planning',
-    label: 'Planning',
+    id: 'personal-productivity',
+    label: 'Personal Productivity',
+    subtitle: 'My day, my week, my growth',
+    heroDescription:
+      'My day, my week, my growth. Skills that help you stay organized, plan your time, and track your own progress.',
+    accentColor: '#7F77DD',
+    icon: 'calendar-check',
     borderColor: '#6ee7b7',
     textColor: '#059669',
     featuredSlugs: [],
@@ -53,8 +68,13 @@ export const CATEGORIES = [
     ],
   },
   {
-    id: 'dev-code',
-    label: 'Dev & Code',
+    id: 'build-and-ship',
+    label: 'Build & Ship',
+    subtitle: 'Developer tools. Requires Claude Code',
+    heroDescription:
+      'Developer tools. Requires Claude Code. Dev tooling, CI/CD, API integrations, and program-specific skill bundles for engineering teams.',
+    accentColor: '#378ADD',
+    icon: 'code',
     borderColor: '#fcd34d',
     textColor: '#92400e',
     featuredSlugs: [],
@@ -85,8 +105,13 @@ export const CATEGORIES = [
     ],
   },
   {
-    id: 'ops-automation',
-    label: 'Ops & Automation',
+    id: 'team-automations',
+    label: 'Team Automations',
+    subtitle: 'Recurring team processes, automated',
+    heroDescription:
+      'Recurring team processes, automated. Skills that run regular operational workflows for a specific team — scoring, reconciliation, reporting.',
+    accentColor: '#BA7517',
+    icon: 'repeat',
     borderColor: '#d1d5db',
     textColor: '#374151',
     featuredSlugs: [],
