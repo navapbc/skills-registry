@@ -196,7 +196,7 @@ The current user's audit events. Returns up to 100 most recent events.
 
 ### `GET /api/categories`
 
-Returns the 5 homepage categories (`writing-comms`, `research-analysis`, `planning`, `dev-code`, `ops-automation`) with their `featuredSlugs`. Used by the homepage grid. No special role required beyond authentication.
+Returns the 5 homepage categories (`personal-productivity`, `research-and-analyze`, `write-and-review`, `team-automations`, `build-and-ship`) with their `featuredSlugs` and metadata (`subtitle`, `heroDescription`, `accentColor`, `icon`). Used by the homepage grid. No special role required beyond authentication.
 
 ### `GET /api/admin/queue`
 
@@ -230,7 +230,7 @@ Get categories with featured slug lists. Maintain+ only.
 
 Replace the featured skills list for a category. Maintain+ only.
 
-Valid `id` values: `writing-comms`, `research-analysis`, `planning`, `dev-code`, `ops-automation`.
+Valid `id` values: `personal-productivity`, `research-and-analyze`, `write-and-review`, `team-automations`, `build-and-ship`.
 
 **Body:** `{ featuredSlugs: string[] }`
 
@@ -277,7 +277,7 @@ Behavioral analytics ingest. Body: `{ event, props }` where `event` is one of `p
   "sensitive_data": false,
   "content": "...",
   "tags": ["writing", "productivity"],
-  "category": "writing-comms",
+  "category": "write-and-review",
   "visibility": "public",
   "status": "approved",
   "source": "github",
