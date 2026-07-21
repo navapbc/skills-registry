@@ -97,7 +97,7 @@ components:
           example: [writing, productivity]
         category:
           type: string
-          enum: [writing-comms, research-analysis, planning, dev-code, ops-automation]
+          enum: [personal-productivity, research-and-analyze, write-and-review, team-automations, build-and-ship]
         visibility:
           type: string
           enum: [public, internal, private]
@@ -279,7 +279,7 @@ components:
       properties:
         id:
           type: string
-          enum: [writing-comms, research-analysis, planning, dev-code, ops-automation]
+          enum: [personal-productivity, research-and-analyze, write-and-review, team-automations, build-and-ship]
         label:
           type: string
           example: Writing & Comms
@@ -1089,7 +1089,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [writing-comms, research-analysis, planning, dev-code, ops-automation]
+            enum: [personal-productivity, research-and-analyze, write-and-review, team-automations, build-and-ship]
       requestBody:
         required: true
         content:
