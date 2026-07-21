@@ -39,6 +39,13 @@ function authorDisplayName(skill) {
   return skill.author_name || skill.committer?.login || skill.committer?.name || skill.author;
 }
 
+// Avatar for the attributed author. A frontmatter identity (author_name) has no
+// GitHub profile, so it must NOT borrow the committer's avatar — the last pusher
+// is not the author. Return null so avatarHtml falls back to the initial letter.
+function authorAvatarUrl(skill) {
+  return skill.author_name ? null : skill.committer?.avatar_url;
+}
+
 // The email to attribute a submission to, when the file carries a frontmatter identity.
 function submitterEmail(skill) {
   return skill.author && skill.author.includes('@') ? skill.author : null;
@@ -116,7 +123,7 @@ export function renderSkillCard(skill, showPlugin = true) {
       <span class="flex items-center gap-1.5 cursor-pointer"
         data-github-url="${escapeHtml(githubUrl || '')}"
         title="${escapeHtml(githubUrl ? '@' + displayName : displayName)}">
-        ${avatarHtml(displayName, committer?.avatar_url, '5')}
+        ${avatarHtml(displayName, authorAvatarUrl(skill), '5')}
         <span class="text-xs text-gray-400">${escapeHtml(displayName)}</span>
       </span>
       <span class="text-xs text-gray-400 truncate ml-2">${escapeHtml(compatStr)}</span>
@@ -271,7 +278,7 @@ export function renderSkillDetail(skill) {
         ${skill.type === 'agent' ? '<span class="px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>' : ''}
       </div>
       <div class="flex items-center gap-2 text-sm text-gray-400">
-        ${avatarHtml(authorName, committer?.avatar_url, '6')}
+        ${avatarHtml(authorName, authorAvatarUrl(skill), '6')}
         ${addedDate ? `<span class="text-gray-300">·</span><span>Added ${escapeHtml(addedDate)}</span>` : ''}
         <span class="text-gray-300">·</span>
         <a href="https://github.com/${escapeHtml(skill.repo)}/blob/main/${escapeHtml(skill.path)}" target="_blank" rel="noopener" class="text-plum-600 hover:text-plum-700 no-underline">View on GitHub ↗</a>
@@ -536,7 +543,7 @@ function renderCategorySkillRow(skill) {
         <span class="flex items-center gap-1.5 cursor-pointer"
           data-github-url="${escapeHtml(githubUrl || '')}"
           title="${escapeHtml(githubUrl ? '@' + displayName : displayName)}">
-          ${avatarHtml(displayName, committer?.avatar_url, '5')}
+          ${avatarHtml(displayName, authorAvatarUrl(skill), '5')}
           <span class="text-xs text-gray-400">${escapeHtml(displayName)}</span>
         </span>
         <div class="flex items-center gap-1 flex-wrap">${compatBadges}</div>
