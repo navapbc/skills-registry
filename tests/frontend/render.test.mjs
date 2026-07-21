@@ -392,6 +392,38 @@ describe('renderSkillCard — org-wide badge', () => {
   });
 });
 
+describe('renderSkillCard — category badge', () => {
+  const orgSkill = {
+    slug: 'daily-briefing', name: 'Daily Briefing', description: 'Briefing skill',
+    plugin: 'skills-registry', author: 'Nava Ops', compatibility: ['claude-chat'],
+    type: 'skill', source: 'enterprise', tags: [], category: 'write-and-review',
+  };
+
+  it('shows the category label tinted with accent_color instead of the plugin tag', () => {
+    const html = renderSkillCard(orgSkill);
+    expect(html).toContain('Write &amp; Review');
+    expect(html).toContain('#D4537E'); // write-and-review accent
+    expect(html).not.toContain('>skills-registry<');
+  });
+
+  it('retains the Org-wide badge alongside the category badge', () => {
+    const html = renderSkillCard(orgSkill);
+    expect(html).toContain('Org-wide');
+    expect(html).toContain('Write &amp; Review');
+  });
+
+  it('falls back to the plugin tag when category is empty', () => {
+    const html = renderSkillCard({ ...orgSkill, category: '' });
+    expect(html).toContain('skills-registry');
+    expect(html).not.toContain('Write &amp; Review');
+  });
+
+  it('falls back to the plugin tag for an unknown category id', () => {
+    const html = renderSkillCard({ ...orgSkill, category: 'no-such-category' });
+    expect(html).toContain('skills-registry');
+  });
+});
+
 describe('renderCategoryTiles — membership counting', () => {
   const cats = [{ id: 'team-automations', label: 'Team Automations', subtitle: 'Automations', accent_color: '#BA7517', icon: 'repeat', browsable: true }];
   const retro = { slug: 'retro', name: 'Retro', description: 'Retro skill', source: 'github', type: 'skill', category: '' };

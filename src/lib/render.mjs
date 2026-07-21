@@ -1,6 +1,9 @@
 import { CATEGORIES } from './categories.mjs';
 import { renderIcon } from './icons.mjs';
 
+// Lookup for the skill-card category badge (id -> { label, accent_color, … }).
+const CATEGORY_BY_ID = new Map(CATEGORIES.map(c => [c.id, c]));
+
 export function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -52,8 +55,14 @@ export function renderSkillCard(skill, showPlugin = true) {
   const compatStr = skill.compatibility.slice(0, 2).join(', ') +
     (skill.compatibility.length > 2 ? ` +${skill.compatibility.length - 2}` : '');
 
+  // Category badge: the skill's category display name tinted with its accent
+  // color, shown in place of the plugin tag. Falls back to the plugin tag
+  // (e.g. skills-registry) when the skill has no resolvable category.
+  const cat = skill.category ? CATEGORY_BY_ID.get(skill.category) : null;
   const pluginBadge = showPlugin
-    ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">${escapeHtml(skill.plugin)}</span>`
+    ? (cat
+      ? `<span class="px-1.5 py-0.5 text-xs font-medium rounded" style="color:${escapeHtml(cat.accent_color)};background:${escapeHtml(cat.accent_color)}22">${escapeHtml(cat.label)}</span>`
+      : `<span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">${escapeHtml(skill.plugin)}</span>`)
     : '';
   const agentBadge = skill.type === 'agent'
     ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>`
