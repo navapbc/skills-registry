@@ -1,5 +1,6 @@
 ---
 name: actionable-feedback
+category: write-and-review
 description: >
   Turns a vague "I need to say something to Alex" into a paste-ready Slack
   message or review comment. Triggered when you describe a workplace

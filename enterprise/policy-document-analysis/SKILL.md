@@ -1,5 +1,6 @@
 ---
 name: policy-document-analysis
+category: research-and-analyze
 description: >
   Systematically analyze UI policy documents (federal regulations, state
   laws, administrative instructions) to extract implementable business rules,

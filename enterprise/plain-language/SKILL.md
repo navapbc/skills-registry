@@ -1,5 +1,6 @@
 ---
 name: plain-language
+category: write-and-review
 description: >
   Rewrites government and civic content into plain language — and translates
   it into Spanish or other languages on request. Paste in a notice, form, UI

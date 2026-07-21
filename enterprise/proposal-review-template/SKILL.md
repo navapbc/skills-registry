@@ -4,7 +4,7 @@ version: "2.0"
 author: sha@navapbc.com
 author_name: Sha Hwang
 team: Executive
-category: writing, comms, proposal
+category: write-and-review
 compatibility: [claude-chat, claude-cowork]
 description: >
   Review a proposal, strategic initiative, roadmap, project plan, press release, or

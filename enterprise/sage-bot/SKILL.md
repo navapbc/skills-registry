@@ -1,5 +1,6 @@
 ---
 name: sage-bot
+category: research-and-analyze
 description: >
   Searches Sage for company policy information and returns the cited source
   page from Confluence
