@@ -8,7 +8,7 @@ import { SKILL_CATEGORIES } from '../src/lib/admin/format.mjs';
 // only bundles functions/api/ — they cannot share a module at runtime. This
 // test is the guard against drift. It also checks the admin skill-editor
 // dropdown (src/lib/admin/format.mjs) uses the same id/label set.
-const METADATA_FIELDS = ['label', 'subtitle', 'heroDescription', 'accentColor', 'icon'];
+const METADATA_FIELDS = ['label', 'subtitle', 'hero_description', 'accent_color', 'icon'];
 
 describe('category id/label/metadata parity across sources', () => {
   it('frontend and API define the same category ids', () => {
@@ -29,7 +29,7 @@ describe('category id/label/metadata parity across sources', () => {
 
   it('accent colors are 6-digit hex', () => {
     for (const cat of API) {
-      expect(cat.accentColor).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(cat.accent_color).toMatch(/^#[0-9A-Fa-f]{6}$/);
     }
   });
 

@@ -79,9 +79,9 @@ describe('GET /api/categories', () => {
     for (const cat of body.categories) {
       expect(typeof cat.subtitle).toBe('string');
       expect(cat.subtitle.length).toBeGreaterThan(0);
-      expect(typeof cat.heroDescription).toBe('string');
-      expect(cat.heroDescription.length).toBeGreaterThan(0);
-      expect(cat.accentColor).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(typeof cat.hero_description).toBe('string');
+      expect(cat.hero_description.length).toBeGreaterThan(0);
+      expect(cat.accent_color).toMatch(/^#[0-9A-Fa-f]{6}$/);
       expect(typeof cat.icon).toBe('string');
       expect(cat.icon.length).toBeGreaterThan(0);
     }

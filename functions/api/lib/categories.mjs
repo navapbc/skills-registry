@@ -13,45 +13,45 @@ export const CATEGORIES = [
     id: 'personal-productivity',
     label: 'Personal Productivity',
     subtitle: 'My day, my week, my growth',
-    heroDescription:
+    hero_description:
       'My day, my week, my growth. Skills that help you stay organized, plan your time, and track your own progress.',
-    accentColor: '#7F77DD',
+    accent_color: '#7F77DD',
     icon: 'calendar-check',
   },
   {
     id: 'research-and-analyze',
     label: 'Research & Analyze',
     subtitle: 'Look up, understand, extract',
-    heroDescription:
+    hero_description:
       'Look up, understand, extract. Skills that search, analyze, or synthesize source material — policy docs, past work, company knowledge.',
-    accentColor: '#1D9E75',
+    accent_color: '#1D9E75',
     icon: 'search',
   },
   {
     id: 'write-and-review',
     label: 'Write & Review',
     subtitle: 'Produce and review documents',
-    heroDescription:
+    hero_description:
       'Produce and review documents. Skills that draft, structure, translate, or evaluate written deliverables against Nava templates and standards.',
-    accentColor: '#D4537E',
+    accent_color: '#D4537E',
     icon: 'file-text',
   },
   {
     id: 'team-automations',
     label: 'Team Automations',
     subtitle: 'Recurring team processes, automated',
-    heroDescription:
+    hero_description:
       'Recurring team processes, automated. Skills that run regular operational workflows for a specific team — scoring, reconciliation, reporting.',
-    accentColor: '#BA7517',
+    accent_color: '#BA7517',
     icon: 'repeat',
   },
   {
     id: 'build-and-ship',
     label: 'Build & Ship',
     subtitle: 'Developer tools. Requires Claude Code',
-    heroDescription:
+    hero_description:
       'Developer tools. Requires Claude Code. Dev tooling, CI/CD, API integrations, and program-specific skill bundles for engineering teams.',
-    accentColor: '#378ADD',
+    accent_color: '#378ADD',
     icon: 'code',
   },
 ];
