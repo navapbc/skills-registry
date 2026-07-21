@@ -8,7 +8,7 @@ import { SKILL_CATEGORIES } from '../src/lib/admin/format.mjs';
 // only bundles functions/api/ — they cannot share a module at runtime. This
 // test is the guard against drift. It also checks the admin skill-editor
 // dropdown (src/lib/admin/format.mjs) uses the same id/label set.
-const METADATA_FIELDS = ['label', 'subtitle', 'hero_description', 'accent_color', 'icon'];
+const METADATA_FIELDS = ['label', 'subtitle', 'hero_description', 'accent_color', 'icon', 'browsable'];
 
 describe('category id/label/metadata parity across sources', () => {
   it('frontend and API define the same category ids', () => {
@@ -24,6 +24,13 @@ describe('category id/label/metadata parity across sources', () => {
         expect(fe[field], `frontend ${fe.id}.${field} missing`).toBeDefined();
         expect(api[field], `${fe.id}.${field} mismatch`).toBe(fe[field]);
       }
+    }
+  });
+
+  it('every frontend category has non-empty contribution_prompt copy', () => {
+    for (const cat of FRONTEND) {
+      expect(typeof cat.contribution_prompt, `${cat.id}.contribution_prompt`).toBe('string');
+      expect(cat.contribution_prompt.length, `${cat.id}.contribution_prompt empty`).toBeGreaterThan(0);
     }
   });
 

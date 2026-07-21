@@ -1,4 +1,8 @@
-import { SUBMIT_FORM_URL } from './categories.mjs';
+import { CATEGORIES } from './categories.mjs';
+import { renderIcon } from './icons.mjs';
+
+// Lookup for the skill-card category badge (id -> { label, accent_color, … }).
+const CATEGORY_BY_ID = new Map(CATEGORIES.map(c => [c.id, c]));
 
 export function escapeHtml(str) {
   return String(str)
@@ -51,8 +55,14 @@ export function renderSkillCard(skill, showPlugin = true) {
   const compatStr = skill.compatibility.slice(0, 2).join(', ') +
     (skill.compatibility.length > 2 ? ` +${skill.compatibility.length - 2}` : '');
 
+  // Category badge: the skill's category display name tinted with its accent
+  // color, shown in place of the plugin tag. Falls back to the plugin tag
+  // (e.g. skills-registry) when the skill has no resolvable category.
+  const cat = skill.category ? CATEGORY_BY_ID.get(skill.category) : null;
   const pluginBadge = showPlugin
-    ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">${escapeHtml(skill.plugin)}</span>`
+    ? (cat
+      ? `<span class="px-1.5 py-0.5 text-xs font-medium rounded" style="color:${escapeHtml(cat.accent_color)};background:${escapeHtml(cat.accent_color)}22">${escapeHtml(cat.label)}</span>`
+      : `<span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">${escapeHtml(skill.plugin)}</span>`)
     : '';
   const agentBadge = skill.type === 'agent'
     ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>`
@@ -420,75 +430,31 @@ export function renderWhatsNewGroups(skills) {
   return group('This week', thisWeek) + group('This month', thisMonth) + group('Earlier', earlier);
 }
 
-export function renderCategoryGrid(categories, allSkills) {
-  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const bySlug = new Map(allSkills.map(s => [s.slug, s]));
-
-  function isNew(skill) {
-    return !!skill.last_updated && new Date(skill.last_updated).getTime() >= sevenDaysAgo;
-  }
-
-  const categoryCards = categories.map(cat => {
-    const adminFeatured = (cat.featuredSlugs || []).map(slug => bySlug.get(slug)).filter(Boolean);
-    const enterpriseFeatured = allSkills.filter(s => s.source === 'enterprise' && s.category === cat.id);
-    // Merge, deduplicating by slug (admin-featured take precedence, then enterprise)
-    const featuredSlugsSet = new Set(adminFeatured.map(s => s.slug));
-    const featured = [
-      ...adminFeatured,
-      ...enterpriseFeatured.filter(s => !featuredSlugsSet.has(s.slug)),
-    ];
-    const catSlugs = (cat.slugs || []).map(slug => bySlug.get(slug)).filter(Boolean);
-    const enterpriseSlugsSet = new Set(enterpriseFeatured.map(s => s.slug));
-    const catSlugsFiltered = catSlugs.filter(s => !enterpriseSlugsSet.has(s.slug));
-    const all = [...enterpriseFeatured, ...catSlugsFiltered];
-    const preview = all.filter(s => !featuredSlugsSet.has(s.slug) && s.source !== 'enterprise').slice(0, 3);
-
-    const skillUrl = (skill) => `/${skill.type === 'agent' ? 'agents' : 'skills'}/${escapeHtml(skill.slug)}`;
-
-    const featuredRows = featured.map(skill => `
-      <div class="flex items-center justify-between py-1 border-b border-gray-50">
-        <a href="${skillUrl(skill)}" class="text-xs text-gray-700 no-underline hover:text-plum-600">${escapeHtml(skill.name)}</a>
-        ${skill.source === 'enterprise'
-      ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-700 rounded">Org-wide</span>`
-      : `<span class="text-xs font-medium text-plum-600">Featured</span>`}
-      </div>`).join('');
-
-    const previewRows = preview.map(skill => `
-      <div class="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
-        <a href="${skillUrl(skill)}" class="text-xs text-gray-700 no-underline hover:text-plum-600">${escapeHtml(skill.name)}</a>
-        ${isNew(skill) ? `<span class="px-1.5 py-0.5 text-xs font-semibold rounded" style="background:#f5f3ff;color:${escapeHtml(cat.textColor)}">new</span>` : ''}
-      </div>`).join('');
-
-    const rows = (featuredRows + previewRows) ||
-      '<div class="text-xs text-gray-400 py-1 italic">No skills yet</div>';
-
-    const viewAll = all.length > 0
-      ? `<a href="/category/${escapeHtml(cat.id)}" class="text-xs no-underline font-medium hover:underline" style="color:${escapeHtml(cat.textColor)}">View all (${all.length}) &rarr;</a>`
-      : '';
-
+// Homepage category tiles. One tile per browsable category: top accent bar,
+// icon, display name, subtitle, and a dynamic skill count. Count is driven by
+// skill category membership (s.category === cat.id), which includes org-wide
+// skills. Whole tile links to the category detail page.
+export function renderCategoryTiles(categories, allSkills) {
+  const tiles = categories.filter(cat => cat.browsable).map(cat => {
+    const count = allSkills.filter(s => s.category === cat.id).length;
+    const icon = renderIcon(cat.icon, { size: 22 });
     return `
-      <div class="bg-white border border-gray-200 rounded-lg p-4" style="border-top:3px solid ${escapeHtml(cat.borderColor)}">
-        <div class="text-xs font-bold uppercase tracking-wider mb-3" style="color:${escapeHtml(cat.textColor)}">${escapeHtml(cat.label)}</div>
-        <div class="mb-3">${rows}</div>
-        ${viewAll}
-      </div>`;
+      <a href="/category/${escapeHtml(cat.id)}"
+         class="flex flex-col gap-2 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300 transition-all no-underline text-gray-900"
+         style="border-top:3px solid ${escapeHtml(cat.accent_color)}">
+        <span class="flex items-center gap-2">
+          <span class="flex-shrink-0" style="color:${escapeHtml(cat.accent_color)}">${icon}</span>
+          <span class="font-semibold text-sm text-gray-900">${escapeHtml(cat.label)}</span>
+        </span>
+        <span class="text-xs text-gray-500 leading-relaxed flex-1">${escapeHtml(cat.subtitle)}</span>
+        <span class="text-xs text-gray-400">${count} skill${count !== 1 ? 's' : ''}</span>
+      </a>`;
   }).join('');
-
-  const submitCell = `
-    <div class="border border-dashed border-plum-200 bg-plum-50 rounded-lg p-4 flex flex-col items-center justify-center text-center gap-2">
-      <div class="text-xs font-semibold text-plum-700">Have a skill to share?</div>
-      <div class="text-xs text-gray-500 leading-relaxed">Submit via Google Form. The ops team reviews within 1 business day.</div>
-      <a href="${escapeHtml(SUBMIT_FORM_URL)}" target="_blank" rel="noopener"
-         class="px-3 py-1.5 text-xs font-medium bg-plum-600 text-white rounded hover:bg-plum-700 no-underline transition-colors">
-        Submit a skill
-      </a>
-    </div>`;
 
   return `
     <section class="mb-6">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        ${categoryCards}
-        ${submitCell}
+        ${tiles}
       </div>
     </section>`;
 }
@@ -501,13 +467,13 @@ export function renderNewThisWeek(allSkills, categories) {
 
   if (!newSkills.length) return '';
 
-  function getCategoryLabel(slug) {
-    const cat = categories.find(c => c.slugs.includes(slug));
+  function getCategoryLabel(skill) {
+    const cat = categories.find(c => c.id === skill.category);
     return cat ? cat.label : '';
   }
 
   const cards = newSkills.map(skill => {
-    const catLabel = getCategoryLabel(skill.slug);
+    const catLabel = getCategoryLabel(skill);
     return `
       <a href="/skills/${escapeHtml(skill.slug)}"
          class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-1 no-underline hover:border-gray-300 transition-colors">
@@ -525,41 +491,110 @@ export function renderNewThisWeek(allSkills, categories) {
     </div>`;
 }
 
+// A single skill rendered as a full-width row (not a card) for the category
+// detail page: full untruncated description, author, hashtags, platform badges,
+// and a favorite star. Carries data-tags so the page script can filter by tag.
+function renderCategorySkillRow(skill) {
+  const committer = skill.committer;
+  const displayName = authorDisplayName(skill);
+  const githubUrl = (!skill.author_name && committer?.login) ? `https://github.com/${committer.login}` : null;
+  const detailHref = skill.type === 'agent' ? `/agents/${escapeHtml(skill.slug)}` : `/skills/${escapeHtml(skill.slug)}`;
+  const tags = skill.tags || [];
+
+  const orgWideBadge = skill.source === 'enterprise'
+    ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-violet-100 text-violet-700 rounded">Org-wide</span>`
+    : '';
+  const agentBadge = skill.type === 'agent'
+    ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>`
+    : '';
+  const compatBadges = (skill.compatibility || []).map(c =>
+    `<span class="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">${escapeHtml(c)}</span>`
+  ).join('');
+  const hashtags = tags.length
+    ? `<div class="flex flex-wrap gap-1.5 mb-2">${tags.map(t => `<span class="text-xs text-gray-400">#${escapeHtml(t)}</span>`).join('')}</div>`
+    : '';
+
+  const skillData = escapeHtml(JSON.stringify({ slug: skill.slug, name: skill.name, plugin: skill.plugin, type: skill.type, description: skill.description, compatibility: skill.compatibility }));
+
+  return `<div class="relative" data-skill-row data-tags="${escapeHtml(tags.join(','))}">
+    <button
+      class="fav-btn absolute top-3 right-3 z-10 w-6 h-6 flex items-center justify-center text-gray-300 hover:text-amber-400 transition-colors rounded"
+      data-slug="${escapeHtml(skill.slug)}"
+      data-skill="${skillData}"
+      aria-label="Add to favorites"
+      aria-pressed="false"
+      title="Favorite"
+    ><span aria-hidden="true" class="fav-star text-base leading-none">☆</span></button>
+    <a href="${detailHref}" class="block p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm hover:border-gray-300 transition-all no-underline text-gray-900">
+      <div class="flex items-center gap-2 flex-wrap mb-1 pr-6">
+        <span class="font-semibold text-sm text-gray-900">${escapeHtml(skill.name)}</span>
+        ${agentBadge}${orgWideBadge}
+      </div>
+      <p class="text-sm text-gray-600 leading-relaxed m-0 mb-2">${escapeHtml(skill.description)}</p>
+      ${hashtags}
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <span class="flex items-center gap-1.5 cursor-pointer"
+          data-github-url="${escapeHtml(githubUrl || '')}"
+          title="${escapeHtml(githubUrl ? '@' + displayName : displayName)}">
+          ${avatarHtml(displayName, committer?.avatar_url, '5')}
+          <span class="text-xs text-gray-400">${escapeHtml(displayName)}</span>
+        </span>
+        <div class="flex items-center gap-1 flex-wrap">${compatBadges}</div>
+      </div>
+    </a>
+  </div>`;
+}
+
 export function renderCategoryDetail(category, allSkills) {
-  const bySlug = new Map(allSkills.map(s => [s.slug, s]));
+  const skills = allSkills.filter(s => s.category === category.id);
+  const accent = category.accent_color || category.borderColor || '#6b7280';
+  const icon = renderIcon(category.icon, { size: 28 });
 
-  const featured = (category.featuredSlugs || []).map(s => bySlug.get(s)).filter(Boolean);
-  const skills = (category.slugs || []).map(s => bySlug.get(s)).filter(Boolean);
+  const breadcrumb = `
+    <nav class="text-sm mb-6" aria-label="Breadcrumb">
+      <a href="/" class="text-gray-500 hover:text-gray-700 no-underline">Marketplace</a>
+      <span class="mx-1.5 text-gray-300" aria-hidden="true">›</span>
+      <span class="text-gray-700">${escapeHtml(category.label)}</span>
+    </nav>`;
 
-  const featuredSection = featured.length ? `
-    <section class="mb-8">
-      <div class="flex items-center gap-3 mb-4">
-        <span class="text-xs font-semibold text-plum-600 uppercase tracking-wider">Featured</span>
-        <div class="flex-1 border-t border-gray-200"></div>
+  const hero = `
+    <div class="flex items-start gap-4 mb-8">
+      <span class="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
+        style="background:${escapeHtml(accent)}1a;color:${escapeHtml(accent)}">${icon}</span>
+      <div class="min-w-0">
+        <h1 class="text-2xl font-bold text-gray-900 m-0">${escapeHtml(category.label)}</h1>
+        ${category.hero_description ? `<p class="text-sm text-gray-600 mt-1 m-0">${escapeHtml(category.hero_description)}</p>` : ''}
+        <p class="text-sm text-gray-500 mt-1 m-0">${skills.length} skill${skills.length !== 1 ? 's' : ''} in this category</p>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        ${featured.map(skill => `
-          <div style="border-top:2px solid ${escapeHtml(category.borderColor)}">${renderSkillCard(skill)}</div>
-        `).join('')}
-      </div>
-    </section>` : '';
+    </div>`;
 
-  const allSection = skills.length ? `
-    <section>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        ${skills.map(skill => renderSkillCard(skill)).join('')}
-      </div>
-    </section>` : '<p class="text-sm text-gray-400 italic">No skills in this category yet.</p>';
+  const contributionPrompt = `
+    <div class="mt-8 p-5 bg-plum-50 border border-plum-200 rounded-xl flex items-center justify-between gap-4 flex-wrap">
+      <p class="text-sm text-gray-600 m-0 flex-1 min-w-64">${escapeHtml(category.contribution_prompt || '')}</p>
+      <a href="/contribute" class="flex-shrink-0 px-4 py-2 text-sm font-medium bg-plum-600 text-white rounded-lg hover:bg-plum-700 no-underline transition-colors">Submit a skill idea →</a>
+    </div>`;
+
+  // Empty state: hero + contribution prompt only, no filter bar, no list.
+  if (!skills.length) {
+    return breadcrumb + hero + contributionPrompt;
+  }
+
+  // Tag filter bar — union of tags across the category's skills. Omitted when
+  // no skill carries tags. "All" is the default; client-side filtering lives in
+  // src/pages/category/index.astro.
+  const allTags = [...new Set(skills.flatMap(s => s.tags || []))].sort();
+  const filterBar = allTags.length ? `
+    <div class="flex flex-wrap items-center gap-2 mb-6" data-tag-filter>
+      <button type="button" class="tag-pill px-3 py-1 text-xs font-medium rounded-full border border-plum-300 bg-plum-50 text-plum-700 cursor-pointer" data-tag="__all__" aria-pressed="true">All</button>
+      ${allTags.map(t => `<button type="button" class="tag-pill px-3 py-1 text-xs font-medium rounded-full border border-gray-200 bg-white text-gray-600 hover:border-gray-300 cursor-pointer" data-tag="${escapeHtml(t)}" aria-pressed="false">#${escapeHtml(t)}</button>`).join('')}
+    </div>` : '';
+
+  const rows = skills.map(skill => renderCategorySkillRow(skill)).join('');
 
   return `
-    <a href="/" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-6 transition-colors">
-      &larr; Back to hub
-    </a>
-    <div class="mb-8" style="border-left:4px solid ${escapeHtml(category.accent_color || category.borderColor)};padding-left:12px">
-      <h1 class="text-2xl font-bold text-gray-900 m-0">${escapeHtml(category.label)}</h1>
-      ${category.hero_description ? `<p class="text-sm text-gray-600 mt-2 m-0">${escapeHtml(category.hero_description)}</p>` : ''}
-      <p class="text-sm text-gray-500 mt-1 m-0">${skills.length} skill${skills.length !== 1 ? 's' : ''}</p>
-    </div>
-    ${featuredSection}
-    ${allSection}`;
+    ${breadcrumb}
+    ${hero}
+    ${filterBar}
+    <div class="space-y-2" data-skill-list>${rows}</div>
+    ${contributionPrompt}`;
 }

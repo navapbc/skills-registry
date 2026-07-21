@@ -17,6 +17,7 @@ export const CATEGORIES = [
       'My day, my week, my growth. Skills that help you stay organized, plan your time, and track your own progress.',
     accent_color: '#7F77DD',
     icon: 'calendar-check',
+    browsable: true,
   },
   {
     id: 'research-and-analyze',
@@ -26,6 +27,7 @@ export const CATEGORIES = [
       'Look up, understand, extract. Skills that search, analyze, or synthesize source material — policy docs, past work, company knowledge.',
     accent_color: '#1D9E75',
     icon: 'search',
+    browsable: true,
   },
   {
     id: 'write-and-review',
@@ -35,6 +37,7 @@ export const CATEGORIES = [
       'Produce and review documents. Skills that draft, structure, translate, or evaluate written deliverables against Nava templates and standards.',
     accent_color: '#D4537E',
     icon: 'file-text',
+    browsable: true,
   },
   {
     id: 'team-automations',
@@ -44,6 +47,7 @@ export const CATEGORIES = [
       'Recurring team processes, automated. Skills that run regular operational workflows for a specific team — scoring, reconciliation, reporting.',
     accent_color: '#BA7517',
     icon: 'repeat',
+    browsable: true,
   },
   {
     id: 'build-and-ship',
@@ -53,6 +57,7 @@ export const CATEGORIES = [
       'Developer tools. Requires Claude Code. Dev tooling, CI/CD, API integrations, and program-specific skill bundles for engineering teams.',
     accent_color: '#378ADD',
     icon: 'code',
+    browsable: true,
   },
 ];
 

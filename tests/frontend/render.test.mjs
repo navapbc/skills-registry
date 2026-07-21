@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { escapeHtml, renderSkillCard, renderSkillDetail, renderPluginDetail, renderWhatsNewGroups, renderCategoryGrid, renderNewThisWeek, renderCategoryDetail } from '../../src/lib/render.mjs';
+import { escapeHtml, renderSkillCard, renderSkillDetail, renderPluginDetail, renderWhatsNewGroups, renderCategoryTiles, renderNewThisWeek, renderCategoryDetail } from '../../src/lib/render.mjs';
 import { CATEGORIES } from '../../src/lib/categories.mjs';
 
 const baseSkill = {
@@ -212,22 +212,22 @@ const catSkills = [
   {
     slug: 'nava-labs-style', name: 'Nava Labs Style', description: 'Writing style guide',
     plugin: 'labs-tir-prototyping', author: 'navapbc', committer: null, type: 'skill',
-    sensitive_data: false, compatibility: ['claude-code'],
+    sensitive_data: false, compatibility: ['claude-code'], category: 'write-and-review',
     last_updated: new Date().toISOString(),
     repo: 'navapbc/labs-tir-prototyping', path: 'skills/nava-labs-style/SKILL.md', content: '',
   },
   {
     slug: 'diagram', name: 'Diagram', description: 'Draw diagrams',
     plugin: 'digital-service-orchestra', author: 'navapbc', committer: null, type: 'skill',
-    sensitive_data: false, compatibility: ['claude-code'],
+    sensitive_data: false, compatibility: ['claude-code'], category: 'research-and-analyze',
     last_updated: '2025-01-01T00:00:00Z',
     repo: 'navapbc/digital-service-orchestra', path: 'SKILL.md', content: '',
   },
 ];
 
-describe('renderCategoryGrid', () => {
-  it('renders a card for each category', () => {
-    const html = renderCategoryGrid(CATEGORIES, catSkills);
+describe('renderCategoryTiles', () => {
+  it('renders a tile for each browsable category', () => {
+    const html = renderCategoryTiles(CATEGORIES, catSkills);
     expect(html).toContain('Write &amp; Review');
     expect(html).toContain('Research &amp; Analyze');
     expect(html).toContain('Personal Productivity');
@@ -235,34 +235,43 @@ describe('renderCategoryGrid', () => {
     expect(html).toContain('Team Automations');
   });
 
-  it('shows curated skill names in the correct card', () => {
-    const html = renderCategoryGrid(CATEGORIES, catSkills);
-    expect(html).toContain('Nava Labs Style');
-    expect(html).toContain('Diagram');
+  it('links each tile to its category detail page and renders an icon + accent bar', () => {
+    const html = renderCategoryTiles(CATEGORIES, catSkills);
+    expect(html).toContain('href="/category/write-and-review"');
+    expect(html).toContain('<svg');
+    expect(html).toContain('border-top:3px solid #D4537E'); // write-and-review accent
   });
 
-  it('shows "new" badge on skills updated within the last 7 days', () => {
-    const html = renderCategoryGrid(CATEGORIES, catSkills);
-    const writingSection = html.split('Research &amp;')[0];
-    expect(writingSection).toContain('new');
+  it('counts skills by s.category === cat.id', () => {
+    const html = renderCategoryTiles(CATEGORIES, catSkills);
+    // one skill each in write-and-review and research-and-analyze
+    const writeTile = html.split('Research &amp; Analyze')[0];
+    expect(writeTile).toContain('1 skill');
+    // build-and-ship has no matching skills
+    const buildTile = html.split('Build &amp; Ship')[1].split('Team Automations')[0];
+    expect(buildTile).toContain('0 skills');
   });
 
-  it('does not show "new" badge on old skills', () => {
-    const html = renderCategoryGrid(CATEGORIES, catSkills);
-    const researchSection = html.split('Research &amp; Analyze')[1]?.split('Personal Productivity')[0] || '';
-    expect(researchSection).not.toContain('>new<');
+  it('does not count uncategorized skills', () => {
+    const withUncategorized = [...catSkills, { ...baseSkill, slug: 'x', category: '' }];
+    const html = renderCategoryTiles(CATEGORIES, withUncategorized);
+    // write-and-review still shows exactly 1 skill (the empty-category skill is excluded)
+    const writeTile = html.split('Research &amp; Analyze')[0];
+    expect(writeTile).toContain('1 skill');
   });
 
-  it('renders the submit CTA cell', () => {
-    const html = renderCategoryGrid(CATEGORIES, catSkills);
-    expect(html).toContain('Submit a skill');
-    expect(html).toContain('docs.google.com');
+  it('omits categories that are not browsable', () => {
+    const cats = [{ ...CATEGORIES[0], browsable: false }, CATEGORIES[1]];
+    const html = renderCategoryTiles(cats, catSkills);
+    expect(html).not.toContain('Write &amp; Review');
+    expect(html).toContain('Research &amp; Analyze');
   });
 
-  it('skips curated slugs not in allSkills without erroring', () => {
-    const html = renderCategoryGrid(CATEGORIES, []);
-    expect(html).toContain('Write &amp; Review');
-    expect(html).not.toContain('undefined');
+  it('escapes category label/subtitle', () => {
+    const cats = [{ ...CATEGORIES[0], label: '<x>', subtitle: '"s"', browsable: true }];
+    const html = renderCategoryTiles(cats, []);
+    expect(html).toContain('&lt;x&gt;');
+    expect(html).not.toContain('<x>');
   });
 });
 
@@ -287,42 +296,76 @@ describe('renderNewThisWeek', () => {
     const linkCount = (html.match(/href="\/skills\//g) || []).length;
     expect(linkCount).toBeLessThanOrEqual(3);
   });
-});
 
-describe('renderCategoryDetail', () => {
-  const cat = CATEGORIES[0]; // write-and-review, has nava-labs-style in slugs
-
-  it('renders the category label', () => {
-    const html = renderCategoryDetail(cat, catSkills);
+  it('labels a new skill with its category (via s.category, not slugs)', () => {
+    const html = renderNewThisWeek(catSkills, CATEGORIES); // catSkills[0].category = write-and-review
     expect(html).toContain('Write &amp; Review');
   });
 
-  it('renders the hero description and applies the accent color', () => {
+  it('renders no category label for an uncategorized new skill', () => {
+    const uncategorized = [{ ...catSkills[0], category: '', last_updated: new Date().toISOString() }];
+    const html = renderNewThisWeek(uncategorized, CATEGORIES);
+    expect(html).not.toContain('Write &amp; Review');
+  });
+});
+
+describe('renderCategoryDetail', () => {
+  const cat = CATEGORIES[0]; // write-and-review; catSkills[0] has category write-and-review
+  const tagged = [
+    { ...catSkills[0], tags: ['docs', 'writing'] },
+    { slug: 'ux-writing', name: 'UX Writing', description: 'Microcopy', author: 'nava', type: 'skill', compatibility: ['claude-chat'], category: 'write-and-review', tags: ['writing'] },
+  ];
+
+  it('renders a Marketplace breadcrumb with the category label', () => {
     const html = renderCategoryDetail(cat, catSkills);
+    expect(html).toContain('href="/"');
+    expect(html).toContain('Marketplace');
+    expect(html).toContain('Write &amp; Review');
+  });
+
+  it('renders the hero with icon, description and skill count', () => {
+    const html = renderCategoryDetail(cat, catSkills);
+    expect(html).toContain('<svg'); // category icon
     expect(html).toContain(escapeHtml(cat.hero_description));
+    expect(html).toContain('1 skill in this category');
     expect(html).toContain(cat.accent_color);
   });
 
-  it('renders a skill card for each skill in the category', () => {
+  it('filters membership by s.category === cat.id and renders full-width rows', () => {
     const html = renderCategoryDetail(cat, catSkills);
+    expect(html).toContain('data-skill-row');
     expect(html).toContain('href="/skills/nava-labs-style"');
+    expect(html).toContain('Writing style guide'); // full description, untruncated
+    expect(html).not.toContain('href="/skills/diagram"'); // research-and-analyze skill excluded
   });
 
-  it('renders empty state when no skills match', () => {
-    const html = renderCategoryDetail(cat, []);
-    expect(html).toContain('No skills in this category yet');
+  it('renders a tag filter bar from the union of skill tags', () => {
+    const html = renderCategoryDetail(cat, tagged);
+    expect(html).toContain('data-tag-filter');
+    expect(html).toContain('>All<');
+    expect(html).toContain('data-tag="docs"');
+    expect(html).toContain('data-tag="writing"');
   });
 
-  it('renders featured section when featuredSlugs has entries', () => {
-    const catWithFeatured = { ...cat, featuredSlugs: ['nava-labs-style'], slugs: ['nava-labs-style'] };
-    const html = renderCategoryDetail(catWithFeatured, catSkills);
-    expect(html).toContain('Featured');
+  it('omits the tag filter bar when no skill has tags', () => {
+    const html = renderCategoryDetail(cat, catSkills); // catSkills[0] has no tags
+    expect(html).not.toContain('data-tag-filter');
   });
 
-  it('does not render featured section when featuredSlugs is empty', () => {
-    const catNoFeatured = { ...cat, featuredSlugs: [] };
-    const html = renderCategoryDetail(catNoFeatured, catSkills);
-    expect(html).not.toContain('Featured');
+  it('renders the contribution prompt with category copy and a /contribute CTA', () => {
+    const html = renderCategoryDetail(cat, catSkills);
+    expect(html).toContain(escapeHtml(cat.contribution_prompt));
+    expect(html).toContain('Submit a skill idea');
+    expect(html).toContain('href="/contribute"');
+  });
+
+  it('empty state: hero + contribution prompt only, no filter bar or list', () => {
+    const empty = CATEGORIES.find(c => c.id === 'build-and-ship');
+    const html = renderCategoryDetail(empty, catSkills); // no build-and-ship skills in fixture
+    expect(html).toContain('0 skills in this category');
+    expect(html).toContain('Submit a skill idea');
+    expect(html).not.toContain('data-tag-filter');
+    expect(html).not.toContain('data-skill-list');
   });
 });
 
@@ -383,26 +426,52 @@ describe('renderSkillCard — org-wide badge', () => {
   });
 });
 
-describe('renderCategoryGrid — enterprise auto-feature', () => {
-  const cats = [{ id: 'team-automations', label: 'Team Automations', borderColor: '#ccc', textColor: '#333', featuredSlugs: [], slugs: ['retro'] }];
+describe('renderSkillCard — category badge', () => {
+  const orgSkill = {
+    slug: 'daily-briefing', name: 'Daily Briefing', description: 'Briefing skill',
+    plugin: 'skills-registry', author: 'Nava Ops', compatibility: ['claude-chat'],
+    type: 'skill', source: 'enterprise', tags: [], category: 'write-and-review',
+  };
+
+  it('shows the category label tinted with accent_color instead of the plugin tag', () => {
+    const html = renderSkillCard(orgSkill);
+    expect(html).toContain('Write &amp; Review');
+    expect(html).toContain('#D4537E'); // write-and-review accent
+    expect(html).not.toContain('>skills-registry<');
+  });
+
+  it('retains the Org-wide badge alongside the category badge', () => {
+    const html = renderSkillCard(orgSkill);
+    expect(html).toContain('Org-wide');
+    expect(html).toContain('Write &amp; Review');
+  });
+
+  it('falls back to the plugin tag when category is empty', () => {
+    const html = renderSkillCard({ ...orgSkill, category: '' });
+    expect(html).toContain('skills-registry');
+    expect(html).not.toContain('Write &amp; Review');
+  });
+
+  it('falls back to the plugin tag for an unknown category id', () => {
+    const html = renderSkillCard({ ...orgSkill, category: 'no-such-category' });
+    expect(html).toContain('skills-registry');
+  });
+});
+
+describe('renderCategoryTiles — membership counting', () => {
+  const cats = [{ id: 'team-automations', label: 'Team Automations', subtitle: 'Automations', accent_color: '#BA7517', icon: 'repeat', browsable: true }];
   const retro = { slug: 'retro', name: 'Retro', description: 'Retro skill', source: 'github', type: 'skill', category: '' };
   const orgSkill = { slug: 'daily-briefing', name: 'Daily Briefing', description: 'Briefing', source: 'enterprise', type: 'skill', category: 'team-automations' };
 
-  it('auto-features enterprise skills in their category', () => {
-    const html = renderCategoryGrid(cats, [retro, orgSkill]);
-    expect(html).toContain('Daily Briefing');
-    expect(html).toContain('Org-wide');
+  it('counts org-wide (enterprise) skills that match the category', () => {
+    const html = renderCategoryTiles(cats, [retro, orgSkill]);
+    expect(html).toContain('1 skill');
   });
 
-  it('enterprise skills appear in view-all count', () => {
-    const html = renderCategoryGrid(cats, [retro, orgSkill]);
-    expect(html).toContain('View all (2)');
-  });
-
-  it('enterprise skills not in wrong category', () => {
-    const wrongCat = [{ id: 'personal-productivity', label: 'Personal Productivity', borderColor: '#ccc', textColor: '#333', featuredSlugs: [], slugs: [] }];
-    const html = renderCategoryGrid(wrongCat, [orgSkill]);
-    expect(html).not.toContain('Daily Briefing');
+  it('excludes skills whose category does not match (incl. empty category)', () => {
+    const wrongCat = [{ id: 'personal-productivity', label: 'Personal Productivity', subtitle: 'x', accent_color: '#7F77DD', icon: 'calendar-check', browsable: true }];
+    const html = renderCategoryTiles(wrongCat, [orgSkill, retro]);
+    expect(html).toContain('0 skills');
   });
 });
 

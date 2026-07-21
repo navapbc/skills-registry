@@ -51,6 +51,7 @@ if (!category) {
       container.innerHTML = renderCategoryDetail(category, skills);
       initGithubLinks();
       initFavoriteButtons();
+      initTagFilter();
     })
     .catch(err => {
       if (!err.message.startsWith('Unauthorized')) {
@@ -64,6 +65,53 @@ function initGithubLinks() {
     el.addEventListener('click', e => {
       const url = el.dataset.githubUrl;
       if (url) { e.preventDefault(); e.stopPropagation(); window.open(url, '_blank', 'noopener'); }
+    });
+  });
+}
+
+// Client-side tag filtering. "All" (empty selection) shows every row; selecting
+// one or more tag pills shows rows whose data-tags intersects the selection
+// (OR / additive). Deselecting the last tag reverts to "All".
+function initTagFilter() {
+  const bar = document.querySelector('[data-tag-filter]');
+  if (!bar) return;
+  const pills = Array.from(bar.querySelectorAll('.tag-pill'));
+  const rows = Array.from(document.querySelectorAll('[data-skill-row]'));
+  const selected = new Set();
+
+  const ACTIVE = ['border-plum-300', 'bg-plum-50', 'text-plum-700'];
+  const IDLE = ['border-gray-200', 'bg-white', 'text-gray-600'];
+
+  function paint(pill, active) {
+    pill.setAttribute('aria-pressed', String(active));
+    pill.classList.remove(...(active ? IDLE : ACTIVE));
+    pill.classList.add(...(active ? ACTIVE : IDLE));
+  }
+
+  function apply() {
+    const allActive = selected.size === 0;
+    pills.forEach(p => {
+      const tag = p.dataset.tag;
+      paint(p, tag === '__all__' ? allActive : selected.has(tag));
+    });
+    rows.forEach(row => {
+      const tags = (row.dataset.tags || '').split(',').filter(Boolean);
+      const visible = allActive || tags.some(t => selected.has(t));
+      row.classList.toggle('hidden', !visible);
+    });
+  }
+
+  pills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      const tag = pill.dataset.tag;
+      if (tag === '__all__') {
+        selected.clear();
+      } else if (selected.has(tag)) {
+        selected.delete(tag);
+      } else {
+        selected.add(tag);
+      }
+      apply();
     });
   });
 }

@@ -17,12 +17,11 @@ import Tooltip from '../components/Tooltip.astro';
     <div id="favorites-grid"></div>
   </div>
 
-  <!-- CATEGORIES SECTION — commented out, revisit later
+  <!-- Categories — tiles populated by client script after skills are fetched -->
   <div class="mb-3">
     <h2 class="text-base font-semibold text-gray-700 m-0">Categories</h2>
   </div>
   <div id="category-grid"></div>
-  END CATEGORIES SECTION -->
 
   <!-- New this week strip — populated by client script after skills are fetched -->
   <div class="mt-8 mb-3">
@@ -155,7 +154,7 @@ import Tooltip from '../components/Tooltip.astro';
 <script>
 import { fetchApi } from '../lib/api.mjs';
 import { track, debounce } from '../lib/usage.mjs';
-import { renderSkillCard, escapeHtml, renderCategoryGrid, renderNewThisWeek, renderSkillGrid } from '../lib/render.mjs';
+import { renderSkillCard, escapeHtml, renderCategoryTiles, renderNewThisWeek, renderSkillGrid } from '../lib/render.mjs';
 import { CATEGORIES } from '../lib/categories.mjs';
 import { getFavorites, initFavoriteButtons, initFromUser, removeFavorite } from '../lib/favorites.mjs';
 
@@ -230,8 +229,11 @@ Promise.all([
   fetchApi('/skills'),
   fetchApi('/plugins'),
 ]).then(([{ skills }, { plugins }]) => {
-  const mergedCategories = CATEGORIES; // categories hidden, use static config for New This Week
-  document.getElementById('new-this-week').innerHTML = renderNewThisWeek(skills, mergedCategories);
+  // Category tiles — skill count is driven by s.category membership over the
+  // full /skills payload (includes org-wide skills), computed here rather than
+  // via a scoped ?slugs= fetch (which poisoned the CloudFront cache).
+  document.getElementById('category-grid').innerHTML = renderCategoryTiles(CATEGORIES, skills);
+  document.getElementById('new-this-week').innerHTML = renderNewThisWeek(skills, CATEGORIES);
 
   // Org-wide (enterprise) skills get their own callout — show 6 most recent with link to /skills.
   const orgWide = skills.filter(s => s.type === 'skill' && s.source === 'enterprise')
