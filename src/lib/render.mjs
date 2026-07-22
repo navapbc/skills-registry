@@ -402,14 +402,14 @@ export function renderWhatsNewGroups(skills) {
     </div>`;
   }
 
-  const sorted = [...skills].sort((a, b) => new Date(b.last_updated) - new Date(a.last_updated));
+  const sorted = [...skills].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   const now = new Date();
   const oneWeekAgo = new Date(now); oneWeekAgo.setDate(now.getDate() - 7);
   const oneMonthAgo = new Date(now); oneMonthAgo.setDate(now.getDate() - 30);
 
-  const thisWeek = sorted.filter(s => new Date(s.last_updated) >= oneWeekAgo);
-  const thisMonth = sorted.filter(s => { const d = new Date(s.last_updated); return d < oneWeekAgo && d >= oneMonthAgo; });
-  const earlier = sorted.filter(s => new Date(s.last_updated) < oneMonthAgo);
+  const thisWeek = sorted.filter(s => new Date(s.created_at) >= oneWeekAgo);
+  const thisMonth = sorted.filter(s => { const d = new Date(s.created_at); return d < oneWeekAgo && d >= oneMonthAgo; });
+  const earlier = sorted.filter(s => new Date(s.created_at) < oneMonthAgo);
 
   function skillRow(skill) {
     const initial = (skill.author || '?').slice(0, 1).toUpperCase();
@@ -427,7 +427,7 @@ export function renderWhatsNewGroups(skills) {
           ${typeLabel}${sensitiveLabel}
         </div>
         <p class="text-xs text-gray-500 m-0 leading-relaxed">${escapeHtml(skill.description)}</p>
-        <p class="text-xs text-gray-400 mt-1.5 m-0">${escapeHtml(skill.plugin)} · Added ${escapeHtml(formatDateShort(skill.last_updated))}</p>
+        <p class="text-xs text-gray-400 mt-1.5 m-0">${escapeHtml(skill.plugin)} · Added ${escapeHtml(formatDateShort(skill.created_at))}</p>
       </div>
     </a>`;
   }
@@ -478,7 +478,8 @@ export function renderCategoryTiles(categories, allSkills) {
 export function renderNewThisWeek(allSkills, categories) {
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const newSkills = allSkills
-    .filter(s => s.last_updated && new Date(s.last_updated).getTime() >= sevenDaysAgo)
+    .filter(s => s.created_at && new Date(s.created_at).getTime() >= sevenDaysAgo)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 3);
 
   if (!newSkills.length) return '';

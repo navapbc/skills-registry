@@ -221,7 +221,7 @@ describe('renderWhatsNewGroups', () => {
     ...baseSkill,
     slug: 'recent',
     name: 'Recent Skill',
-    last_updated: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   };
 
   it('renders a skill in the this-week group', () => {
@@ -241,14 +241,14 @@ const catSkills = [
     slug: 'nava-labs-style', name: 'Nava Labs Style', description: 'Writing style guide',
     plugin: 'labs-tir-prototyping', author: 'navapbc', committer: null, type: 'skill',
     sensitive_data: false, compatibility: ['claude-code'], category: 'write-and-review',
-    last_updated: new Date().toISOString(),
+    last_updated: new Date().toISOString(), created_at: new Date().toISOString(),
     repo: 'navapbc/labs-tir-prototyping', path: 'skills/nava-labs-style/SKILL.md', content: '',
   },
   {
     slug: 'diagram', name: 'Diagram', description: 'Draw diagrams',
     plugin: 'digital-service-orchestra', author: 'navapbc', committer: null, type: 'skill',
     sensitive_data: false, compatibility: ['claude-code'], category: 'research-and-analyze',
-    last_updated: '2025-01-01T00:00:00Z',
+    last_updated: '2025-01-01T00:00:00Z', created_at: '2025-01-01T00:00:00Z',
     repo: 'navapbc/digital-service-orchestra', path: 'SKILL.md', content: '',
   },
 ];
@@ -331,7 +331,7 @@ describe('renderNewThisWeek', () => {
   });
 
   it('renders no category label for an uncategorized new skill', () => {
-    const uncategorized = [{ ...catSkills[0], category: '', last_updated: new Date().toISOString() }];
+    const uncategorized = [{ ...catSkills[0], category: '', created_at: new Date().toISOString() }];
     const html = renderNewThisWeek(uncategorized, CATEGORIES);
     expect(html).not.toContain('Write &amp; Review');
   });
