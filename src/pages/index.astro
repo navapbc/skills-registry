@@ -24,7 +24,7 @@ import Tooltip from '../components/Tooltip.astro';
   <div id="category-grid"></div>
 
   <!-- New this week strip — populated by client script after skills are fetched -->
-  <div class="mt-8 mb-3">
+  <div id="new-this-week-heading" class="mt-8 mb-3">
     <h2 class="text-base font-semibold text-gray-700 m-0">New This Week</h2>
   </div>
   <div id="new-this-week">
@@ -234,10 +234,14 @@ Promise.all([
   // via a scoped ?slugs= fetch (which poisoned the CloudFront cache).
   document.getElementById('category-grid').innerHTML = renderCategoryTiles(CATEGORIES, skills);
   // "New This Week" is scoped to org-wide (enterprise) skills/agents only.
-  document.getElementById('new-this-week').innerHTML = renderNewThisWeek(
+  const newThisWeekHtml = renderNewThisWeek(
     skills.filter(s => s.source === 'enterprise'),
     CATEGORIES,
   );
+  document.getElementById('new-this-week').innerHTML = newThisWeekHtml;
+  // Hide the heading when there's nothing new, so it doesn't read as a label
+  // for the Org-wide section that follows.
+  if (!newThisWeekHtml) document.getElementById('new-this-week-heading')?.classList.add('hidden');
 
   // Org-wide (enterprise) skills get their own callout — show 6 most recent with link to /skills.
   const orgWide = skills.filter(s => s.type === 'skill' && s.source === 'enterprise')
