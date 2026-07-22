@@ -3,9 +3,18 @@ import { escapeHtml } from '../../lib/render.mjs';
 import { apiPut } from './api.mjs';
 import { catLabel, catSelectOptions, tagChips, compatChips, COMPAT_OPTIONS } from '../../lib/admin/format.mjs';
 
+// This tab manages org-wide skills only. Community (GitHub-sourced) skills are
+// excluded so they can't be edited here — their category/compatibility edits
+// would be overwritten by the next sync anyway, and they belong to the browse
+// surfaces, not admin curation. "Org-wide" is defined the same way as site-wide:
+// source === 'enterprise' (see src/lib/parse-skill.mjs, src/lib/render.mjs).
+export function orgWideOnly(skills) {
+  return (skills ?? []).filter(s => s.source === 'enterprise');
+}
+
 export async function load(panel) {
   const { skills } = await fetchApi('/admin/skills');
-  const items = skills;
+  const items = orgWideOnly(skills);
 
   let filterType = 'all';
   let searchQuery = '';
