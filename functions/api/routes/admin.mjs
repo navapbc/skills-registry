@@ -1,38 +1,11 @@
-import { ddb, tables, GetCommand, PutCommand, UpdateCommand, DeleteCommand, ScanCommand, BatchGetCommand } from '../lib/dynamo.mjs';
+import { ddb, tables, GetCommand, PutCommand, UpdateCommand, DeleteCommand, ScanCommand } from '../lib/dynamo.mjs';
 import { can } from '../lib/permissions.mjs';
 import { writeAudit } from '../lib/audit.mjs';
 import { aggregateAnalytics } from '../lib/analytics.mjs';
-import { CATEGORIES, CATEGORY_IDS } from '../lib/categories.mjs';
 
 const ANALYTICS_WINDOW_DAYS = 28;
 
-async function getCategoryOverrides() {
-  const result = await ddb.send(new BatchGetCommand({
-    RequestItems: {
-      [tables.skills()]: {
-        Keys: CATEGORY_IDS.map(id => ({ slug: `category::${id}` })),
-      },
-    },
-  }));
-  const overrides = {};
-  for (const item of (result.Responses?.[tables.skills()] ?? [])) {
-    overrides[item.slug.replace('category::', '')] = item.featuredSlugs ?? [];
-  }
-  return overrides;
-}
-
 export function adminRoutes(app) {
-  // ── Public: used by homepage to get featuredSlugs ──────────────────────
-  app.get('/api/categories', async (c) => {
-    const overrides = await getCategoryOverrides();
-    return c.json({
-      categories: CATEGORIES.map(cat => ({
-        ...cat,
-        featuredSlugs: overrides[cat.id] ?? [],
-      })),
-    });
-  });
-
   // ── All skills for admin panel (maintain+) — no visibility filtering ──
   app.get('/api/admin/skills', async (c) => {
     const user = c.get('user');
@@ -49,7 +22,7 @@ export function adminRoutes(app) {
       lastKey = page.LastEvaluatedKey;
     } while (lastKey);
 
-    return c.json({ skills: items.filter(s => s.source !== 'category-config') });
+    return c.json({ skills: items });
   });
 
   // ── Skills queue (maintain+) ───────────────────────────────────────────
@@ -183,46 +156,6 @@ export function adminRoutes(app) {
     await ddb.send(new DeleteCommand({ TableName: tables.skills(), Key: { slug } }));
     await writeAudit(user, 'deleted', 'enterprise-skill', slug);
     return c.json({ deleted: slug });
-  });
-
-  // ── Categories (maintain+) ────────────────────────────────────────────
-  app.get('/api/admin/categories', async (c) => {
-    const user = c.get('user');
-    if (!can(user, 'manage:categories')) return c.json({ error: 'Forbidden' }, 403);
-
-    const overrides = await getCategoryOverrides();
-    return c.json({
-      categories: CATEGORIES.map(cat => ({
-        ...cat,
-        featuredSlugs: overrides[cat.id] ?? [],
-      })),
-    });
-  });
-
-  app.put('/api/admin/categories/:id/featured', async (c) => {
-    const user = c.get('user');
-    if (!can(user, 'manage:categories')) return c.json({ error: 'Forbidden' }, 403);
-
-    const { id } = c.req.param();
-    if (!CATEGORY_IDS.includes(id)) return c.json({ error: 'Unknown category' }, 404);
-
-    const body = await c.req.json().catch(() => null);
-    if (!body || !Array.isArray(body.featuredSlugs)) {
-      return c.json({ error: 'featuredSlugs must be an array' }, 400);
-    }
-
-    await ddb.send(new PutCommand({
-      TableName: tables.skills(),
-      Item: {
-        slug: `category::${id}`,
-        source: 'category-config',
-        featuredSlugs: body.featuredSlugs,
-        updated_at: new Date().toISOString(),
-      },
-    }));
-
-    await writeAudit(user, 'updated', 'category', id);
-    return c.json({ id, featuredSlugs: body.featuredSlugs });
   });
 
   // ── Users (admin only) ────────────────────────────────────────────────

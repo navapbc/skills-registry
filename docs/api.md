@@ -23,7 +23,7 @@ The JWT is validated in the API Lambda middleware on every request — not at AP
 | Role | Description |
 |---|---|
 | `user` | Default. All authenticated `@navapbc.com` users. |
-| `maintain` | Can approve/reject skills, manage categories, edit any skill. |
+| `maintain` | Can approve/reject skills, manage enterprise skills, edit any skill. |
 | `admin` | Full access, including user management, deletion, and audit log. |
 
 Roles are set in DynamoDB. The first admin must be promoted [directly via CLI](DEPLOY.md#14-promote-first-admin-manual--after-first-deploy). Subsequent promotions go through `PUT /api/admin/users/:id/role`.
@@ -194,10 +194,6 @@ The current user's audit events. Returns up to 100 most recent events.
 
 ## Admin
 
-### `GET /api/categories`
-
-Returns the 5 homepage categories (`personal-productivity`, `research-and-analyze`, `write-and-review`, `team-automations`, `build-and-ship`) with their `featuredSlugs` and metadata (`subtitle`, `hero_description`, `accent_color`, `icon`). Used by the homepage grid. No special role required beyond authentication.
-
 ### `GET /api/admin/queue`
 
 Pending approval queue — all skills with `status=pending`, sorted newest first. Maintain+ only.
@@ -221,18 +217,6 @@ Update an enterprise skill. Maintain+ only. Cannot edit `anthropic-builtin` sour
 ### `DELETE /api/admin/enterprise-skills/:slug`
 
 Delete an enterprise skill. Admin only.
-
-### `GET /api/admin/categories`
-
-Get categories with featured slug lists. Maintain+ only.
-
-### `PUT /api/admin/categories/:id/featured`
-
-Replace the featured skills list for a category. Maintain+ only.
-
-Valid `id` values: `personal-productivity`, `research-and-analyze`, `write-and-review`, `team-automations`, `build-and-ship`.
-
-**Body:** `{ featuredSlugs: string[] }`
 
 ### `GET /api/admin/users`
 

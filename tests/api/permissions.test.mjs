@@ -123,12 +123,9 @@ describe('can — maintain role: edit any skill', () => {
   });
 });
 
-describe('can — maintain role: enterprise and categories', () => {
+describe('can — maintain role: enterprise', () => {
   it('maintain can manage enterprise skills', () => {
     expect(can(maintain, 'manage:enterprise')).toBe(true);
-  });
-  it('maintain can manage categories', () => {
-    expect(can(maintain, 'manage:categories')).toBe(true);
   });
   it('user cannot manage enterprise skills', () => {
     expect(can(user, 'manage:enterprise')).toBe(false);

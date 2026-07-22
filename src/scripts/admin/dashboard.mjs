@@ -48,7 +48,7 @@ export async function load(panel, ctx) {
     ctx.role === 'admin' ? fetchApi('/admin/analytics').catch(() => ({})) : Promise.resolve({}),
   ]);
 
-  const allItems = (skillsRes.skills ?? []).filter(s => s.source !== 'category-config');
+  const allItems = skillsRes.skills ?? [];
   const skillItems = allItems.filter(s => s.type !== 'agent');
   const agentItems = allItems.filter(s => s.type === 'agent');
   const plugins = pluginsRes.plugins ?? [];

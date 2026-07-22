@@ -2,7 +2,7 @@ const ROLE_RANK = { user: 0, maintain: 1, admin: 2 };
 export const atLeast = (user, role) => (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[role] ?? 99);
 
 const ADMIN_ONLY = new Set(['read:users', 'set:role', 'read:audit', 'delete:skill', 'delete:plugin']);
-const MAINTAIN_PLUS = new Set(['approve:skill', 'reject:skill', 'edit:any-skill', 'manage:plugins', 'manage:enterprise', 'manage:categories']);
+const MAINTAIN_PLUS = new Set(['approve:skill', 'reject:skill', 'edit:any-skill', 'manage:plugins', 'manage:enterprise']);
 
 export function can(user, action, resource = null) {
   if (!user) return false;
