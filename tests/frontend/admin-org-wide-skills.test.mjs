@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { orgWideOnly } from '../../src/scripts/admin/all-content.mjs';
+import { orgWideOnly } from '../../src/scripts/admin/org-wide-skills.mjs';
 
 const mixed = [
   { slug: 'a', source: 'enterprise' },
