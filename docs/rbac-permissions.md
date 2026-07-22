@@ -60,7 +60,7 @@ Full access. Admins can do everything a Maintainer can, plus:
 
 These are distinct concepts and should not be conflated:
 
-**Category** — A curated top-level navigation grouping (Writing & Comms, Research & Analysis, Planning, Dev & Code, Ops & Automation). A skill is placed in a category by a Maintainer. Categories are fixed — adding a new category requires a code change. Each category has a `featuredSlugs` list for highlighting enterprise or curated skills at the top of the category card.
+**Category** — A curated top-level navigation grouping (Writing & Comms, Research & Analysis, Planning, Dev & Code, Ops & Automation). A skill is placed in a category by a Maintainer. Categories are fixed — adding a new category requires a code change.
 
 **Tag** — A freeform label on the skill itself (`testing`, `documentation`, `federal`, `security`). Many tags per skill. Added by the author at submission time or by a Maintainer during curation. Tags are for search filtering and discovery, not navigation. The browsing-by-tag UI is not yet built.
 

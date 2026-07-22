@@ -290,19 +290,6 @@ describe('POST /api/skills — tags field', () => {
   });
 });
 
-describe('POST /api/skills/:slug/approve — category-config guard', () => {
-  it('returns 404 for category-config records', async () => {
-    mockSend
-      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
-      .mockResolvedValueOnce({ Item: { slug: 'category::dev-code', source: 'category-config' } });
-    const res = await app.request('/api/skills/category::dev-code/approve', {
-      method: 'POST',
-      headers: { Cookie: makeSessionCookie('admin@navapbc.com') },
-    });
-    expect(res.status).toBe(404);
-  });
-});
-
 describe('POST /api/skills/:slug/reject', () => {
   it('maintain can reject a pending skill', async () => {
     mockSend
@@ -316,17 +303,6 @@ describe('POST /api/skills/:slug/reject', () => {
       body: JSON.stringify({ reason: 'Not relevant' }),
     });
     expect(res.status).toBe(200);
-  });
-
-  it('returns 404 for category-config records', async () => {
-    mockSend
-      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
-      .mockResolvedValueOnce({ Item: { slug: 'category::dev-code', source: 'category-config' } });
-    const res = await app.request('/api/skills/category::dev-code/reject', {
-      method: 'POST',
-      headers: { Cookie: makeSessionCookie('admin@navapbc.com') },
-    });
-    expect(res.status).toBe(404);
   });
 });
 
@@ -477,19 +453,6 @@ describe('PUT /api/skills/:slug — edge cases', () => {
       body: JSON.stringify({ name: 'Hacked' }),
     });
     expect(res.status).toBe(403);
-  });
-
-  it('returns 404 for category-config record', async () => {
-    mockSend
-      .mockResolvedValueOnce({ Item: USER_RECORD })
-      .mockResolvedValueOnce({ Item: { slug: 'category::dev-code', source: 'category-config' } });
-
-    const res = await app.request('/api/skills/category::dev-code', {
-      method: 'PUT',
-      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Hack' }),
-    });
-    expect(res.status).toBe(404);
   });
 });
 

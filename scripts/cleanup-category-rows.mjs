@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
- * One-time cleanup: removes orphaned category-config rows left behind by the
- * category id rename (issue #32). Featured slugs are stored as synthetic rows
- * in the skills table keyed `slug = "category::<id>"`. After renaming the
- * category ids, the old-id rows are orphaned and must be deleted — new-id rows
- * are re-created fresh via the admin panel.
+ * One-time cleanup: removes all category-config rows from the skills table.
+ *
+ * "Featured skills" used synthetic rows keyed `slug = "category::<id>"` with
+ * `source: "category-config"`. The feature has been retired (never reached the
+ * UI), so every such row is now dead data and should be deleted. This covers
+ * both the current category ids and the old pre-rename ids (issue #32) that may
+ * still linger, so a single run cleans everything.
  *
  * Run staging first, verify, then prod:
  *   node scripts/cleanup-category-rows.mjs --env staging
@@ -40,10 +42,16 @@ if (!['staging', 'prod'].includes(env)) {
 
 const SKILLS_TABLE = `skills-registry-skills-${env}`;
 
-// Old category ids from before the issue #32 rename. New-id rows
-// (personal-productivity, research-and-analyze, write-and-review,
-// team-automations, build-and-ship) are intentionally left untouched.
-const OLD_CATEGORY_IDS = [
+// All category ids whose `category::<id>` config rows should be deleted:
+// the current ids plus the old pre-rename ids (issue #32) that may still exist.
+const CATEGORY_IDS = [
+  // current ids
+  'personal-productivity',
+  'research-and-analyze',
+  'write-and-review',
+  'team-automations',
+  'build-and-ship',
+  // old pre-rename ids (issue #32)
   'writing-comms',
   'research-analysis',
   'planning',
@@ -55,9 +63,9 @@ const client = new DynamoDBClient({ region: 'us-east-1' });
 const ddb = DynamoDBDocumentClient.from(client);
 
 async function main() {
-  console.log(`[${env}] Cleaning up orphaned category-config rows${DRY_RUN ? ' (dry run)' : ''}\n`);
+  console.log(`[${env}] Cleaning up category-config rows${DRY_RUN ? ' (dry run)' : ''}\n`);
   let deleted = 0;
-  for (const id of OLD_CATEGORY_IDS) {
+  for (const id of CATEGORY_IDS) {
     const slug = `category::${id}`;
     const existing = await ddb.send(new GetCommand({ TableName: SKILLS_TABLE, Key: { slug } }));
     if (!existing.Item) {

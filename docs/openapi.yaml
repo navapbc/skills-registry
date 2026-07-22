@@ -274,20 +274,6 @@ components:
           type: string
           format: date-time
 
-    Category:
-      type: object
-      properties:
-        id:
-          type: string
-          enum: [personal-productivity, research-and-analyze, write-and-review, team-automations, build-and-ship]
-        label:
-          type: string
-          example: Writing & Comms
-        featuredSlugs:
-          type: array
-          items:
-            type: string
-
     Error:
       type: object
       required: [error]
@@ -885,24 +871,6 @@ paths:
 
   # ── Admin ──────────────────────────────────────────────────────────────────
 
-  /api/categories:
-    get:
-      tags: [admin]
-      summary: List homepage categories
-      description: Returns all 5 categories with their featured skill slugs. Used by the homepage grid.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  categories:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Category"
-
   /api/admin/queue:
     get:
       tags: [admin]
@@ -1053,77 +1021,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
-  /api/admin/categories:
-    get:
-      tags: [admin]
-      summary: Get categories with featured slugs (admin view)
-      description: Maintain+ only.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  categories:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Category"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /api/admin/categories/{id}/featured:
-    put:
-      tags: [admin]
-      summary: Update featured skills for a category
-      description: Maintain+ only. Replaces the full featuredSlugs list.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            enum: [personal-productivity, research-and-analyze, write-and-review, team-automations, build-and-ship]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [featuredSlugs]
-              properties:
-                featuredSlugs:
-                  type: array
-                  items:
-                    type: string
-      responses:
-        "200":
-          description: Updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  featuredSlugs:
-                    type: array
-                    items:
-                      type: string
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "404":
-          description: Unknown category ID
 
   /api/admin/users:
     get:

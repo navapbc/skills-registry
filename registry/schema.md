@@ -68,7 +68,6 @@ Skills and agents are stored in DynamoDB (`skills-registry-skills-{env}`) and se
 | `"github"` | Sync script | Sourced from a GitHub repo via code search |
 | `"enterprise"` | Sync script | From the `enterprise/` folder in this repo |
 | `"user-submitted"` | API (`POST /api/skills`) | Submitted via the `/submit` form |
-| `"category-config"` | Sync script | Synthetic record from category configuration |
 | `"anthropic-builtin"` | Anthropic sync script | Anthropic's official built-in skills |
 
 ### `compatibility` values

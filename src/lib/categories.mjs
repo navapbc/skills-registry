@@ -2,9 +2,6 @@
 // Category membership (tiles' skill count, detail-page list, tag pills) is
 // driven by each skill's `category` field (s.category === cat.id), not a
 // per-category slug list.
-// featuredSlugs: enterprise-managed skills shown with "Featured" label at top
-//   (leave empty until Anthropic API enterprise skill sync is built)
-// Ops team: edit featuredSlugs to curate featured skills per category.
 export const CATEGORIES = [
   {
     id: 'write-and-review',
@@ -19,7 +16,6 @@ export const CATEGORIES = [
       'Have an idea for a Write & Review skill? Status reports, exec summaries, capability statements, and weekly recaps are all good candidates.',
     borderColor: '#c4b5fd',
     textColor: '#7c3aed',
-    featuredSlugs: [],
   },
   {
     id: 'research-and-analyze',
@@ -34,7 +30,6 @@ export const CATEGORIES = [
       'Have an idea for a Research & Analyze skill? Competitive intel, contract vehicle research, and RFP analysis are all good candidates.',
     borderColor: '#94a3b8',
     textColor: '#475569',
-    featuredSlugs: [],
   },
   {
     id: 'personal-productivity',
@@ -49,7 +44,6 @@ export const CATEGORIES = [
       'Have an idea for a Personal Productivity skill? Expense report automation, Slack digests, and daily standup prep are all good candidates.',
     borderColor: '#6ee7b7',
     textColor: '#059669',
-    featuredSlugs: [],
   },
   {
     id: 'build-and-ship',
@@ -64,7 +58,6 @@ export const CATEGORIES = [
       'Have an idea for a Build & Ship skill? PR automation, MCP setup, program onboarding, and code review are all good candidates.',
     borderColor: '#fcd34d',
     textColor: '#92400e',
-    featuredSlugs: [],
   },
   {
     id: 'team-automations',
@@ -79,6 +72,5 @@ export const CATEGORIES = [
       'Have an idea for a Team Automations skill? Monthly reconciliation, quarterly compliance checks, and onboarding checklists are all good candidates.',
     borderColor: '#d1d5db',
     textColor: '#374151',
-    featuredSlugs: [],
   },
 ];

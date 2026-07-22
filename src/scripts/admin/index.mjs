@@ -5,7 +5,6 @@ import { load as loadQueue } from './queue.mjs';
 import { load as loadAllContent } from './all-content.mjs';
 import { load as loadPlugins } from './plugins.mjs';
 import { load as loadEnterprise } from './enterprise.mjs';
-import { load as loadCategories } from './categories.mjs';
 import { load as loadValidate } from './validate.mjs';
 import { load as loadUsers } from './users.mjs';
 import { load as loadAudit } from './audit.mjs';
@@ -28,7 +27,6 @@ export async function initAdmin() {
     'all-content': loadAllContent,
     plugins: loadPlugins,
     enterprise: loadEnterprise,
-    categories: loadCategories,
     validate: loadValidate,
     users: loadUsers,
     audit: loadAudit,

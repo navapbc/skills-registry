@@ -50,61 +50,6 @@ const ADMIN_RECORD    = { user_id: 'admin@navapbc.com',    email: 'admin@navapbc
 
 beforeEach(() => mockSend.mockReset());
 
-// ── GET /api/categories ────────────────────────────────────────────────────
-describe('GET /api/categories', () => {
-  it('returns categories with empty featuredSlugs when no DDB overrides', async () => {
-    mockSend
-      .mockResolvedValueOnce({ Item: USER_RECORD })   // auth
-      .mockResolvedValueOnce({ Responses: {} });       // BatchGetCommand
-
-    const res = await app.request('/api/categories', {
-      headers: { Cookie: makeSessionCookie() },
-    });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.categories).toHaveLength(5);
-    expect(body.categories[0].id).toBe('personal-productivity');
-    expect(body.categories[0].featuredSlugs).toEqual([]);
-  });
-
-  it('includes metadata fields for every category', async () => {
-    mockSend
-      .mockResolvedValueOnce({ Item: USER_RECORD })   // auth
-      .mockResolvedValueOnce({ Responses: {} });       // BatchGetCommand
-
-    const res = await app.request('/api/categories', {
-      headers: { Cookie: makeSessionCookie() },
-    });
-    const body = await res.json();
-    for (const cat of body.categories) {
-      expect(typeof cat.subtitle).toBe('string');
-      expect(cat.subtitle.length).toBeGreaterThan(0);
-      expect(typeof cat.hero_description).toBe('string');
-      expect(cat.hero_description.length).toBeGreaterThan(0);
-      expect(cat.accent_color).toMatch(/^#[0-9A-Fa-f]{6}$/);
-      expect(typeof cat.icon).toBe('string');
-      expect(cat.icon.length).toBeGreaterThan(0);
-    }
-  });
-
-  it('merges DDB featuredSlugs override', async () => {
-    mockSend
-      .mockResolvedValueOnce({ Item: USER_RECORD })
-      .mockResolvedValueOnce({
-        Responses: {
-          'undefined': [{ slug: 'category::build-and-ship', featuredSlugs: ['fix-bug', 'test'] }],
-        },
-      });
-
-    const res = await app.request('/api/categories', {
-      headers: { Cookie: makeSessionCookie() },
-    });
-    const body = await res.json();
-    const buildShip = body.categories.find(c => c.id === 'build-and-ship');
-    expect(buildShip.featuredSlugs).toEqual(['fix-bug', 'test']);
-  });
-});
-
 // ── GET /api/admin/queue ───────────────────────────────────────────────────
 describe('GET /api/admin/queue', () => {
   it('returns 403 for user role', async () => {
@@ -207,47 +152,6 @@ describe('POST /api/admin/enterprise-skills', () => {
   });
 });
 
-// ── PUT /api/admin/categories/:id/featured ────────────────────────────────
-describe('PUT /api/admin/categories/:id/featured', () => {
-  it('returns 403 for user role', async () => {
-    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
-
-    const res = await app.request('/api/admin/categories/build-and-ship/featured', {
-      method: 'PUT',
-      headers: { Cookie: makeSessionCookie(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ featuredSlugs: ['fix-bug'] }),
-    });
-    expect(res.status).toBe(403);
-  });
-
-  it('returns 404 for unknown category id', async () => {
-    mockSend.mockResolvedValueOnce({ Item: MAINTAIN_RECORD });
-
-    const res = await app.request('/api/admin/categories/unknown-cat/featured', {
-      method: 'PUT',
-      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ featuredSlugs: [] }),
-    });
-    expect(res.status).toBe(404);
-  });
-
-  it('updates featuredSlugs for maintain role', async () => {
-    mockSend
-      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
-      .mockResolvedValueOnce({})  // PutCommand
-      .mockResolvedValueOnce({}); // writeAudit
-
-    const res = await app.request('/api/admin/categories/build-and-ship/featured', {
-      method: 'PUT',
-      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ featuredSlugs: ['fix-bug', 'test'] }),
-    });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.featuredSlugs).toEqual(['fix-bug', 'test']);
-  });
-});
-
 // ── GET /api/admin/users — admin only ─────────────────────────────────────
 describe('GET /api/admin/users', () => {
   it('returns 403 for maintain role', async () => {
@@ -316,7 +220,6 @@ describe('GET /api/admin/skills', () => {
           { slug: 'public-skill',  source: 'github',          visibility: 'public',  status: 'approved' },
           { slug: 'private-skill', source: 'github',          visibility: 'private', status: 'approved', created_by: 'other@navapbc.com' },
           { slug: 'hidden-skill',  source: 'github',          visibility: 'hidden',  status: 'approved', created_by: 'other@navapbc.com' },
-          { slug: 'cat-config',    source: 'category-config' },
         ],
         LastEvaluatedKey: undefined,
       });
@@ -328,7 +231,6 @@ describe('GET /api/admin/skills', () => {
     expect(body.skills).toHaveLength(3);
     expect(body.skills.map(s => s.slug)).toContain('private-skill');
     expect(body.skills.map(s => s.slug)).toContain('hidden-skill');
-    expect(body.skills.map(s => s.slug)).not.toContain('cat-config');
   });
 });
 
@@ -497,54 +399,6 @@ describe('POST /api/admin/enterprise-skills — slug collision', () => {
       body: JSON.stringify({ slug: 'existing-skill', name: 'Existing', description: 'Already there' }),
     });
     expect(res.status).toBe(409);
-  });
-});
-
-// ── GET /api/admin/categories (admin-gated) ───────────────────────────────
-describe('GET /api/admin/categories', () => {
-  it('returns 403 for user role', async () => {
-    mockSend.mockResolvedValueOnce({ Item: USER_RECORD });
-    const res = await app.request('/api/admin/categories', {
-      headers: { Cookie: makeSessionCookie() },
-    });
-    expect(res.status).toBe(403);
-  });
-
-  it('returns categories for maintain role', async () => {
-    mockSend
-      .mockResolvedValueOnce({ Item: MAINTAIN_RECORD })
-      .mockResolvedValueOnce({ Responses: {} }); // BatchGetCommand
-    const res = await app.request('/api/admin/categories', {
-      headers: { Cookie: makeSessionCookie('maintain@navapbc.com') },
-    });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.categories).toHaveLength(5);
-  });
-});
-
-// ── PUT /api/admin/categories/:id/featured — body validation ─────────────
-describe('PUT /api/admin/categories/:id/featured — body validation', () => {
-  it('returns 400 when featuredSlugs is missing', async () => {
-    mockSend.mockResolvedValueOnce({ Item: MAINTAIN_RECORD });
-
-    const res = await app.request('/api/admin/categories/build-and-ship/featured', {
-      method: 'PUT',
-      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ other: 'field' }),
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it('returns 400 when featuredSlugs is not an array', async () => {
-    mockSend.mockResolvedValueOnce({ Item: MAINTAIN_RECORD });
-
-    const res = await app.request('/api/admin/categories/build-and-ship/featured', {
-      method: 'PUT',
-      headers: { Cookie: makeSessionCookie('maintain@navapbc.com'), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ featuredSlugs: 'not-an-array' }),
-    });
-    expect(res.status).toBe(400);
   });
 });
 

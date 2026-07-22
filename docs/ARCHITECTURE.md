@@ -160,12 +160,9 @@ Key fields: `slug`, `name`, `description`, `type` (skill/agent), `plugin`, `repo
 
 GSIs: `byCreator` (for "my skills"), `byStatus` (for admin approval queue), `byPlugin`.
 
-This table also holds **category-config rows** — synthetic items keyed
-`slug = "category::<id>"` with `source: "category-config"` and a `featuredSlugs`
-array — which store each category's admin-curated featured skills separately from
-the per-skill `category` attribute. See
-[Categories & Featured Skills — Data Model](categories-data-model.md) for how
-category membership (`s.category === cat.id`) and featured slugs relate.
+Category membership is the per-skill `category` attribute, matched at render time
+as `s.category === cat.id`. See
+[Categories — Data Model](categories-data-model.md) for details.
 
 ### `skills-registry-plugins-{env}`
 
