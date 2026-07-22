@@ -71,7 +71,7 @@ if (!slug) {
       <div class="flex gap-1.5">
         <button data-filter="all"       class="skills-filter-btn active text-xs px-3 py-1.5 rounded-lg border border-plum-600 bg-plum-600 text-white transition-colors">All</button>
         <button data-filter="org-wide"  class="skills-filter-btn text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-plum-300 transition-colors">Org-wide</button>
-        <button data-filter="community" class="skills-filter-btn text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-plum-300 transition-colors">Community</button>
+        <button data-filter="community" class="skills-filter-btn text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-plum-300 transition-colors">Claude Code</button>
       </div>
     </div>
 
@@ -87,9 +87,9 @@ if (!slug) {
         <div id="orgwide-grid"><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">${Array(3).fill(skeletonCard).join('')}</div></div>
       </div>
 
-      <!-- Community skills -->
+      <!-- Claude Code skills (a.k.a. "community" skills internally: source !== 'enterprise') -->
       <div id="community-section">
-        <h2 class="text-base font-semibold text-gray-700 mb-3 m-0" id="community-heading">Community Skills</h2>
+        <h2 class="text-base font-semibold text-gray-700 mb-3 m-0" id="community-heading">Claude Code Skills</h2>
         <div id="skills-list-grid"><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">${Array(9).fill(skeletonCard).join('')}</div></div>
       </div>
     </div>
@@ -166,7 +166,7 @@ if (!slug) {
       if (orgHeading) orgHeading.textContent = `Available to all Nava staff (${orgWide.length})`;
 
       const communityHeading = document.getElementById('community-heading');
-      if (communityHeading) communityHeading.textContent = `Community Skills (${community.length})`;
+      if (communityHeading) communityHeading.textContent = `Claude Code Skills (${community.length})`;
 
       const orgGrid = document.getElementById('orgwide-grid');
       if (orgGrid) {
@@ -177,7 +177,7 @@ if (!slug) {
 
       document.getElementById('skills-list-grid').innerHTML = community.length
         ? renderSkillGrid(community)
-        : '<p class="text-sm text-gray-400 italic">No community skills yet.</p>';
+        : '<p class="text-sm text-gray-400 italic">No Claude Code Skills yet.</p>';
 
       initGithubLinks();
       initFavoriteButtons();

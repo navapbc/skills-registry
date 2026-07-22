@@ -3,7 +3,8 @@ import { escapeHtml } from '../../lib/render.mjs';
 import { apiPut } from './api.mjs';
 import { catLabel, catSelectOptions, tagChips, compatChips, COMPAT_OPTIONS } from '../../lib/admin/format.mjs';
 
-// This tab manages org-wide skills only. Community (GitHub-sourced) skills are
+// This tab manages org-wide skills only. Community (GitHub-sourced) skills —
+// surfaced in the UI as "Claude Code skills" — are
 // excluded so they can't be edited here — their category/compatibility edits
 // would be overwritten by the next sync anyway, and they belong to the browse
 // surfaces, not admin curation. "Org-wide" is defined the same way as site-wide:
