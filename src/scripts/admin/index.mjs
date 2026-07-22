@@ -2,7 +2,7 @@ import { fetchApi } from '../../lib/api.mjs';
 import { createTabController } from './controller.mjs';
 import { load as loadDashboard } from './dashboard.mjs';
 import { load as loadQueue } from './queue.mjs';
-import { load as loadOrgWideSkills } from './org-wide-skills.mjs';
+import { load as loadOrgWide } from './org-wide.mjs';
 import { load as loadPlugins } from './plugins.mjs';
 import { load as loadEnterprise } from './enterprise.mjs';
 import { load as loadValidate } from './validate.mjs';
@@ -24,7 +24,7 @@ export async function initAdmin() {
 
   const loaders = {
     queue: loadQueue,
-    'all-content': loadOrgWideSkills,
+    'org-wide': loadOrgWide,
     plugins: loadPlugins,
     enterprise: loadEnterprise,
     validate: loadValidate,
