@@ -203,6 +203,7 @@ export function renderSkillDetail(skill) {
   const committer = skill.committer;
   const authorName = authorDisplayName(skill);
   const addedDate = formatDate(skill.created_at);
+  const updatedDate = formatDate(skill.last_updated);
 
   const compatBadges = skill.compatibility.map(c =>
     `<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">${escapeHtml(c)}</span>`
@@ -289,6 +290,7 @@ export function renderSkillDetail(skill) {
       <div class="flex items-center gap-2 text-sm text-gray-400">
         ${avatarHtml(authorName, authorAvatarUrl(skill), '6')}
         ${addedDate ? `<span class="text-gray-300">·</span><span>Added ${escapeHtml(addedDate)}</span>` : ''}
+        ${updatedDate && updatedDate !== addedDate ? `<span class="text-gray-300">·</span><span>Updated ${escapeHtml(updatedDate)}</span>` : ''}
         <span class="text-gray-300">·</span>
         <a href="https://github.com/${escapeHtml(skill.repo)}/blob/main/${escapeHtml(skill.path)}" target="_blank" rel="noopener" class="text-plum-600 hover:text-plum-700 no-underline">View on GitHub ↗</a>
       </div>
@@ -334,6 +336,7 @@ export function renderSkillDetail(skill) {
           <h3 class="text-sm font-semibold text-gray-900 mb-3">Details</h3>
           <dl class="space-y-2 m-0">
             ${addedDate ? `<div class="flex justify-between gap-2"><dt class="text-xs text-gray-400">Added</dt><dd class="text-xs text-gray-700 m-0">${escapeHtml(addedDate)}</dd></div>` : ''}
+            ${updatedDate && updatedDate !== addedDate ? `<div class="flex justify-between gap-2"><dt class="text-xs text-gray-400">Updated</dt><dd class="text-xs text-gray-700 m-0">${escapeHtml(updatedDate)}</dd></div>` : ''}
             <div class="flex justify-between gap-2">
               <dt class="text-xs text-gray-400">Repo</dt>
               <dd class="text-xs m-0"><a href="https://github.com/${escapeHtml(skill.repo)}" target="_blank" rel="noopener" class="text-plum-600 hover:text-plum-700 no-underline truncate block max-w-32" title="${escapeHtml(skill.repo)}">${escapeHtml(skill.repo)}</a></dd>
