@@ -202,7 +202,7 @@ export function renderSkillDetail(skill) {
   const claudeCodeCommand = `claude mcp add ${skill.slug} --from-github ${skill.repo}`;
   const committer = skill.committer;
   const authorName = authorDisplayName(skill);
-  const addedDate = formatDate(skill.last_updated);
+  const addedDate = formatDate(skill.created_at);
 
   const compatBadges = skill.compatibility.map(c =>
     `<span class="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">${escapeHtml(c)}</span>`
