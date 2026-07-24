@@ -1,0 +1,35 @@
+name: Update Release Branch
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  update-release:
+    name: Point release at latest main
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Verify release has not diverged from main
+        run: |
+          release_sha=$(git ls-remote origin refs/heads/release | cut -f1)
+          if [ -z "$release_sha" ]; then
+            echo "No release branch exists yet; it will be created from main."
+            exit 0
+          fi
+          if ! git merge-base --is-ancestor "$release_sha" ${{ github.sha }}; then
+            echo "::error::release ($release_sha) is not an ancestor of main (${{ github.sha }})."
+            echo "::error::release has diverged from main. Please fix release manually before this workflow can update it."
+            exit 1
+          fi
+          echo "release ($release_sha) is in main's history; safe to update."
+
+      - name: Update release branch to main
+        run: git push origin ${{ github.sha }}:refs/heads/release
