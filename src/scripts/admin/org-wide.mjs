@@ -110,7 +110,7 @@ export async function load(panel) {
 
   panel.innerHTML = `
     <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 leading-relaxed">
-      <strong>Sync note:</strong> Category and compatibility on GitHub-sourced skills are overwritten by the next sync whenever the SKILL.md changes in the source repo. To make these changes permanent, update the frontmatter in the SKILL.md directly. <strong>Tags are safe</strong> — they are never touched by sync.
+      <strong>Sync note:</strong> <strong>Category, tags, and visibility are admin-owned</strong> — edits here are saved to the Hub and are never overwritten by sync. <strong>Compatibility</strong> and the skill's other details come from the SKILL.md frontmatter and are overwritten by the next sync whenever the source file changes; to change those, edit the frontmatter in the SKILL.md directly.
     </div>
     <div class="flex flex-wrap items-center gap-3 mb-4">
       <input type="text" id="content-search" placeholder="Search by name, slug, or author…" class="flex-1 min-w-48 text-sm border border-gray-200 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-plum-300" />
