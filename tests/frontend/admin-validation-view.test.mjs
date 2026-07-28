@@ -52,4 +52,16 @@ describe('renderValidationResults', () => {
     expect(html).toContain('Extracted fields');
     expect(html).toContain('Set by the pipeline');
   });
+
+  it('renders the admin-managed block for category/tags in frontmatter', () => {
+    const html = renderValidationResults({ ...base, adminManaged: ['category', 'tags'] });
+    expect(html).toContain('Managed in the admin panel');
+    expect(html).toContain('<code>category</code>');
+    expect(html).toContain('<code>tags</code>');
+  });
+
+  it('omits the admin-managed block when there are none (and tolerates a missing field)', () => {
+    expect(renderValidationResults(base)).not.toContain('Managed in the admin panel');
+    expect(renderValidationResults({ ...base, adminManaged: [] })).not.toContain('Managed in the admin panel');
+  });
 });

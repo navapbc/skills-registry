@@ -276,7 +276,7 @@ async function main() {
       const record = buildSkillRecord({ meta, body, content, repo: repoData, path: file.path, committer, type: 'skill', org: ORG });
       skillMap.set(`${ORG}/${REGISTRY_REPO}::${file.path}`, record);
       updatedPlugins.add(`${ORG}/${REGISTRY_REPO}`);
-      console.log(`  ✓ ${record.slug} (source: ${record.source}, category: ${record.category || 'none'})`);
+      console.log(`  ✓ ${record.slug} (source: ${record.source})`);
     }
   } catch (err) {
     console.error(`  Warning: could not fetch enterprise skills directly — ${err.message}`);

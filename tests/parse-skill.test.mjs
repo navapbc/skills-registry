@@ -41,7 +41,8 @@ describe('buildSkillRecord — context-free (validator) mode', () => {
     expect(rec.expected_audience).toBe('6-15 people');
     expect(rec.impact_type).toEqual(['Time saved per use']);
     expect(rec.compatibility).toEqual(['claude-chat', 'claude-cowork']);
-    expect(rec.tags).toEqual(['writing', 'meeting-prep']);
+    // tags is admin-owned — never read from frontmatter into the record
+    expect('tags' in rec).toBe(false);
     expect(rec.sensitive_data).toBe(false);
     expect(rec.type).toBe('skill');
     expect(rec.content).toBe(SAMPLE);
@@ -82,12 +83,19 @@ describe('buildSkillRecord — context-free (validator) mode', () => {
     expect('author_name' in rec).toBe(false);
   });
 
-  it('normalizes scalar impact_type/tags to arrays', () => {
-    const src = `---\nname: x\nimpact_type: Time saved per use\ntags: writing\n---\n\nbody`;
+  it('normalizes scalar impact_type to an array', () => {
+    const src = `---\nname: x\nimpact_type: Time saved per use\n---\n\nbody`;
     const { meta, body } = parseFrontmatter(src);
     const rec = buildSkillRecord({ meta, body, content: src });
     expect(rec.impact_type).toEqual(['Time saved per use']);
-    expect(rec.tags).toEqual(['writing']);
+  });
+
+  it('never reads admin-owned category/tags from frontmatter into the record', () => {
+    const src = `---\nname: x\ncategory: write-and-review\ntags: [a, b]\n---\n\nbody`;
+    const { meta, body } = parseFrontmatter(src);
+    const rec = buildSkillRecord({ meta, body, content: src });
+    expect('category' in rec).toBe(false);
+    expect('tags' in rec).toBe(false);
   });
 
   it('adds agent-only fields when type is agent', () => {
@@ -127,14 +135,15 @@ describe('buildSkillRecord — pipeline (sync) mode', () => {
     expect(rec.name).toBe('cool-thing');
   });
 
-  it('marks enterprise/ paths with source=enterprise', () => {
+  it('marks enterprise/ paths with source=enterprise and ignores frontmatter category', () => {
     const src = `---\nname: ent\ncategory: ops\n---\n\nbody`;
     const { meta, body } = parseFrontmatter(src);
     const rec = buildSkillRecord({
       meta, body, content: src, repo, path: 'enterprise/ops/ent/SKILL.md', org: 'navapbc',
     });
     expect(rec.source).toBe('enterprise');
-    expect(rec.category).toBe('ops');
+    // category is admin-owned in DynamoDB — frontmatter category is not read
+    expect('category' in rec).toBe(false);
   });
 });
 
@@ -170,6 +179,26 @@ describe('analyzeSkillFile', () => {
     expect(Object.keys(ignored)).toContain('nava_team');
     expect(ignored.nava_team).toBe('team');
     expect('bogusfield' in ignored).toBe(true);
+  });
+
+  it('surfaces frontmatter category/tags as admin-managed, not ignored/typo, and not in the record', () => {
+    const out = analyzeSkillFile(`---\nname: x\ncategory: write-and-review\ntags: [a, b]\n---\n\nbody`);
+    expect(out.adminManaged).toEqual(expect.arrayContaining(['category', 'tags']));
+    // not treated as unrecognized/typo keys
+    const ignoredKeys = out.ignored.map(i => i.key);
+    expect(ignoredKeys).not.toContain('category');
+    expect(ignoredKeys).not.toContain('tags');
+    // not extracted into the record
+    expect('category' in out.record).toBe(false);
+    expect('tags' in out.record).toBe(false);
+    // not shown in the extracted-fields table
+    expect(out.fields.map(f => f.key)).not.toContain('category');
+    expect(out.fields.map(f => f.key)).not.toContain('tags');
+  });
+
+  it('adminManaged is empty when frontmatter declares neither field', () => {
+    const out = analyzeSkillFile(`---\nname: x\n---\n\nbody`);
+    expect(out.adminManaged).toEqual([]);
   });
 
   it('coerces sparse input into a schema-valid record (linting lives in warnings)', () => {
@@ -241,9 +270,9 @@ body`;
     expect(out.warnings.some(w => w.field === 'name' && /skill-name format/.test(w.message))).toBe(true);
   });
 
-  it('warns when there are more than 3 tags or bad tag format', () => {
+  it('does not warn about tag count/format — tags are admin-owned, not authored', () => {
     const out = analyzeSkillFile(`---\nname: x\ntags: [a, b, c, d]\n---\n\nbody`);
-    expect(out.warnings.some(w => w.field === 'tags')).toBe(true);
+    expect(out.warnings.some(w => w.field === 'tags')).toBe(false);
   });
 
   it('warns when sensitive_data is not explicitly set', () => {

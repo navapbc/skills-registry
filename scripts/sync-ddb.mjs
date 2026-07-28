@@ -9,8 +9,13 @@
 
 // Optional record fields produced by buildSkillRecord. Keep in sync with the
 // optional fields in SkillSchema (src/lib/registry-schema.mjs).
+// NOTE: `category` and `tags` are intentionally absent here (and from the SET
+// clauses below). They are admin-owned fields living only in DynamoDB, managed
+// via the admin panel — the same model as `visibility`. Sync must never write
+// them, or it would clobber admin edits (see
+// docs/plans/2026-07-28-001-refactor-admin-owned-category-tags-plan.md).
 export const OPTIONAL_SYNC_FIELDS = [
-  'author_name', 'tags',
+  'author_name',
   'team', 'problem', 'impact_type', 'estimated_impact',
   'usage_frequency', 'expected_audience', 'data_sources',
   'tools_used', 'human_in_loop',
@@ -28,7 +33,6 @@ export function buildSkillUpdateParams(skill, { table, now, force = false }) {
     'version = :version',
     'compatibility = :compat',
     'sensitive_data = :sensitive',
-    'category = :category',
     '#type = :type',
     'content = :content',
     'last_updated = :updated',
@@ -55,7 +59,6 @@ export function buildSkillUpdateParams(skill, { table, now, force = false }) {
     ':github': 'github', ':approved': 'approved', ':public': 'public', ':system': 'system',
     ':src': skill.source ?? 'github',
     ':enterprise': 'enterprise',
-    ':category': skill.category ?? '',
   };
 
   // Append optional fields that are actually present on the record. Using

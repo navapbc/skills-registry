@@ -88,11 +88,15 @@ export function buildSkillRecord({ meta = {}, body = '', content = '', repo = nu
   }
 
   if (path && path.startsWith('enterprise/')) record.source = 'enterprise';
-  record.category = meta.category ?? '';
 
-  // Optional submission metadata + author/tags — included only when present.
+  // `category` and `tags` are intentionally NOT read from frontmatter. They are
+  // admin-owned fields managed in the admin panel and stored only in DynamoDB
+  // (same model as `visibility`). A `category:`/`tags:` key in frontmatter is
+  // ignored here and surfaced as admin-managed by the validator (see
+  // ADMIN_MANAGED_KEYS and analyzeSkillFile).
+
+  // Optional submission metadata + author name — included only when present.
   if (meta.author_name) record.author_name = meta.author_name;
-  if (meta.tags) record.tags = normalizeArray(meta.tags);
   if (meta.team) record.team = meta.team;
   if (meta.problem) record.problem = meta.problem;
   if (meta.impact_type) record.impact_type = normalizeArray(meta.impact_type);
@@ -108,6 +112,9 @@ export function buildSkillRecord({ meta = {}, body = '', content = '', repo = nu
 const PIPELINE_KEYS = new Set(['repo', 'path', 'plugin', 'committer', 'last_updated', 'source', 'content']);
 
 // Frontmatter keys the registry understands. Anything else is ignored.
+// `category` and `tags` stay listed here so a stray key is NOT mis-flagged as a
+// typo (see nearestKey) — but they are admin-managed, not read into the record
+// (see ADMIN_MANAGED_KEYS and buildSkillRecord).
 export const RECOGNIZED_KEYS = new Set([
   'name', 'slug', 'description', 'version', 'author', 'author_name',
   'compatibility', 'sensitive_data', 'type', 'tags', 'category',
@@ -115,6 +122,12 @@ export const RECOGNIZED_KEYS = new Set([
   'team', 'problem', 'impact_type', 'estimated_impact',
   'usage_frequency', 'expected_audience', 'data_sources',
 ]);
+
+// Fields that are owned and edited in the admin panel (stored only in DynamoDB),
+// not authored in SKILL.md frontmatter. A frontmatter key here is recognized but
+// ignored — the validator surfaces it as admin-managed rather than dropping it
+// silently or suggesting a typo correction.
+export const ADMIN_MANAGED_KEYS = new Set(['category', 'tags']);
 
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
@@ -151,7 +164,6 @@ function fieldSource(key, meta) {
     case 'version': return meta.version ? 'frontmatter' : 'defaulted';
     case 'type': return meta.type ? 'frontmatter' : 'defaulted';
     case 'compatibility': return meta.compatibility ? 'frontmatter' : 'defaulted';
-    case 'category': return meta.category ? 'frontmatter' : 'defaulted';
     case 'sensitive_data': return meta.sensitive_data !== undefined ? 'frontmatter' : 'defaulted';
     default: return 'frontmatter'; // optional fields only exist when present in meta
   }
@@ -174,6 +186,10 @@ export function analyzeSkillFile(rawContent) {
     .filter(k => !RECOGNIZED_KEYS.has(k))
     .map(k => ({ key: k, suggestion: nearestKey(k) }));
 
+  // Recognized-but-ignored admin-owned keys present in the frontmatter. Surfaced
+  // separately so the validator can explain they are managed in the admin panel.
+  const adminManaged = Object.keys(meta).filter(k => ADMIN_MANAGED_KEYS.has(k));
+
   const parsed = SkillSchema.safeParse(record);
   const validation = parsed.success
     ? { valid: true, errors: [] }
@@ -184,5 +200,5 @@ export function analyzeSkillFile(rawContent) {
 
   const warnings = checkFormConstraints(record, meta);
 
-  return { meta, body, record, fields, ignored, validation, warnings };
+  return { meta, body, record, fields, ignored, adminManaged, validation, warnings };
 }
