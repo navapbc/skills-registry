@@ -289,10 +289,6 @@ export function renderSkillDetail(skill) {
       </div>
       <div class="flex items-center gap-2 text-sm text-gray-400">
         ${avatarHtml(authorName, authorAvatarUrl(skill), '6')}
-        ${addedDate ? `<span class="text-gray-300">·</span><span>Added ${escapeHtml(addedDate)}</span>` : ''}
-        ${updatedDate && updatedDate !== addedDate ? `<span class="text-gray-300">·</span><span>Updated ${escapeHtml(updatedDate)}</span>` : ''}
-        <span class="text-gray-300">·</span>
-        <a href="https://github.com/${escapeHtml(skill.repo)}/blob/main/${escapeHtml(skill.path)}" target="_blank" rel="noopener" class="text-plum-600 hover:text-plum-700 no-underline">View on GitHub ↗</a>
       </div>
     </div>
 
