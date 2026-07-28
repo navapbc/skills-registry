@@ -52,6 +52,20 @@ describe('buildSkillUpdateParams — core fields', () => {
     expect('#team' in p.ExpressionAttributeNames).toBe(false);
   });
 
+  it('never writes category or tags — they are admin-owned in DynamoDB, not synced', () => {
+    // Even when the record carries category/tags, sync must leave them untouched
+    // so admin-panel edits are not clobbered
+    // (docs/plans/2026-07-28-001-refactor-admin-owned-category-tags-plan.md).
+    const p = paramsFor({ ...coreSkill, category: 'team-automations', tags: ['a', 'b'] });
+    expect(p.UpdateExpression).not.toContain('category');
+    expect(p.UpdateExpression).not.toContain('tags');
+    expect(':category' in p.ExpressionAttributeValues).toBe(false);
+    expect(':tags' in p.ExpressionAttributeValues).toBe(false);
+    expect('#tags' in p.ExpressionAttributeNames).toBe(false);
+    assertNoUnusedValues(p);
+    assertNoUnusedNames(p);
+  });
+
   it('keeps the content-unchanged condition guard', () => {
     const p = paramsFor(coreSkill);
     expect(p.ConditionExpression).toContain('attribute_not_exists(slug)');
@@ -79,8 +93,9 @@ describe('buildSkillUpdateParams — optional submission fields', () => {
     data_sources: 'Google Docs',
   };
 
+  // `tags` is intentionally NOT here — it is admin-owned and never synced.
   const OPTIONALS = [
-    'author_name', 'tags', 'team', 'problem', 'impact_type',
+    'author_name', 'team', 'problem', 'impact_type',
     'estimated_impact', 'usage_frequency', 'expected_audience', 'data_sources',
   ];
 
@@ -148,7 +163,7 @@ describe('buildSkillUpdateParams — agent fields', () => {
 });
 
 describe('end-to-end: parsed SKILL.md → record → write params', () => {
-  it('flows team / author_name / tags / author from frontmatter into the write params', () => {
+  it('flows team / author_name / author from frontmatter but never category/tags', () => {
     const src = `---
 name: test-exec-summary
 description: Does a thing
@@ -156,6 +171,7 @@ author: diana@navapbc.com
 author_name: Diana Olympia
 team: Business Development
 impact_type: [Time saved per use]
+category: write-and-review
 tags: [writing, meeting-prep]
 ---
 
@@ -166,11 +182,16 @@ tags: [writing, meeting-prep]
       repo: { name: 'r', owner: { login: 'navapbc' }, pushed_at: NOW },
       path: 'enterprise/x/SKILL.md', org: 'navapbc',
     });
+    // category/tags are admin-owned — the parser must not read them into the record...
+    expect('category' in record).toBe(false);
+    expect('tags' in record).toBe(false);
     const p = paramsFor(record);
     expect(p.ExpressionAttributeValues[':team']).toBe('Business Development');
     expect(p.ExpressionAttributeValues[':author_name']).toBe('Diana Olympia');
-    expect(p.ExpressionAttributeValues[':tags']).toEqual(['writing', 'meeting-prep']);
     expect(p.ExpressionAttributeValues[':impact_type']).toEqual(['Time saved per use']);
+    // ...and the write params must not carry them either
+    expect(':category' in p.ExpressionAttributeValues).toBe(false);
+    expect(':tags' in p.ExpressionAttributeValues).toBe(false);
     // frontmatter email wins over the GitHub repo owner
     expect(p.ExpressionAttributeValues[':author']).toBe('diana@navapbc.com');
     assertNoUnusedValues(p);

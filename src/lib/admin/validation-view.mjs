@@ -1,7 +1,7 @@
 import { escapeHtml } from '../render.mjs';
 
 export function renderValidationResults(analysis) {
-  const { fields, ignored, validation, warnings } = analysis;
+  const { fields, ignored, adminManaged = [], validation, warnings } = analysis;
 
   const sourceLabel = {
     frontmatter: '<span class="text-green-700">from frontmatter</span>',
@@ -52,6 +52,15 @@ export function renderValidationResults(analysis) {
       </div>`
     : '';
 
+  const adminManagedBlock = adminManaged.length
+    ? `<div class="mt-4">
+        <h3 class="text-sm font-semibold text-gray-900 mb-2">🛠️ Managed in the admin panel</h3>
+        <ul class="text-xs text-gray-600 space-y-1">
+          ${adminManaged.map(k => `<li><code>${escapeHtml(k)}</code> — set in the admin panel, not in frontmatter; this value is ignored here.</li>`).join('')}
+        </ul>
+      </div>`
+    : '';
+
   return `
     ${banner}
     ${warningsBlock}
@@ -64,6 +73,7 @@ export function renderValidationResults(analysis) {
       <table class="admin-table w-full text-left opacity-70"><tbody>${fieldRows(pipeline)}</tbody></table>
     </div>
     ${ignoredBlock}
+    ${adminManagedBlock}
     <div class="mt-4">
       <button id="copy-record-btn" class="text-xs px-2 py-1 bg-plum-600 text-white rounded hover:bg-plum-700 transition-colors">Copy as JSON</button>
       <span id="copy-status" class="text-xs text-green-600 ml-2 hidden">Copied ✓</span>

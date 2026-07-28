@@ -100,16 +100,9 @@ export function checkFormConstraints(record, meta = {}) {
     }
   }
 
-  // Tags: form asks for 1-3 lowercase-hyphen tags.
-  if (Array.isArray(record.tags)) {
-    if (record.tags.length < 1 || record.tags.length > 3) {
-      warnings.push({ field: 'tags', message: `Form asks for 1-3 tags; found ${record.tags.length}.` });
-    }
-    const badTags = record.tags.filter(t => !SLUG_FORMAT.test(t));
-    if (badTags.length) {
-      warnings.push({ field: 'tags', message: `Tag(s) not in lowercase-hyphen format: ${badTags.map(t => `"${t}"`).join(', ')}.` });
-    }
-  }
+  // NOTE: tags are no longer author-owned (managed in the admin panel, stored in
+  // DynamoDB), so there is no frontmatter tag-format conformance check here — a
+  // `tags:` key in frontmatter is surfaced by the validator as admin-managed.
 
   // Sensitive-data question is required on the form; warn when not explicitly set.
   if (meta.sensitive_data === undefined) {
