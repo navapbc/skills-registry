@@ -1,6 +1,5 @@
 ---
 name: policy-document-analysis
-category: research-and-analyze
 description: >
   Systematically analyze UI policy documents (federal regulations, state
   laws, administrative instructions) to extract implementable business rules,
@@ -19,7 +18,6 @@ usage_frequency: Weekly
 expected_audience: 16+ people
 impact_type: [Time saved per use, Reduced error rate or rework, Faster turnaround / cycle time, Increased output volume or consistency]
 compatibility: [claude-chat]
-tags: [policy-document-analysis, unemployment-policy, new-jersey-ui-moderinzation]
 data_sources: federal, state and administrative documents
 ---
 
