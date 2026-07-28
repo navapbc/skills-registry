@@ -1,6 +1,5 @@
 ---
 name: actionable-feedback
-category: write-and-review
 description: >
   Turns a vague "I need to say something to Alex" into a paste-ready Slack
   message or review comment. Triggered when you describe a workplace
@@ -34,7 +33,6 @@ usage_frequency: Weekly
 expected_audience: 16+ people
 impact_type: [Time saved per use, Increased output volume or consistency, Other]
 compatibility: [claude-chat, claude-cowork, claude-code]
-tags: [feedback, performance-reviews, communication]
 ---
 
 # Drafting Actionable Feedback

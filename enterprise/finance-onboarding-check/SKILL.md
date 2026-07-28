@@ -1,6 +1,5 @@
 ---
 name: finance-onboarding-check
-category: team-automations
 description: >
   Runs monthly LCAT check for Finance. Pulls all billable roles from Jira Staffing board (project SO) where Project Start Date falls in a given month then creates new Google Sheet report in Delivery Staffing Movements Drive folder for Finance to compare LCATs vs. Unanet. Trigger phrases: "monthly LCAT check", "run the LCAT check", "LCAT check for [month]", "run the finance report", "monthly finance check", "pull staffing for [month]", "create the finance onboarding sheet", or "finance staffing report." What it does: - Asks which month to report on and whether to notify Finance afterward - Queries Jira (project SO) for roles with Project Start Date in that month, excluding Corporate/Non-Billable - Builds CSV with columns: Project Name, Employee Full Name, Project Start Date, Summary, Issue Key, GSA LCAT, Contract LCAT, Unanet LCAT, Flag/Comment? - Creates new Google Sheet titled {Month} {Year} - Delivery Staffing Movements in Finance LCAT reports Drive folder - Sends summary to Finance Slack channel
 version: "1.0"
@@ -16,7 +15,6 @@ usage_frequency: Monthly or less
 expected_audience: 2-5 people
 impact_type: [Time saved per use, Reduced error rate or rework, Faster turnaround / cycle time, Other]
 compatibility: [claude-chat]
-tags: [lcat-check, monthly-invoice-review, staffing-movements-report]
 data_sources: Jira staffing board, Google Drive, Slack
 ---
 

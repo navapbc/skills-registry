@@ -1,6 +1,5 @@
 ---
 name: weekly-brag-log
-category: personal-productivity
 description: >
   End-of-week brag-doc capture for any Nava employee pursuing a level-up. Pulls Jira and Slack from the last 7 days, ranks candidate entries against the Nava competency gaps the user is targeting, and writes confirmed entries directly into a .docx brag log on the user's computer. Use when the user says "weekly brag log", "Friday brag log", "log my wins", "update my brag doc", "promotion prep", or when scheduled to run at end-of-week.
 version: "1.0"
@@ -14,7 +13,6 @@ usage_frequency: Weekly
 expected_audience: 16+ people
 impact_type: ["Time saved per use", "Increased output volume or consistency"]
 compatibility: [claude-chat, claude-cowork]
-tags: [brag-document, promotion, engineer]
 data_sources: Slack, Jira
 
 ---

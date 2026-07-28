@@ -1,6 +1,5 @@
 ---
 name: central-ops-review
-category: team-automations
 description: >
   Run the Central Ops Workflow intake review. Reads all unreviewed
   submissions from the Intake tab (empty Status column), scores each
@@ -25,7 +24,6 @@ usage_frequency: A few times per week
 expected_audience: 2 - 5 people
 impact_type: [Time saved per use, Reduced error rate or rework, Faster turnaround / cycle time]
 compatibility: [claude-chat, claude-cowork]
-tags: [workflow-automation, ops-backlog-review]
 data_sources: "Google Form & Sheet, optional: Confluence pages, meeting transcripts, (if for submission includes links to other context)"
 ---
 

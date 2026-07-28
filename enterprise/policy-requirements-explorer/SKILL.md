@@ -1,6 +1,5 @@
 ---
 name: policy-requirements-explorer
-category: research-and-analyze
 description: >
   Input policy document (links or downloads) to generate a flowchart, service
   blueprint, and plain list of all policy-based delivery requirements. Best
@@ -23,7 +22,6 @@ usage_frequency: A few times per month
 expected_audience: 2-5 people
 impact_type: [Time saved per use, Faster turnaround / cycle time, Cost avoidance (fewer tools, vendor hours, etc.), Increased output volume or consistency]
 compatibility: [claude-chat, claude-cowork]
-tags: [policy, visualization, service-blueprint]
 data_sources: Links to online policy documents or downloaded files
 ---
 

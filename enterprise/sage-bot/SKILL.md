@@ -1,6 +1,5 @@
 ---
 name: sage-bot
-category: research-and-analyze
 description: >
   Searches Sage for company policy information and returns the cited source
   page from Confluence
@@ -15,7 +14,6 @@ usage_frequency: Weekly
 expected_audience: 16+ people
 impact_type: [Time saved per use]
 compatibility: [claude-chat, claude-cowork]
-tags: [company-policy, sage-search]
 data_sources: Confluence (Sage)
 ---
 

@@ -19,7 +19,6 @@ estimated_impact: Reduces manual review time from ~10 minutes per submission to 
 usage_frequency: Weekly
 impact_type: ["Time saved per use", "Faster turnaround / cycle time", "Increased output volume or consistency"]
 compatibility: [claude-chat, claude-cowork]
-tags: [governance, review]
 data_sources: SKILL.md files, Google Form submissions via Google Sheets
 
 ---

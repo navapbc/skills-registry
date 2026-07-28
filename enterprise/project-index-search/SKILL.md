@@ -1,6 +1,5 @@
 ---
 name: project-index-search
-category: research-and-analyze
 description: >
   Search Nava's Project Index spaces to find relevant past performance, similar work, and project capabilities for proposal research. Use this skill whenever someone asks to find past Nava projects, look up similar work for an active opportunity, search for past performance examples, identify which projects match an RFP requirement, find project capabilities by agency or technology, filter by portfolio (FedCiv, FedHealth, VA, State), filter by archetype (Product Team, Data Modernization Team, Enterprise Operations Team, etc.), or asks any variant of "what has Nava done with X?" or "find me projects similar to Y." Triggers on natural language queries using RFP phrasing, federal evaluation language, agency names, technology keywords, dollar thresholds, portfolio names, or archetype labels. Also triggers when someone asks who to talk to about a specific project area.
 usage_frequency: A few times per week

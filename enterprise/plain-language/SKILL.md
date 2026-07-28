@@ -1,6 +1,5 @@
 ---
 name: plain-language
-category: write-and-review
 description: >
   Rewrites government and civic content into plain language — and translates
   it into Spanish or other languages on request. Paste in a notice, form, UI
@@ -27,7 +26,6 @@ usage_frequency: A few times per week
 expected_audience: 6-15 people
 impact_type: [Time saved per use, Faster turnaround / cycle time, Cost avoidance (fewer tools, vendor hours, etc.)]
 compatibility: [claude-chat, claude-cowork]
-tags: [plain-language, content-strategy, translation]
 data_sources: Federal Plain Language Guidelines (plainlanguage.gov), USDR Benefits Resource Hub — Spanish Translation Guide for Benefits Programs (usdr.gitbook.io/benefits-resource-hub), and WCAG 2.2 (w3.org/TR/WCAG22). Optionally reads from Google Drive when a user shares a Doc or Drive link.
 ---
 

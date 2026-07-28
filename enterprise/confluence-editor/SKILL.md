@@ -1,6 +1,5 @@
 ---
 name: confluence-editor
-category: build-and-ship
 description: >
   Edit existing Confluence pages with granular, reviewable changes using an ADF-based workflow
   that preserves macros and formatting. This skill is the ONLY safe way to edit Confluence pages.
