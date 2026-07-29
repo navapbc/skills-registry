@@ -44,7 +44,7 @@ jobs:
       - name: Terraform init (${{ matrix.env }} state)
         working-directory: terraform
         run: |
-          terraform init -input=false \
+          terraform init -input=false -lockfile=readonly \
             -backend-config="bucket=navapbc-skills-registry-tf-state" \
             -backend-config="key=skills-registry/${{ matrix.env }}.tfstate" \
             -backend-config="region=us-east-1"

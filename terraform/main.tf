@@ -4,7 +4,10 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 6.0"
+      # Pinned exactly: aws 6.57.0 shipped a request-signing/serialization
+      # regression that broke the drift check (see git history). Bump
+      # deliberately after verifying, not automatically.
+      version = "6.56.0"
     }
     archive = {
       source  = "hashicorp/archive"

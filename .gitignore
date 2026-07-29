@@ -32,7 +32,8 @@ yarn-error.log*
 terraform/*.tfstate
 terraform/*.tfstate.backup
 terraform/.terraform/
-terraform/.terraform.lock.hcl
+# .terraform.lock.hcl is committed on purpose: it pins provider versions +
+# checksums so CI can't silently pull a new (possibly broken) release.
 terraform/*.zip
 
 # Inspiration screenshots (local only)
