@@ -7,6 +7,7 @@ import { usersRoutes } from './routes/users.mjs';
 import { auditRoutes } from './routes/audit.mjs';
 import { adminRoutes } from './routes/admin.mjs';
 import { eventsRoutes } from './routes/events.mjs';
+import { projectReferenceRoutes } from './routes/project-reference.mjs';
 
 export const app = new Hono();
 
@@ -18,5 +19,6 @@ usersRoutes(app);
 auditRoutes(app);
 adminRoutes(app);
 eventsRoutes(app);
+projectReferenceRoutes(app);
 
 export const handler = handle(app);

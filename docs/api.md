@@ -25,6 +25,7 @@ The JWT is validated in the API Lambda middleware on every request — not at AP
 | `user` | Default. All authenticated `@navapbc.com` users. |
 | `maintain` | Can approve/reject skills, manage enterprise skills, edit any skill. |
 | `admin` | Full access, including user management, deletion, and audit log. |
+| `projects-admin` | Manages Contract Explorer reference data only. Sits outside the ladder — grants nothing else privileged. See [rbac-permissions.md](rbac-permissions.md). |
 
 Roles are set in DynamoDB. The first admin must be promoted [directly via CLI](DEPLOY.md#14-promote-first-admin-manual--after-first-deploy). Subsequent promotions go through `PUT /api/admin/users/:id/role`.
 
@@ -143,6 +144,38 @@ Update a plugin. Admin only.
 ### `DELETE /api/plugins/:slug`
 
 Delete a plugin. Admin only.
+
+---
+
+## Project reference data
+
+Admin-owned reference data for the Contract Explorer: delivery `archetype` records and AI-posture `posture` records. Both live in one table partitioned by `:entityType`, which must be `archetype` or `posture` — anything else is a 400.
+
+Every endpoint below, **including the reads**, requires `projects-admin` or `admin`. This differs from Skills and Plugins, whose list endpoints are open to any authenticated user.
+
+There is deliberately no delete endpoint. A record referenced by program data must not be removable, so records are deactivated instead.
+
+### `GET /api/project-reference/:entityType`
+
+List all records of one entity type, active and inactive. Returns `{ "records": [...] }`.
+
+### `GET /api/project-reference/:entityType/:id`
+
+Get a single record. Deactivated records are still retrievable.
+
+### `POST /api/project-reference/:entityType`
+
+Create a record. Required for both types: `id` (slug-safe), `label`, `color` (six-digit hex). Archetypes also require `icon` (from the curated menu in `src/lib/icons.mjs`) and accept `description`, `characteristics`, `ai_opportunities`. Postures also require `position` (integer, display order only — no severity meaning) and `steps` (non-empty list of non-empty strings, order preserved).
+
+Returns 409 if the id already exists.
+
+### `PUT /api/project-reference/:entityType/:id`
+
+Replace a record. The path owns the id; an `id` in the body is ignored. Whole-record write, last writer wins.
+
+### `PUT /api/project-reference/:entityType/:id/status`
+
+Set `status` to `active` or `inactive`. Separate from the update endpoint so the audit trail records `deactivated` / `reactivated` rather than a generic update.
 
 ---
 
