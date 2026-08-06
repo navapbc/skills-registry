@@ -1,0 +1,41 @@
+---
+import Base from '../../layouts/Base.astro';
+import ProjectsAdminTabs from '../../components/projects-admin/ProjectsAdminTabs.astro';
+
+// Unlinked by design: this page appears in no navigation, including the sidebar.
+// That is discoverability, not a boundary — the whole site sits behind login at
+// the edge, and every read and mutation on this data is authorised server-side.
+---
+<Base
+  title="Projects Admin"
+  description="Manage Contract Explorer delivery archetypes and AI policy guidance."
+>
+  <div id="projects-admin-root" class="hidden">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900 m-0">Projects Admin</h1>
+      <p class="text-sm text-gray-500 mt-1 m-0">
+        Contract Explorer reference data — delivery archetypes and AI policy guidance
+      </p>
+    </div>
+
+    <ProjectsAdminTabs />
+  </div>
+
+  <!-- Shown instead of the tabs when the signed-in user lacks the role. An
+       explicit refusal rather than a silent redirect, so someone who lost the
+       role understands what happened. -->
+  <div id="projects-admin-denied" class="hidden max-w-xl">
+    <h1 class="text-2xl font-bold text-gray-900 m-0">Not available to your account</h1>
+    <p class="text-sm text-gray-600 mt-2">
+      Managing Contract Explorer reference data requires the
+      <code class="text-xs bg-gray-100 rounded px-1 py-0.5">projects-admin</code> role.
+      Ask a site administrator if you need access.
+    </p>
+    <p class="text-sm mt-4"><a href="/" class="text-plum-700">Back to the hub</a></p>
+  </div>
+</Base>
+
+<script>
+  import { initProjectsAdmin } from '../../scripts/projects-admin/index.mjs';
+  initProjectsAdmin();
+</script>
