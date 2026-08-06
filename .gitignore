@@ -51,3 +51,6 @@ terraform/*.tfvars
 
 # Temporary files
 tmp/
+
+# Secret credentials
+credentials.json
