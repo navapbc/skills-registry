@@ -215,12 +215,21 @@ describe('buildRecords', () => {
   });
 });
 
-// Guards the mapping tables against the real files drifting out from under them.
-// Skips rather than fails when the sources are not on this machine — they live
-// outside the repo by design.
-describe('against the real prototype sources, when present', () => {
-  const SOURCE_DIR = '/Users/yoom/dev/AI Contract Explorer/data';
+// Guards the mapping tables against the real source files drifting out from
+// under them — an icon or posture added upstream with no mapping here fails the
+// seed, and this is where that shows up first.
+//
+// The sources live outside this repository on purpose, since it is public, so
+// point at them explicitly to run these:
+//
+//   PROJECT_REFERENCE_SOURCE_DIR="/path/to/data" pnpm test
+//
+// Without that variable the checks skip rather than fail — no developer's local
+// directory layout is baked into the repo.
+describe('against the real prototype sources, when available', () => {
+  const SOURCE_DIR = process.env.PROJECT_REFERENCE_SOURCE_DIR;
   const read = (name) => {
+    if (!SOURCE_DIR) return null;
     try {
       return JSON.parse(readFileSync(`${SOURCE_DIR}/${name}`, 'utf8'));
     } catch {
