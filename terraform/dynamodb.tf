@@ -74,6 +74,40 @@ resource "aws_dynamodb_table" "plugins" {
   }
 }
 
+# Admin-owned reference data for the Contract Explorer: delivery archetypes and
+# AI-posture policy guidance. Both datasets are small and static — low churn, no
+# independent growth or throughput profile — so neither warrants its own table's
+# indexes or lifecycle, and they share one table keyed by entity type. This is a
+# deliberate divergence from the one-table-per-entity convention above, which
+# exists for entities with distinct access patterns; these have none. Each admin
+# tab reads its records with a single Query on the partition key, so no GSI is
+# needed — every access path is that Query or a direct Get.
+#
+# Access is table-scoped by construction: one permission action covers the whole
+# table, so only entity types meant to be governed by that same action may join it.
+resource "aws_dynamodb_table" "project_reference" {
+  name         = "${var.project_name}-project-reference-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "entity_type"
+  range_key    = "id"
+
+  # Admin-authored and not re-derivable from any sync, unlike skills/plugins.
+  deletion_protection_enabled = var.environment == "prod"
+
+  attribute {
+    name = "entity_type"
+    type = "S"
+  }
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
 resource "aws_dynamodb_table" "users" {
   name         = "${var.project_name}-users-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"

@@ -19,6 +19,8 @@ export const tables = {
   users: () => process.env.USERS_TABLE,
   audit: () => process.env.AUDIT_TABLE,
   analyticsEvents: () => process.env.ANALYTICS_TABLE,
+  // Archetypes and policy postures share one table, keyed by entity_type.
+  projectReference: () => process.env.PROJECT_REFERENCE_TABLE,
 };
 
 // Fast path for auth middleware: GetItem (read) on every request, write only on first login.
