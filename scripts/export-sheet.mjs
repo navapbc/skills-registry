@@ -5,9 +5,9 @@
  * (docs/plans/2026-08-05-001-feat-sheets-contract-data-export-plan.md, U5).
  *
  * Produces, in one run:
- *   <out>/contract-sheet.json   the whole workbook, tabs keyed by name — each tab
- *                               carries its header-keyed rows AND its raw cell grid
- *   <out>/<tab-slug>.csv        one file per exported tab
+ *   <out>/sheet.json        the whole workbook, tabs keyed by name — each tab
+ *                           carries its header-keyed rows AND its raw cell grid
+ *   <out>/<tab-slug>.csv    one file per exported tab
  *
  * Output is a faithful dump of the sheet — no renaming, filtering, or derived
  * fields. Shaping for the Contract Explorer happens downstream.
@@ -34,11 +34,11 @@
  *
  * Options (each falls back to an env var, then to a default):
  *   --credentials <path>  GOOGLE_APPLICATION_CREDENTIALS   default ./credentials.json
- *   --spreadsheet <ref>   CONTRACT_SHEET_ID                 URL or ID; default the
+ *   --spreadsheet <ref>   EXPORT_SHEET_ID                 URL or ID; default the
  *                                                           workbook above
- *   --out <dir>           CONTRACT_SHEET_OUT_DIR            default ./sheet-export
- *   --tabs <a,b,c>        CONTRACT_SHEET_TABS               default every tab
- *   --header-row <t=n>    CONTRACT_SHEET_HEADER_ROWS        default auto-detect
+ *   --out <dir>           EXPORT_SHEET_OUT_DIR            default ./sheet-export
+ *   --tabs <a,b,c>        EXPORT_SHEET_TABS               default every tab
+ *   --header-row <t=n>    EXPORT_SHEET_HEADER_ROWS        default auto-detect
  *
  * Header rows: most tabs in this workbook open with title banners or blank spacers,
  * so the header row is auto-detected by density and the chosen 1-based row number is
@@ -71,7 +71,7 @@ import {
 } from './lib/sheets-client.mjs';
 
 const DEFAULT_SPREADSHEET_ID = '1hax9xwy69e5H8dfo4KI7g9Cvhe0j59CwjUSYRujShP4';
-const JSON_FILENAME = 'contract-sheet.json';
+const JSON_FILENAME = 'sheet.json';
 
 const USAGE =
   'Usage: node scripts/export-sheet.mjs [--credentials <path>] [--spreadsheet <url-or-id>]\n' +
@@ -96,19 +96,19 @@ function parseArgs(argv) {
     }
   }
 
-  const tabsRaw = opts.tabs ?? process.env.CONTRACT_SHEET_TABS;
+  const tabsRaw = opts.tabs ?? process.env.EXPORT_SHEET_TABS;
   const headerRowsRaw = headerRowArgs.length
     ? headerRowArgs.join(',')
-    : process.env.CONTRACT_SHEET_HEADER_ROWS;
+    : process.env.EXPORT_SHEET_HEADER_ROWS;
 
   return {
     credentialsPath: resolve(
       opts.credentials ?? process.env.GOOGLE_APPLICATION_CREDENTIALS ?? 'credentials.json',
     ),
     spreadsheetId: resolveSpreadsheetId(
-      opts.spreadsheet ?? process.env.CONTRACT_SHEET_ID ?? DEFAULT_SPREADSHEET_ID,
+      opts.spreadsheet ?? process.env.EXPORT_SHEET_ID ?? DEFAULT_SPREADSHEET_ID,
     ),
-    outDir: resolve(opts.out ?? process.env.CONTRACT_SHEET_OUT_DIR ?? 'sheet-export'),
+    outDir: resolve(opts.out ?? process.env.EXPORT_SHEET_OUT_DIR ?? 'sheet-export'),
     tabs: tabsRaw ? tabsRaw.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
     headerRows: parseHeaderRows(headerRowsRaw),
   };
@@ -263,7 +263,7 @@ async function main() {
         'earlier run and were NOT refreshed:',
     );
     for (const f of stale) console.log(`    ${f}`);
-    console.log('  Delete them, or treat contract-sheet.json as the authoritative list.');
+    console.log('  Delete them, or treat sheet.json as the authoritative list.');
   }
 }
 
