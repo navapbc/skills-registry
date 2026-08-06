@@ -109,7 +109,7 @@ Nothing in this repo can read Google Sheets today — every existing data path p
 > *This illustrates the intended approach and is directional guidance for review, not implementation specification. The implementing agent should treat it as context, not code to reproduce.*
 
 ```
-CLI (scripts/export-contract-sheet.mjs)
+CLI (scripts/export-sheet.mjs)
   parse argv / env  →  { credentialsPath, spreadsheetId, outDir, tabs? }
         │
         ├─ auth:      service-account key file → JWT → bearer token
@@ -278,7 +278,7 @@ Failure-mode routing, which R9–R11 depend on:
 **Dependencies:** U2, U3, U4
 
 **Files:**
-- Create: `scripts/export-contract-sheet.mjs`
+- Create: `scripts/export-sheet.mjs`
 
 **Approach:**
 - Docblock header at the top of the file with purpose, prerequisites (service-account key, workbook shared with the account), and example invocations — matching `scripts/verify-category-tags-ddb.mjs`.

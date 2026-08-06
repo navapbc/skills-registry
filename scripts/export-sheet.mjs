@@ -15,19 +15,19 @@
  * As of 2026-08-05, auto-detection is correct on 5 of the 7 tabs. Two need help, so
  * the full-fidelity invocation for this workbook is:
  *
- *   node scripts/export-contract-sheet.mjs \
+ *   node scripts/export-sheet.mjs \
  *     --header-row "Sage View=2" --header-row "All Columns (Full View)=6"
  *
  * Other examples:
  *
- *   node scripts/export-contract-sheet.mjs
- *   node scripts/export-contract-sheet.mjs --tabs "Contracts orig,Project Indexes"
- *   node scripts/export-contract-sheet.mjs --out tmp/sheet-export --credentials ./key.json
+ *   node scripts/export-sheet.mjs
+ *   node scripts/export-sheet.mjs --tabs "Contracts orig,Project Indexes"
+ *   node scripts/export-sheet.mjs --out tmp/sheet-export --credentials ./key.json
  *
  * Any Google Sheet works, not just the default one — paste the URL straight from
  * the browser (a bare spreadsheet ID is accepted too):
  *
- *   node scripts/export-contract-sheet.mjs \
+ *   node scripts/export-sheet.mjs \
  *     --spreadsheet "https://docs.google.com/spreadsheets/d/<id>/edit?gid=0#gid=0"
  *
  * Whatever sheet you point at must be shared with the service account.
@@ -74,7 +74,7 @@ const DEFAULT_SPREADSHEET_ID = '1hax9xwy69e5H8dfo4KI7g9Cvhe0j59CwjUSYRujShP4';
 const JSON_FILENAME = 'contract-sheet.json';
 
 const USAGE =
-  'Usage: node scripts/export-contract-sheet.mjs [--credentials <path>] [--spreadsheet <url-or-id>]\n' +
+  'Usage: node scripts/export-sheet.mjs [--credentials <path>] [--spreadsheet <url-or-id>]\n' +
   '                                             [--out <dir>] [--tabs <a,b,c>] [--header-row <tab=n>]';
 
 function parseArgs(argv) {
