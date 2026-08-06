@@ -190,4 +190,20 @@ describe('PUT /api/users/:id/role', () => {
     });
     expect(res.status).toBe(400);
   });
+
+  // Two role-change routes exist; the admin UI calls the other one. Both share
+  // ASSIGNABLE_ROLES so they cannot drift, and this pins that they agree.
+  it('accepts projects-admin, matching the admin route', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Attributes: { ...USER_RECORD, role: 'projects-admin' } })
+      .mockResolvedValueOnce({}); // writeAudit
+    const res = await app.request(`/api/users/${encodeURIComponent('user@navapbc.com')}/role`, {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie('admin@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'projects-admin' }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).role).toBe('projects-admin');
+  });
 });

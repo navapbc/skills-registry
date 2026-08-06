@@ -438,4 +438,20 @@ describe('PUT /api/admin/users/:id/role', () => {
     const body = await res.json();
     expect(body.role).toBe('maintain');
   });
+
+  // This is the route the admin users tab actually calls. A role the dropdown
+  // offers but this route rejects turns a valid selection into a 400.
+  it('accepts projects-admin, the role the dropdown offers', async () => {
+    mockSend
+      .mockResolvedValueOnce({ Item: ADMIN_RECORD })
+      .mockResolvedValueOnce({ Attributes: { user_id: 'someone@navapbc.com', role: 'projects-admin' } })
+      .mockResolvedValueOnce({}); // writeAudit
+    const res = await app.request('/api/admin/users/someone%40navapbc.com/role', {
+      method: 'PUT',
+      headers: { Cookie: makeSessionCookie('admin@navapbc.com'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'projects-admin' }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).role).toBe('projects-admin');
+  });
 });
