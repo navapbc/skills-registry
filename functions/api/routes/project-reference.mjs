@@ -2,6 +2,7 @@ import { ddb, tables, GetCommand, PutCommand, UpdateCommand, QueryCommand } from
 import { can } from '../lib/permissions.mjs';
 import { writeAudit } from '../lib/audit.mjs';
 import { ENTITY_TYPES, STATUSES, validateRecord, normalizeRecord } from '../lib/project-reference.mjs';
+import { referenceUsage } from '../lib/program-data.mjs';
 
 // One capability covers both entity types: the role is all-or-nothing across the
 // two admin tabs, so per-entity actions would be unused surface.
@@ -24,6 +25,27 @@ function badEntityType(c, entityType) {
 }
 
 export function projectReferenceRoutes(app) {
+  // Deliberately its own top-level path rather than
+  // /api/project-reference/:entityType/usage — that would shadow a record whose
+  // id happens to be "usage".
+  app.get('/api/project-reference-usage/:entityType', async (c) => {
+    const user = c.get('user');
+    if (!can(user, CAPABILITY)) return forbidden(c);
+
+    const { entityType } = c.req.param();
+    const bad = badEntityType(c, entityType);
+    if (bad) return bad;
+
+    const page = await ddb.send(new QueryCommand({
+      TableName: tables.projectReference(),
+      KeyConditionExpression: 'entity_type = :t',
+      ExpressionAttributeValues: { ':t': entityType },
+      ProjectionExpression: 'id',
+    }));
+
+    return c.json(await referenceUsage(entityType, page.Items ?? []));
+  });
+
   app.get('/api/project-reference/:entityType', async (c) => {
     const user = c.get('user');
     if (!can(user, CAPABILITY)) return forbidden(c);

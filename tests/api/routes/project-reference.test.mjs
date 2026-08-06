@@ -398,3 +398,37 @@ describe('deletion is not exposed', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ── Reference usage ───────────────────────────────────────────────────────
+describe('GET /api/project-reference-usage/:entityType', () => {
+  it('reports unavailable rather than zeroes while program data is absent', async () => {
+    const headers = as('projects-admin');
+    mockSend.mockResolvedValueOnce({ Items: [{ id: 'product-team' }] });
+    const res = await app.request('/api/project-reference-usage/archetype', { headers });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.available).toBe(false);
+    expect(body.counts).toBeUndefined();
+    expect(body.reason).toMatch(/not yet loaded/i);
+  });
+
+  it('is gated like every other route', async () => {
+    const res = await app.request('/api/project-reference-usage/archetype', { headers: as('maintain') });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects an unknown entity type', async () => {
+    const res = await app.request('/api/project-reference-usage/widget', { headers: as('admin') });
+    expect(res.status).toBe(400);
+  });
+
+  // The path is separate rather than nested so a record whose id is literally
+  // "usage" stays reachable.
+  it('does not shadow a record whose id is "usage"', async () => {
+    const headers = as('projects-admin');
+    mockSend.mockResolvedValueOnce({ Item: { entity_type: 'archetype', id: 'usage', label: 'Usage' } });
+    const res = await app.request('/api/project-reference/archetype/usage', { headers });
+    expect(res.status).toBe(200);
+    expect((await res.json()).id).toBe('usage');
+  });
+});

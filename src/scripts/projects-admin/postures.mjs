@@ -9,6 +9,7 @@ import {
   moveUp,
   moveDown,
 } from './list-editor.mjs';
+import { renderUsageCell, renderOrphanNotice, renderUsageUnavailableNotice } from './usage.mjs';
 
 const ENDPOINT = '/project-reference/posture';
 
@@ -42,7 +43,7 @@ export function renderPostureBadge(posture) {
     style="background:${escapeHtml(posture.color)};color:${BADGE_FOREGROUND}">${escapeHtml(posture.label)}</span>`;
 }
 
-export function renderPostureRow(posture, index, total) {
+export function renderPostureRow(posture, index, total, usage) {
   const steps = posture.steps ?? [];
   const inactive = posture.status === 'inactive';
   return `
@@ -59,6 +60,8 @@ export function renderPostureRow(posture, index, total) {
         ${renderPostureBadge(posture)}
         <span class="text-xs text-gray-400 font-mono">${escapeHtml(posture.id)}</span>
         <span class="text-xs text-gray-500">${steps.length} step${steps.length === 1 ? '' : 's'}</span>
+        <span class="text-xs text-gray-400">·</span>
+        <span title="Programs with this posture">${renderUsageCell(usage, posture.id)}</span>
         ${inactive ? '<span class="text-xs text-gray-500">inactive</span>' : ''}
         <button class="edit-posture-btn ml-auto text-xs text-plum-600 hover:text-plum-700">Edit</button>
       </div>
@@ -69,14 +72,17 @@ export function renderPostureRow(posture, index, total) {
     </li>`;
 }
 
-export function renderPostureList(postures) {
+export function renderPostureList(postures, usage) {
   if (!postures.length) {
     return '<p class="text-sm text-gray-400">No postures yet. Add one above.</p>';
   }
   const ordered = sortPostures(postures);
-  return `<ul class="list-none p-0 m-0">${ordered
-    .map((p, i) => renderPostureRow(p, i, ordered.length))
-    .join('')}</ul>`;
+  return `
+    ${renderUsageUnavailableNotice(usage)}
+    <ul class="list-none p-0 m-0">${ordered
+      .map((p, i) => renderPostureRow(p, i, ordered.length, usage))
+      .join('')}</ul>
+    ${renderOrphanNotice(usage, 'posture')}`;
 }
 
 export function renderPostureForm(p = {}) {
@@ -129,9 +135,14 @@ export function renderPostureForm(p = {}) {
 export async function load(panel, ctx) {
   const { records } = await fetchApi(ENDPOINT);
   let postures = sortPostures(records);
+  // Advisory — a failure here must not take the tab down.
+  const usage = await fetchApi('/project-reference-usage/posture').catch(() => ({
+    available: false,
+    reason: 'Reference counts could not be loaded.',
+  }));
 
   function paint() {
-    panel.querySelector('#posture-list').innerHTML = renderPostureList(postures);
+    panel.querySelector('#posture-list').innerHTML = renderPostureList(postures, usage);
     wireList();
   }
 
@@ -143,7 +154,7 @@ export async function load(panel, ctx) {
     <p class="text-xs text-gray-500 mb-3">
       Order is display order only — it carries no severity meaning. Reorder with the arrows.
     </p>
-    <div id="posture-list">${renderPostureList(postures)}</div>
+    <div id="posture-list">${renderPostureList(postures, usage)}</div>
     <div id="posture-form" class="hidden mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg"></div>`;
 
   const formEl = panel.querySelector('#posture-form');

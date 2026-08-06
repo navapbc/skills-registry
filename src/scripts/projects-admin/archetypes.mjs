@@ -3,6 +3,7 @@ import { escapeHtml } from '../../lib/render.mjs';
 import { renderIcon, ARCHETYPE_ICON_NAMES } from '../../lib/icons.mjs';
 import { apiPost, apiPut } from '../admin/api.mjs';
 import { renderListEditor, readListEditor, bindListEditor, compact } from './list-editor.mjs';
+import { renderUsageCell, renderOrphanNotice, renderUsageUnavailableNotice } from './usage.mjs';
 
 const ENDPOINT = '/project-reference/archetype';
 
@@ -12,7 +13,7 @@ const swatch = (color) =>
   `<span class="inline-block w-4 h-4 rounded border border-gray-200 align-middle" style="background:${escapeHtml(color)}"></span>`;
 
 /** One table row. Actions are Edit only — no delete endpoint exists. */
-export function renderArchetypeRow(a) {
+export function renderArchetypeRow(a, usage) {
   const inactive = a.status === 'inactive';
   return `
     <tr class="border-b border-gray-100 ${inactive ? 'opacity-60' : ''}" data-id="${escapeHtml(a.id)}">
@@ -21,6 +22,7 @@ export function renderArchetypeRow(a) {
       <td class="py-2 text-gray-500 font-mono text-xs">${escapeHtml(a.id)}</td>
       <td class="py-2">${swatch(a.color)} <span class="text-xs text-gray-400 font-mono">${escapeHtml(a.color)}</span></td>
       <td class="py-2 text-xs text-gray-500">${(a.characteristics ?? []).length} / ${(a.ai_opportunities ?? []).length}</td>
+      <td class="py-2">${renderUsageCell(usage, a.id)}</td>
       <td class="py-2 text-xs">${inactive ? '<span class="text-gray-500">inactive</span>' : '<span class="text-green-700">active</span>'}</td>
       <td class="py-2">
         <button class="edit-archetype-btn text-xs text-plum-600 hover:text-plum-700">Edit</button>
@@ -28,11 +30,12 @@ export function renderArchetypeRow(a) {
     </tr>`;
 }
 
-export function renderArchetypeTable(archetypes) {
+export function renderArchetypeTable(archetypes, usage) {
   if (!archetypes.length) {
     return '<p class="text-sm text-gray-400">No archetypes yet. Add one above.</p>';
   }
   return `
+    ${renderUsageUnavailableNotice(usage)}
     <table class="admin-table w-full text-sm border-collapse">
       <thead><tr class="text-left text-xs text-gray-500 border-b border-gray-200">
         <th class="pb-2 font-medium"></th>
@@ -40,11 +43,13 @@ export function renderArchetypeTable(archetypes) {
         <th class="pb-2 font-medium">Id</th>
         <th class="pb-2 font-medium">Color</th>
         <th class="pb-2 font-medium" title="Characteristics / AI opportunities">Lists</th>
+        <th class="pb-2 font-medium" title="Programs referencing this archetype">Programs</th>
         <th class="pb-2 font-medium">Status</th>
         <th class="pb-2 font-medium">Actions</th>
       </tr></thead>
-      <tbody>${archetypes.map(renderArchetypeRow).join('')}</tbody>
-    </table>`;
+      <tbody>${archetypes.map((a) => renderArchetypeRow(a, usage)).join('')}</tbody>
+    </table>
+    ${renderOrphanNotice(usage, 'archetype')}`;
 }
 
 /**
@@ -121,13 +126,19 @@ export function renderArchetypeForm(a = {}) {
 export async function load(panel, ctx) {
   const { records } = await fetchApi(ENDPOINT);
   const archetypes = [...records].sort((a, b) => a.label.localeCompare(b.label));
+  // A usage failure must not take the whole tab down — the counts are advisory,
+  // the records are the point.
+  const usage = await fetchApi('/project-reference-usage/archetype').catch(() => ({
+    available: false,
+    reason: 'Reference counts could not be loaded.',
+  }));
 
   panel.innerHTML = `
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-base font-semibold text-gray-700 m-0">Delivery Archetypes</h2>
       <button id="add-archetype-btn" class="px-3 py-1.5 text-xs bg-plum-600 text-white rounded hover:bg-plum-700">+ Add Archetype</button>
     </div>
-    <div id="archetype-list">${renderArchetypeTable(archetypes)}</div>
+    <div id="archetype-list">${renderArchetypeTable(archetypes, usage)}</div>
     <div id="archetype-form" class="hidden mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg"></div>`;
 
   const formEl = panel.querySelector('#archetype-form');
