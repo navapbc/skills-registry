@@ -5,6 +5,39 @@
 // all I/O and exit codes so these stay unit-testable.
 
 /**
+ * Accept either a Google Sheets URL or a bare spreadsheet ID and return the ID.
+ *
+ * Operators copy the URL out of the browser; asking them to hand-extract the ID
+ * from the middle of it is a needless step and an easy place to slice off a
+ * character. Both forms are accepted so either paste works.
+ */
+export function parseSpreadsheetId(input) {
+  const value = String(input ?? '').trim();
+  if (value === '') throw new Error('No spreadsheet URL or ID given.');
+
+  if (/^https?:\/\//i.test(value)) {
+    const match = value.match(/\/spreadsheets\/d\/(?:e\/)?([A-Za-z0-9_-]+)/);
+    if (!match) {
+      throw new Error(
+        `Could not find a spreadsheet ID in ${value}\n` +
+          '  Expected a URL like https://docs.google.com/spreadsheets/d/<id>/edit',
+      );
+    }
+    return match[1];
+  }
+
+  // A bare ID. Reject anything with URL punctuation so a malformed paste surfaces
+  // here rather than as a confusing 404 from Google.
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) {
+    throw new Error(
+      `"${value}" is neither a Google Sheets URL nor a spreadsheet ID.\n` +
+        '  Pass the full URL from your browser, or just the ID from it.',
+    );
+  }
+  return value;
+}
+
+/**
  * Resolve which tabs to export.
  *
  * With no request, every tab is exported in workbook order. With a request, the

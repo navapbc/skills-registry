@@ -24,9 +24,18 @@
  *   node scripts/export-contract-sheet.mjs --tabs "Contracts orig,Project Indexes"
  *   node scripts/export-contract-sheet.mjs --out tmp/sheet-export --credentials ./key.json
  *
+ * Any Google Sheet works, not just the default one — paste the URL straight from
+ * the browser (a bare spreadsheet ID is accepted too):
+ *
+ *   node scripts/export-contract-sheet.mjs \
+ *     --spreadsheet "https://docs.google.com/spreadsheets/d/<id>/edit?gid=0#gid=0"
+ *
+ * Whatever sheet you point at must be shared with the service account.
+ *
  * Options (each falls back to an env var, then to a default):
  *   --credentials <path>  GOOGLE_APPLICATION_CREDENTIALS   default ./credentials.json
- *   --spreadsheet <id>    CONTRACT_SHEET_ID                 default the workbook above
+ *   --spreadsheet <ref>   CONTRACT_SHEET_ID                 URL or ID; default the
+ *                                                           workbook above
  *   --out <dir>           CONTRACT_SHEET_OUT_DIR            default ./sheet-export
  *   --tabs <a,b,c>        CONTRACT_SHEET_TABS               default every tab
  *   --header-row <t=n>    CONTRACT_SHEET_HEADER_ROWS        default auto-detect
@@ -52,7 +61,7 @@
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { slugify } from './utils.mjs';
-import { selectTabs, rowsToObjects, toCsv } from './lib/sheet-export.mjs';
+import { parseSpreadsheetId, selectTabs, rowsToObjects, toCsv } from './lib/sheet-export.mjs';
 import {
   SheetsError,
   loadServiceAccountKey,
@@ -65,7 +74,7 @@ const DEFAULT_SPREADSHEET_ID = '1hax9xwy69e5H8dfo4KI7g9Cvhe0j59CwjUSYRujShP4';
 const JSON_FILENAME = 'contract-sheet.json';
 
 const USAGE =
-  'Usage: node scripts/export-contract-sheet.mjs [--credentials <path>] [--spreadsheet <id>]\n' +
+  'Usage: node scripts/export-contract-sheet.mjs [--credentials <path>] [--spreadsheet <url-or-id>]\n' +
   '                                             [--out <dir>] [--tabs <a,b,c>] [--header-row <tab=n>]';
 
 function parseArgs(argv) {
@@ -96,11 +105,22 @@ function parseArgs(argv) {
     credentialsPath: resolve(
       opts.credentials ?? process.env.GOOGLE_APPLICATION_CREDENTIALS ?? 'credentials.json',
     ),
-    spreadsheetId: opts.spreadsheet ?? process.env.CONTRACT_SHEET_ID ?? DEFAULT_SPREADSHEET_ID,
+    spreadsheetId: resolveSpreadsheetId(
+      opts.spreadsheet ?? process.env.CONTRACT_SHEET_ID ?? DEFAULT_SPREADSHEET_ID,
+    ),
     outDir: resolve(opts.out ?? process.env.CONTRACT_SHEET_OUT_DIR ?? 'sheet-export'),
     tabs: tabsRaw ? tabsRaw.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
     headerRows: parseHeaderRows(headerRowsRaw),
   };
+}
+
+// parseSpreadsheetId throws on a bad value; the CLI owns exit codes, so translate.
+function resolveSpreadsheetId(value) {
+  try {
+    return parseSpreadsheetId(value);
+  } catch (err) {
+    fail(err.message);
+  }
 }
 
 // "Sage View=2,Contracts orig=1" -> Map { 'sage view' => 1, 'contracts orig' => 0 }.

@@ -1,5 +1,54 @@
 import { describe, it, expect } from 'vitest';
-import { selectTabs, detectHeaderRow, rowsToObjects, toCsv } from '../scripts/lib/sheet-export.mjs';
+import {
+  parseSpreadsheetId,
+  selectTabs,
+  detectHeaderRow,
+  rowsToObjects,
+  toCsv,
+} from '../scripts/lib/sheet-export.mjs';
+
+describe('parseSpreadsheetId', () => {
+  const ID = '1hax9xwy69e5H8dfo4KI7g9Cvhe0j59CwjUSYRujShP4';
+
+  it('extracts the ID from a browser URL with a gid fragment', () => {
+    expect(parseSpreadsheetId(
+      `https://docs.google.com/spreadsheets/d/${ID}/edit?gid=1917302466#gid=1917302466`,
+    )).toBe(ID);
+  });
+
+  it('extracts the ID from a bare /edit URL and from one with no trailing path', () => {
+    expect(parseSpreadsheetId(`https://docs.google.com/spreadsheets/d/${ID}/edit`)).toBe(ID);
+    expect(parseSpreadsheetId(`https://docs.google.com/spreadsheets/d/${ID}`)).toBe(ID);
+  });
+
+  it('extracts the ID from a published /d/e/ URL', () => {
+    expect(parseSpreadsheetId(`https://docs.google.com/spreadsheets/d/e/${ID}/pubhtml`)).toBe(ID);
+  });
+
+  it('accepts http and surrounding whitespace', () => {
+    expect(parseSpreadsheetId(`  http://docs.google.com/spreadsheets/d/${ID}/edit  `)).toBe(ID);
+  });
+
+  it('passes a bare ID through unchanged', () => {
+    expect(parseSpreadsheetId(ID)).toBe(ID);
+    expect(parseSpreadsheetId('a-b_C123')).toBe('a-b_C123');
+  });
+
+  it('rejects a URL that is not a spreadsheet link', () => {
+    expect(() => parseSpreadsheetId('https://docs.google.com/document/d/abc/edit'))
+      .toThrow(/Could not find a spreadsheet ID/);
+  });
+
+  it('rejects a malformed paste that is neither a URL nor an ID', () => {
+    expect(() => parseSpreadsheetId('docs.google.com/spreadsheets/d/abc'))
+      .toThrow(/neither a Google Sheets URL nor a spreadsheet ID/);
+  });
+
+  it('rejects empty input', () => {
+    expect(() => parseSpreadsheetId('')).toThrow(/No spreadsheet URL or ID/);
+    expect(() => parseSpreadsheetId(undefined)).toThrow(/No spreadsheet URL or ID/);
+  });
+});
 
 describe('selectTabs', () => {
   const available = ['Contracts', 'Programs', 'Lookup'];
