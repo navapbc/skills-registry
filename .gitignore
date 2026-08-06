@@ -48,3 +48,6 @@ bugs/
 # Terraform secrets — never commit real tfvars
 terraform/*.tfvars
 !terraform/*.tfvars.example
+
+# Temporary files
+tmp/
