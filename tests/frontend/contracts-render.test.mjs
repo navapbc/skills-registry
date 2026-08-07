@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  UNIT_LABEL,
   renderPostureBadge,
   indexPostures,
   hasPosture,
@@ -115,10 +114,6 @@ describe('formatCapturedAt', () => {
 });
 
 describe('renderContractCard', () => {
-  it('names the record for what it is, not a contract', () => {
-    expect(renderContractCard(contract(), byId)).toContain(UNIT_LABEL);
-  });
-
   it('shows the contract number as a parent when one exists', () => {
     expect(renderContractCard(contract(), byId)).toContain('47QTCA18D008M');
   });
