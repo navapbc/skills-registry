@@ -389,9 +389,12 @@ export function renderContractDetail(contract, postureById, capturedAt) {
     <a href="/contracts" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">&larr; All contracts</a>
 
     <div class="mb-5">
-      <span class="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
-        ${escapeHtml(contract.portfolio ?? '')}
-      </span>
+      <div class="flex items-center flex-wrap gap-2">
+        <span class="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
+          ${escapeHtml(contract.portfolio ?? '')}
+        </span>
+        ${renderPostureBadge(posture)}
+      </div>
       <h1 class="text-2xl font-bold text-gray-900 mt-2 mb-1">${escapeHtml(contract.project || contract.contract_id)}</h1>
       ${contract.contract_num
         ? `<p class="text-sm text-gray-500 m-0">

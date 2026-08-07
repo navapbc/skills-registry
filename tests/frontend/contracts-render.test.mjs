@@ -182,6 +182,20 @@ describe('renderContractDetail', () => {
     program_manager: 'Nancy Nussear', nava_contract_pp: 'Priya Contracts',
   };
 
+  // The same badge the card carried, so the answer survives the click rather than
+  // making the reader scroll to the posture section to re-find it.
+  it('badges the posture at the top, beside the portfolio', () => {
+    const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
+    const badge = html.indexOf('background-color: #e0f5f0');
+    expect(badge).toBeGreaterThan(-1);
+    expect(badge).toBeLessThan(html.indexOf('<h1'));
+  });
+
+  it('says the posture is unrecorded in the top badge rather than omitting it', () => {
+    const html = renderContractDetail(contract({ posture_id: null, ai_posture: '' }), byId, null);
+    expect(html.indexOf('Posture not recorded')).toBeLessThan(html.indexOf('<h1'));
+  });
+
   it('renders the posture label and its guidance steps in order', () => {
     const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, '2026-08-07T00:00:00Z');
     expect(html).toContain('AI ALLOWED');
