@@ -25,24 +25,12 @@ import { RECORD_PROJECT } from '../../functions/api/lib/projects.mjs';
 import { ENTITY_POSTURE } from '../../functions/api/lib/project-reference.mjs';
 import { shapeContracts, reconcile, safetyVerdict } from './sync-contracts.mjs';
 
-/** Read every contract record. 119 rows is one page, but paginate anyway. */
+/** Read every contract record, keyed by id. 119 rows is one page, but paginate. */
 async function readStoredContracts({ ddb, table, QueryCommand }) {
-  const stored = {};
-  let lastKey;
-  do {
-    const page = await ddb.send(
-      new QueryCommand({
-        TableName: table,
-        KeyConditionExpression: 'record_type = :t',
-        ExpressionAttributeValues: { ':t': RECORD_CONTRACT },
-        ...(lastKey && { ExclusiveStartKey: lastKey }),
-      }),
-    );
-    for (const item of page.Items ?? []) stored[item.contract_id] = item;
-    lastKey = page.LastEvaluatedKey;
-  } while (lastKey);
-
-  return stored;
+  const items = await readPartition({
+    ddb, table, keyName: 'record_type', keyValue: RECORD_CONTRACT, QueryCommand,
+  });
+  return Object.fromEntries(items.map((item) => [item.contract_id, item]));
 }
 
 /**
@@ -127,6 +115,10 @@ export async function populateContracts({
     incoming: incomingCount,
     storedCount,
     deletes: diff.deletes.length,
+    // The baseline describes the last COMPLETED run, which is what makes the
+    // compounding-drain check work: measuring against the current stored count
+    // would move the goalposts with the damage.
+    baseline: meta.baseline,
     override,
   });
 

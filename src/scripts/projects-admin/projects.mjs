@@ -184,12 +184,27 @@ export function renderDriftSummary(drift, sync) {
 export function renderContractDrift(contractDrift) {
   const drift = contractDrift ?? {};
   if (!drift.available) {
+    // Two very different situations. Offering the benign explanation for a live
+    // fault is worse than saying nothing — it actively tells the reader to stop
+    // looking, which is exactly wrong when a populated table has stopped reading.
+    // Only an explicit read_failed raises the alarm. An absent reason means an API
+    // that predates this field, which is a deploy-order artifact rather than a
+    // fault — defaulting THAT to red would cry wolf on every skewed deploy.
+    const failed = drift.reason === 'read_failed';
     return `
-      <section aria-label="Contract drift" class="mt-3 p-3 border border-gray-200 bg-gray-50 rounded">
-        <p class="text-xs font-semibold text-gray-700 m-0">Contracts not checked</p>
-        <p class="text-xs text-gray-500 mt-1 m-0">
-          The contracts table could not be read. This is expected before the first
-          <code>terraform apply</code> for this environment — it is not a finding about the data.
+      <section aria-label="Contract drift" class="mt-3 p-3 border rounded ${
+        failed ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'
+      }">
+        <p class="text-xs font-semibold ${failed ? 'text-red-900' : 'text-gray-700'} m-0">
+          ${failed ? 'Contracts could not be read' : 'Contracts not checked'}
+        </p>
+        <p class="text-xs ${failed ? 'text-red-900' : 'text-gray-500'} mt-1 m-0">
+          ${failed
+            ? `The contracts table is configured but the read failed. This is a fault, not a
+               pending setup step — check the API logs for
+               <code>projects contract drift read failed</code>.`
+            : `No contracts table is configured for this environment. Expected before the first
+               <code>terraform apply</code> — it is not a finding about the data.`}
         </p>
       </section>`;
   }

@@ -90,15 +90,31 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     const value = argv[i + 1];
+
+    // A value-taking flag consumes the next token, so `--projects-table --dry-run`
+    // swallows the --dry-run and the run proceeds LIVE against a table the operator
+    // never named. Both shapes are rejected rather than guessed at: this script
+    // deletes records, and the flag it is most likely to eat is the safety one.
+    const requireValue = () => {
+      if (value === undefined) fail(`${flag} requires a value.\n${USAGE}`);
+      if (value.startsWith('--')) {
+        fail(
+          `${flag} requires a value, but the next argument is "${value}".\n` +
+            `  If "${value}" was meant as its own flag, ${flag} is missing its value.\n${USAGE}`,
+        );
+      }
+      return value;
+    };
+
     switch (flag) {
       case '--dry-run': opts.dryRun = true; break;
       case '--force': opts.force = true; break;
-      case '--env': opts.env = value; i++; break;
-      case '--credentials': opts.credentials = value; i++; break;
-      case '--spreadsheet': opts.spreadsheet = value; i++; break;
-      case '--table': opts.table = value; i++; break;
-      case '--projects-table': opts.projectsTable = value; i++; break;
-      case '--reference-table': opts.referenceTable = value; i++; break;
+      case '--env': opts.env = requireValue(); i++; break;
+      case '--credentials': opts.credentials = requireValue(); i++; break;
+      case '--spreadsheet': opts.spreadsheet = requireValue(); i++; break;
+      case '--table': opts.table = requireValue(); i++; break;
+      case '--projects-table': opts.projectsTable = requireValue(); i++; break;
+      case '--reference-table': opts.referenceTable = requireValue(); i++; break;
       default: fail(`Unknown flag: ${flag}\n${USAGE}`);
     }
   }

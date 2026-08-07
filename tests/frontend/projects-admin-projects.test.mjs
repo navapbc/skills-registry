@@ -370,14 +370,33 @@ describe('renderContractDrift', () => {
     ...over,
   });
 
-  it('says not-checked when the contracts table could not be read', () => {
-    const html = renderContractDrift({ available: false, contract_count: 0 });
+  it('says not-checked when no contracts table is configured', () => {
+    const html = renderContractDrift({ available: false, contract_count: 0, reason: 'not_configured' });
     expect(html).toMatch(/not checked/i);
+    expect(html).toMatch(/terraform apply/);
     // Must not read as a clean bill of health for data it never looked at.
     expect(html).not.toMatch(/every contract/i);
   });
 
-  it('says not-checked when given nothing at all', () => {
+  it('raises an alarm when a configured table failed to read', () => {
+    // The benign before-first-apply copy would tell the reader to dismiss a live
+    // fault on a populated table — worse than saying nothing.
+    const html = renderContractDrift({ available: false, contract_count: 0, reason: 'read_failed' });
+    expect(html).toMatch(/could not be read/i);
+    expect(html).toMatch(/fault/i);
+    expect(html).not.toMatch(/expected before the first/i);
+    expect(html).toContain('border-red-200');
+  });
+
+  it('points at the log line an operator should search for', () => {
+    const html = renderContractDrift({ available: false, contract_count: 0, reason: 'read_failed' });
+    expect(html).toContain('projects contract drift read failed');
+  });
+
+  it('treats an absent reason as not-checked, not as a fault', () => {
+    // An API predating the reason field is a deploy-order artifact. Defaulting it
+    // to red would cry wolf on every skewed deploy.
+    expect(renderContractDrift({ available: false, contract_count: 0 })).toMatch(/not checked/i);
     expect(renderContractDrift(undefined)).toMatch(/not checked/i);
   });
 

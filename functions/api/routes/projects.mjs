@@ -101,16 +101,22 @@ function describeSync(item) {
  * response would take the Projects tab down for a table it never needed.
  */
 async function readContractDrift(projects) {
-  const empty = {
+  // `reason` distinguishes the two ways this can come back unavailable. They look
+  // identical to the code and could not be less alike to a reader: one is an
+  // environment that has not been applied yet, the other is a live fault on a
+  // populated table. Collapsing them means the tab reassures someone about an IAM
+  // regression or a resolution bug.
+  const unavailable = (reason) => ({
     contract_count: 0,
     unresolved_projects: [],
     missing_posture: [],
     unresolved_postures: [],
     available: false,
-  };
+    reason,
+  });
 
   const table = tables.contracts();
-  if (!table) return empty;
+  if (!table) return unavailable('not_configured');
 
   try {
     const contracts = await queryPartition(table, 'record_type', RECORD_CONTRACT);
@@ -128,17 +134,17 @@ async function readContractDrift(projects) {
       missing_posture: issues.missingPosture,
       unresolved_postures: issues.unresolvedPostures,
       available: true,
+      reason: null,
     };
   } catch (err) {
-    // Logged rather than swallowed: a missing table is expected before an
-    // environment's first apply, but a bug in the resolution rules would land
-    // here too and would otherwise be invisible forever behind "not checked".
+    // Logged rather than swallowed: this catch spans the contracts read, the
+    // postures read, and the resolution call, so a bug in any of them lands here.
     console.error('projects contract drift read failed', err);
 
-    // `available: false` is deliberately distinct from a zero count: the tab must
-    // be able to say "not checked" rather than claiming a clean bill of health it
-    // did not verify.
-    return empty;
+    // `read_failed`, never `not_configured` — the table name resolved, so whatever
+    // went wrong is a real fault and the tab must say so rather than offering the
+    // before-first-apply explanation.
+    return unavailable('read_failed');
   }
 }
 

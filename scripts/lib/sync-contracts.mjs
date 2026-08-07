@@ -16,8 +16,6 @@
 // built from functions/api/ alone, so nothing there may import from scripts/.
 import { RECORD_CONTRACT } from '../../functions/api/lib/contracts.mjs';
 
-export { RECORD_CONTRACT };
-
 export class SyncContractsError extends Error {
   constructor(message) {
     super(message);
@@ -50,6 +48,20 @@ export const HEADER_ROW = 2;
 export const EXCLUDED_HEADERS = ['terms'];
 export const UNNAMED_COLUMN_INDEX = 0;
 
+// Attribute names the population writes itself. A survey column that slugs to one
+// of these would reach the stored item through the record spread and overwrite it.
+//
+// `contract_id` and `record_type` are the primary key: a column named `contractId`
+// slugs to `contract_id`, wins over the key the writer sets, and sends the Put to a
+// phantom range key — the real record is never touched again and serves stale data
+// forever, with no delete for the gate to notice.
+export const RESERVED_ATTRIBUTES = [
+  'record_type',
+  'contract_id',
+  'first_seen_at',
+  'last_synced_at',
+];
+
 // Machine names the shaping refuses to proceed without. Not the full column set
 // — new columns are carried automatically — but the ones whose absence means the
 // header row shifted or was reorganized, which otherwise yields a result that
@@ -73,6 +85,22 @@ export const ID_COLUMNS = ['PORTFOLIO', 'PROJECT'];
 // alone cannot see — a shifted header row can produce a full delete-and-recreate
 // at an unchanged row count.
 export const MAX_DELETE_FRACTION = 0.1;
+
+// Tolerated single-run shrinkage before the run refuses, measured against the last
+// COMPLETED run rather than against the current stored count.
+export const MAX_ROW_DROP_FRACTION = 0.1;
+
+// Hard minimum surviving contract count.
+//
+// This exists because the delete ceiling is measured against a storedCount that
+// shrinks with the damage: 119 -> 108 -> 98 -> ... -> 9 drains the table without any
+// single run exceeding 10%. A per-run ceiling cannot see a compounding drain across
+// runs; only a floor terminates it.
+//
+// 119 contracts today. 90 is low enough not to block a real contraction of the
+// survey and high enough to stop the decay early. Revisit if the survey changes
+// materially — a hardcoded number goes stale silently.
+export const ABSOLUTE_FLOOR = 90;
 
 /**
  * Derive a stored attribute name from a machine header.
@@ -136,6 +164,27 @@ export function shapeContracts(cells) {
     );
   }
 
+  // Checked AFTER the required-header check, so a shifted or emptied header row
+  // gets the message that names the expected row rather than this narrower one.
+  //
+  // The unnamed column is excluded BY POSITION while every other header is
+  // validated BY NAME, and those two strategies disagree the moment a column is
+  // inserted or deleted to the left of the data. Deleting column A shifts
+  // everything left: PORTFOLIO lands at index 0 and is dropped, the required-header
+  // check still passes because the NAME is present, and the id still resolves via
+  // indexOf — so shaping succeeds and every record is written WITHOUT its
+  // portfolio. Put replaces items whole, so that erases the attribute from all 119
+  // stored contracts while reporting a clean run of updates, and there are no
+  // deletes for the gate to see.
+  if (headers[UNNAMED_COLUMN_INDEX] !== '') {
+    throw new SyncContractsError(
+      `Expected the header at column ${UNNAMED_COLUMN_INDEX + 1} to be unnamed, but found ` +
+        `"${headers[UNNAMED_COLUMN_INDEX]}". That column is excluded by position, so a column ` +
+        'inserted or deleted to its left silently drops a real column from every record ' +
+        'instead of failing. Restore the column order, or update UNNAMED_COLUMN_INDEX.',
+    );
+  }
+
   // Column indices to carry, with their attribute names. Built by index rather
   // than by name so the unnamed first column can be excluded by position.
   const carried = [];
@@ -146,6 +195,19 @@ export function shapeContracts(cells) {
     if (EXCLUDED_HEADERS.includes(header)) return;
 
     const attribute = slugAttribute(header);
+
+    // A column that slugs onto a name the writer sets would reach the item through
+    // the record spread and win. For the key attributes that means writing to a
+    // phantom range key: the real record is never updated again, and there is no
+    // delete for the gate to notice.
+    if (RESERVED_ATTRIBUTES.includes(attribute)) {
+      throw new SyncContractsError(
+        `Header "${header}" maps to the attribute "${attribute}", which the population ` +
+          'writes itself. Carrying it would overwrite a key or an audit timestamp on every ' +
+          `record. Rename the column in the sheet. Reserved: ${RESERVED_ATTRIBUTES.join(', ')}.`,
+      );
+    }
+
     // Collisions are rejected rather than resolved: silently keeping the last
     // writer would drop a whole column's data with no signal anywhere.
     if (byAttribute.has(attribute)) {
@@ -267,21 +329,30 @@ export function reconcile(incoming, stored) {
 /**
  * Decide whether a run may write. Returns a refusal reason, or null to proceed.
  *
- * Deliberately narrower than the projects sync's four-condition gate. Contracts
- * have no established baseline to measure a row-count drop against, and no
- * portfolio-size floor that would mean anything — the survey is 31% classified
- * and still being filled in, so both of those would either never fire or fire on
- * every legitimate run.
- *
- * What remains is the pair that catches real destruction:
+ * Four conditions, because each is blind to what the others catch:
  *
  *  - A zero-row read means the tab, its share, or its shape changed, not that
  *    every contract was retired. Never overridable.
  *  - A shifted header row can key contracts on the wrong columns and produce a
  *    full delete-and-recreate at an UNCHANGED row count. Only a delete ceiling
  *    sees that run.
+ *  - The delete ceiling is measured against a storedCount that shrinks with the
+ *    damage, so repeated under-ceiling runs compound: 119 -> 108 -> 98 -> ... -> 9,
+ *    with every run exiting clean. The baseline check and the absolute floor are
+ *    what terminate that decay, and they are why a per-run ceiling is not enough.
+ *
+ * An earlier version of this gate carried only the first two conditions, on the
+ * reasoning that the survey is 31% classified and still being filled in. That
+ * reasoning confuses two different measures: posture completeness is indeed in
+ * flux, but the ROW COUNT is not — PORTFOLIO and PROJECT are populated on every
+ * row. A floor measures rows, so it is meaningful here.
+ *
+ * KNOWN LIMIT: every condition here counts records. None of them inspects field
+ * VALUES, so a run that rewrites the contents of all 119 contracts onto the wrong
+ * records — a sub-range sort in the sheet does exactly this — presents as 0 deletes
+ * and 119 updates and passes untouched. See docs/plans for the follow-up.
  */
-export function safetyVerdict({ incoming, storedCount, deletes, override = false }) {
+export function safetyVerdict({ incoming, storedCount, deletes, baseline, override = false }) {
   if (incoming === 0) {
     return 'Refusing: the sheet returned zero rows. This is never overridable — a ' +
       'zero-row read means the tab, its share, or its shape changed, not that every ' +
@@ -290,6 +361,15 @@ export function safetyVerdict({ incoming, storedCount, deletes, override = false
 
   if (override) return null;
 
+  if (
+    baseline !== null && baseline !== undefined &&
+    incoming < baseline * (1 - MAX_ROW_DROP_FRACTION)
+  ) {
+    return `Refusing: the sheet returned ${incoming} rows against a previous ${baseline}, ` +
+      `a drop of more than ${MAX_ROW_DROP_FRACTION * 100}%. Re-run with the override if this ` +
+      'is intended.';
+  }
+
   // Only meaningful against stored data. With an empty table there is nothing to
   // protect, and applying the ceiling there would block every first population.
   if (storedCount > 0 && deletes > storedCount * MAX_DELETE_FRACTION) {
@@ -297,6 +377,15 @@ export function safetyVerdict({ incoming, storedCount, deletes, override = false
       `more than ${MAX_DELETE_FRACTION * 100}%. Note the row count alone would not have caught ` +
       'this — a shifted header row produces a full delete-and-recreate at an unchanged count. ' +
       'Re-run with the override if this is intended.';
+  }
+
+  // Same reasoning as the ceiling: with an empty table there is nothing to drain,
+  // and applying the floor there would make the first population of any smaller
+  // survey impossible.
+  if (storedCount > 0 && incoming < ABSOLUTE_FLOOR) {
+    return `Refusing: ${incoming} surviving contracts is below the absolute floor of ` +
+      `${ABSOLUTE_FLOOR}. Successive under-ceiling drops compound, and this is the condition ` +
+      'that stops them. Re-run with the override if the survey really is this small now.';
   }
 
   return null;

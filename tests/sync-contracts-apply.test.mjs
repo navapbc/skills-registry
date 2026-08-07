@@ -43,6 +43,23 @@ function rowOf(values) {
 const AECF = { PORTFOLIO: 'LABS', PROJECT: 'AECF', aiUseTerms: 'Silent', notes: 'a' };
 const RIVERSIDE = { PORTFOLIO: 'LABS', PROJECT: 'Riverside', aiUseTerms: 'Allowed', notes: 'b' };
 
+// Enough rows to clear the absolute floor of 90 in tests that should not trip it.
+// Same approach as tests/sync-projects.test.mjs, which clears its floor of 40.
+function manyRows(count, { from = 0 } = {}) {
+  return Array.from({ length: count }, (_, i) =>
+    rowOf({ PORTFOLIO: 'LABS', PROJECT: `Filler ${from + i}`, notes: `n${from + i}` }));
+}
+
+/** The stored form of manyRows, as the table would hold it after a run. */
+function manyStored(count, { from = 0, now = NOW } = {}) {
+  return Array.from({ length: count }, (_, i) => ({
+    contract_id: `labs-filler-${from + i}`,
+    portfolio: 'LABS', project: `Filler ${from + i}`, notes: `n${from + i}`,
+    agreement_type: '', contract_num: '', ai_use_terms: '', project_name: '', ai_posture: '',
+    first_seen_at: now, last_synced_at: now,
+  }));
+}
+
 /**
  * A fake DynamoDB client backed by an in-memory table, recording every command.
  * Reads reflect writes, so ordering bugs surface rather than being mocked away.
@@ -157,14 +174,17 @@ describe('populateContracts', () => {
 
   it('preserves first_seen_at across an update', async () => {
     const ddb = fakeDdb({
-      contracts: [{
-        contract_id: 'labs-aecf', portfolio: 'LABS', project: 'AECF',
-        ai_use_terms: 'Silent', notes: 'OLD', project_name: '', ai_posture: '',
-        agreement_type: '', contract_num: '',
-        first_seen_at: EARLIER, last_synced_at: EARLIER,
-      }],
+      contracts: [
+        {
+          contract_id: 'labs-aecf', portfolio: 'LABS', project: 'AECF',
+          ai_use_terms: 'Silent', notes: 'OLD', project_name: '', ai_posture: '',
+          agreement_type: '', contract_num: '',
+          first_seen_at: EARLIER, last_synced_at: EARLIER,
+        },
+        ...manyStored(95),
+      ],
     });
-    const report = await run(ddb, gridOf(rowOf(AECF)));
+    const report = await run(ddb, gridOf(rowOf(AECF), ...manyRows(95)));
 
     expect(report.updated).toBe(1);
     const record = ddb.store.get(`${RECORD_CONTRACT}#labs-aecf`);
@@ -208,15 +228,15 @@ describe('populateContracts', () => {
     const ddb = fakeDdb({
       meta: {
         record_type: RECORD_SEED_META, contract_id: SEED_META_KEY,
-        status: SEED_COMPLETE, row_count: 42,
+        status: SEED_COMPLETE, row_count: 95,
       },
     });
-    await run(ddb, gridOf(rowOf(AECF)));
+    await run(ddb, gridOf(rowOf(AECF), ...manyRows(95)));
 
     const marker = ddb.metaWrites()[0].params.Item;
     expect(marker.status).toBe(SEED_IN_PROGRESS);
-    expect(marker.row_count).toBe(42);
-    expect(marker.incoming_row_count).toBe(1);
+    expect(marker.row_count).toBe(95);
+    expect(marker.incoming_row_count).toBe(96);
   });
 
   it('reports a previous in-progress marker to the caller', async () => {
@@ -313,5 +333,76 @@ describe('checkContractDrift', () => {
     const queried = ddb.calls.filter((c) => c.type === 'Query').map((c) => c.params.TableName);
     expect(queried).toContain(PROJECTS_TABLE);
     expect(queried).toContain(REFERENCE_TABLE);
+  });
+});
+
+// The gate is unit-tested in isolation, but the call site is what actually guards
+// the prod table. A wiring bug here — wrong count, wrong baseline, gate not
+// consulted — would pass every pure-function test.
+describe('populateContracts gate wiring', () => {
+  it('refuses at the delete ceiling and writes nothing', async () => {
+    const ddb = fakeDdb({ contracts: manyStored(100) });
+    // 100 stored, 80 incoming: 20 deletes is over the 10% ceiling.
+    const report = await run(ddb, gridOf(...manyRows(80)));
+
+    expect(report.refusal).toMatch(/delete/i);
+    expect(report.applied).toBe(false);
+    expect(ddb.contractWrites()).toHaveLength(0);
+    expect(ddb.metaWrites()).toHaveLength(0);
+    expect(ddb.deletes()).toHaveLength(0);
+  });
+
+  it('passes the last completed run as the baseline, not the stored count', async () => {
+    // Stored has already been drained to 100; the baseline still says 119. Only a
+    // gate reading the baseline refuses this.
+    const ddb = fakeDdb({
+      contracts: manyStored(100),
+      meta: {
+        record_type: RECORD_SEED_META, contract_id: SEED_META_KEY,
+        status: SEED_COMPLETE, row_count: 119,
+      },
+    });
+    const report = await run(ddb, gridOf(...manyRows(100)));
+
+    expect(report.refusal).toMatch(/drop|previous/i);
+    expect(ddb.contractWrites()).toHaveLength(0);
+  });
+
+  it('refuses below the absolute floor even when deletes are under the ceiling', async () => {
+    const ddb = fakeDdb({ contracts: manyStored(95) });
+    // 95 stored, 89 incoming: 6 deletes is under 10%, but 89 is below the floor.
+    const report = await run(ddb, gridOf(...manyRows(89)));
+
+    expect(report.refusal).toMatch(/floor|minimum/i);
+    expect(ddb.contractWrites()).toHaveLength(0);
+  });
+
+  it('applies the same run when the override is given', async () => {
+    const ddb = fakeDdb({ contracts: manyStored(95) });
+    const report = await run(ddb, gridOf(...manyRows(89)), { override: true });
+
+    expect(report.refusal).toBeNull();
+    expect(report.applied).toBe(true);
+  });
+});
+
+describe('populateContracts write ordering', () => {
+  it('writes the completion marker after the deletes, not before', async () => {
+    // The docstring calls this load-bearing: a death mid-apply must leave an
+    // in-progress marker rather than a baseline describing a half-applied table.
+    // Asserting final store state cannot catch a regression here, because deletes
+    // and the marker touch different keys.
+    const ddb = fakeDdb({ contracts: manyStored(100) });
+    await run(ddb, gridOf(...manyRows(95)), { override: true });
+
+    const lastDelete = ddb.calls.map((c) => c.type).lastIndexOf('Delete');
+    const completionWrite = ddb.calls.findIndex(
+      (c) => c.type === 'Put'
+        && c.params.Item.record_type === RECORD_SEED_META
+        && c.params.Item.status === SEED_COMPLETE,
+    );
+
+    expect(lastDelete).toBeGreaterThan(-1);
+    expect(completionWrite).toBeGreaterThan(lastDelete);
   });
 });

@@ -524,4 +524,79 @@ describe('projects contract drift', () => {
     const res = await app.request('/api/projects', { headers: as('maintain') });
     expect(res.status).toBe(403);
   });
+
+  it('reads no table at all when refusing a non-holder', async () => {
+    await app.request('/api/projects', { headers: as('maintain') });
+    // Only the auth user lookup. Hoisting the contracts read above the gate would
+    // fail here rather than silently serving contract data to the wrong audience.
+    expect(mockSend).toHaveBeenCalledTimes(1);
+  });
+
+  it('never emits contract-confidential attributes in the drift payload', async () => {
+    // The payload is narrow because the locate helper is narrow. Spreading the
+    // whole contract into it would leak named individuals and clause text to a
+    // response that is rendered in a browser — and would pass every other test.
+    const headers = as('projects-admin');
+    queueReads();
+    queueContractReads({
+      contracts: [contract({
+        project_name: 'MA PFML',
+        ai_posture: 'nonsense',
+        nava_project_mgr: 'A Named Person',
+        nava_program_mgr: 'Another Named Person',
+        customer: 'SEC',
+        contract_num: '47QTCA18D008M',
+        task_order: '50310225F0004',
+        ai_use_terms_language: 'Verbatim BPA modification clause text.',
+      })],
+    });
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.text();
+
+    for (const secret of [
+      'A Named Person', 'Another Named Person', 'SEC',
+      '47QTCA18D008M', '50310225F0004', 'Verbatim BPA modification clause text.',
+    ]) {
+      expect(body).not.toContain(secret);
+    }
+    // The finding itself still made it through.
+    expect(JSON.parse(body).contract_drift.unresolved_projects).toHaveLength(1);
+  });
+
+  it('reports not_configured when no contracts table is set', async () => {
+    delete process.env.CONTRACTS_TABLE;
+    const headers = as('projects-admin');
+    queueReads();
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.available).toBe(false);
+    expect(body.contract_drift.reason).toBe('not_configured');
+  });
+
+  it('reports read_failed when a configured table throws', async () => {
+    // Distinct from not_configured: the tab must not offer the
+    // before-first-apply explanation for a live fault on a populated table.
+    const headers = as('projects-admin');
+    queueReads();
+    mockSend.mockRejectedValueOnce(Object.assign(new Error('denied'), {
+      name: 'AccessDeniedException',
+    }));
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.available).toBe(false);
+    expect(body.contract_drift.reason).toBe('read_failed');
+  });
+
+  it('reports read_failed when the postures read throws', async () => {
+    const headers = as('projects-admin');
+    queueReads();
+    mockSend.mockResolvedValueOnce({ Items: [contract()] });
+    mockSend.mockRejectedValueOnce(new Error('throttled'));
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.reason).toBe('read_failed');
+  });
 });

@@ -3,6 +3,8 @@ import {
   HEADER_ROW,
   EXCLUDED_HEADERS,
   MAX_DELETE_FRACTION,
+  ABSOLUTE_FLOOR,
+  RESERVED_ATTRIBUTES,
   SyncContractsError,
   slugAttribute,
   slugContractId,
@@ -265,5 +267,108 @@ describe('safetyVerdict', () => {
 
   it('does not apply the delete ceiling to a first run against an empty table', () => {
     expect(safetyVerdict({ incoming: 119, storedCount: 0, deletes: 0 })).toBeNull();
+  });
+});
+
+// The unnamed column is excluded by POSITION while everything else is validated by
+// NAME. When those disagree, shaping succeeds and silently writes records missing a
+// real column — and because Put replaces items whole, that erases the attribute
+// from every stored contract with zero deletes for the gate to see.
+describe('shapeContracts column-shift protection', () => {
+  it('fails when column A is no longer unnamed', () => {
+    // Column A deleted from the sheet: everything shifts left, PORTFOLIO lands at 0.
+    const headers = ['PORTFOLIO', 'PROJECT', 'contractNum', 'aiUseTerms', 'projectName', 'aiPosture'];
+    const grid = [[], [], headers, ['LABS', 'AECF', 'C-1', 'Silent', 'AECF', 'silent']];
+    expect(() => shapeContracts(grid)).toThrow(SyncContractsError);
+    expect(() => shapeContracts(grid)).toThrow(/unnamed/i);
+  });
+
+  it('names the offending header so the operator can see the shift', () => {
+    const headers = ['PORTFOLIO', 'PROJECT', 'contractNum', 'aiUseTerms', 'projectName', 'aiPosture'];
+    const grid = [[], [], headers, ['LABS', 'AECF', 'C-1', 'Silent', 'AECF', 'silent']];
+    expect(() => shapeContracts(grid)).toThrow(/PORTFOLIO/);
+  });
+
+  it('would otherwise have dropped portfolio from every record', () => {
+    // Guards the regression directly: without the check, this shape produced records
+    // with no `portfolio` key and no error.
+    const headers = ['PORTFOLIO', 'PROJECT', 'contractNum', 'aiUseTerms', 'projectName', 'aiPosture'];
+    const grid = [[], [], headers, ['LABS', 'AECF', 'C-1', 'Silent', 'AECF', 'silent']];
+    let record;
+    try { record = Object.values(shapeContracts(grid).contracts)[0]; } catch { record = null; }
+    expect(record).toBeNull();
+  });
+});
+
+describe('shapeContracts reserved attributes', () => {
+  it.each(RESERVED_ATTRIBUTES)('rejects a column that maps to %s', (reserved) => {
+    // e.g. a survey column named `contractId` slugs to `contract_id`, wins over the
+    // key the writer sets via the record spread, and sends the Put to a phantom
+    // range key — the real record is never updated again and there is no delete.
+    const camel = reserved.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    const headers = ['', 'PORTFOLIO', 'PROJECT', 'contractNum', 'aiUseTerms', 'projectName', 'aiPosture', camel];
+    const grid = [[], [], headers, ['', 'LABS', 'AECF', '', 'Silent', '', '', 'x']];
+    expect(() => shapeContracts(grid)).toThrow(SyncContractsError);
+    expect(() => shapeContracts(grid)).toThrow(new RegExp(reserved));
+  });
+
+  it('still carries ordinary columns', () => {
+    const headers = ['', 'PORTFOLIO', 'PROJECT', 'contractNum', 'aiUseTerms', 'projectName', 'aiPosture', 'somethingNew'];
+    const grid = [[], [], headers, ['', 'LABS', 'AECF', '', 'Silent', '', '', 'x']];
+    expect(shapeContracts(grid).contracts['labs-aecf'].something_new).toBe('x');
+  });
+});
+
+describe('safetyVerdict compounding-drain protection', () => {
+  it('refuses a row count that dropped more than 10% below the last completed run', () => {
+    const verdict = safetyVerdict({ incoming: 100, storedCount: 119, deletes: 19, baseline: 119 });
+    expect(verdict).toMatch(/drop|previous/i);
+  });
+
+  it('measures the drop against the baseline, not the current stored count', () => {
+    // The stored count shrinks with the damage; the baseline does not. Measuring
+    // against stored would move the goalposts with each successive run.
+    const verdict = safetyVerdict({ incoming: 100, storedCount: 100, deletes: 0, baseline: 119 });
+    expect(verdict).toMatch(/drop|previous/i);
+  });
+
+  it('allows a first run with no baseline', () => {
+    expect(safetyVerdict({ incoming: 119, storedCount: 0, deletes: 0, baseline: null })).toBeNull();
+  });
+
+  it('refuses when survivors fall below the absolute floor', () => {
+    const verdict = safetyVerdict({
+      incoming: ABSOLUTE_FLOOR - 1, storedCount: ABSOLUTE_FLOOR, deletes: 1, baseline: ABSOLUTE_FLOOR,
+    });
+    expect(verdict).toMatch(/floor|minimum/i);
+  });
+
+  it('terminates a compounding drain that no single run could catch', () => {
+    // Each step deletes under 10% of what is stored and reports a clean run. Only
+    // the floor stops the decay. Baseline tracks the previous successful run.
+    let stored = 119;
+    let baseline = 119;
+    const verdicts = [];
+    for (let i = 0; i < 6; i++) {
+      const deletes = Math.floor(stored * MAX_DELETE_FRACTION);
+      const incoming = stored - deletes;
+      const verdict = safetyVerdict({ incoming, storedCount: stored, deletes, baseline });
+      verdicts.push(verdict);
+      if (verdict) break;
+      stored = incoming;
+      baseline = incoming;
+    }
+    expect(verdicts.some((v) => v !== null)).toBe(true);
+    expect(verdicts[verdicts.length - 1]).toMatch(/floor|minimum|drop/i);
+  });
+
+  it('does not apply the floor to a first population of an empty table', () => {
+    expect(safetyVerdict({ incoming: 5, storedCount: 0, deletes: 0, baseline: null })).toBeNull();
+  });
+
+  it('lets the override past the baseline and floor refusals', () => {
+    expect(safetyVerdict({
+      incoming: 1, storedCount: 119, deletes: 118, baseline: 119, override: true,
+    })).toBeNull();
   });
 });
