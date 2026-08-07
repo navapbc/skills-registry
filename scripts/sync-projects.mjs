@@ -287,12 +287,39 @@ async function main() {
   // the tab must resolve on request so an archetype edit clears findings at once,
   // and the run must resolve so a typo reaches a human without a page load. Both
   // call the same rule in functions/api/lib/projects.mjs.
-  const drift = await checkDrift({
-    ddb,
-    referenceTable: args.referenceTable,
-    projects: report.projects,
-    QueryCommand,
-  });
+  // A drift-check failure is reported separately from a sync failure, because by
+  // this point the projects have already been written successfully. Letting the
+  // exception escape produced a raw stack trace on a run that had actually done
+  // its job, which reads as "the sync broke" when nothing of the sort happened.
+  let drift;
+  try {
+    drift = await checkDrift({
+      ddb,
+      referenceTable: args.referenceTable,
+      projects: report.projects,
+      QueryCommand,
+    });
+  } catch (err) {
+    const message =
+      `The projects synced successfully, but the archetype drift check could not run: ` +
+      `${err.message ?? err}\n\n` +
+      `  The table is correct — only the alarm failed. Most likely the caller lacks\n` +
+      `  dynamodb:Query on ${args.referenceTable}; see the DynamoDBArchetypeRead\n` +
+      `  statement in terraform/iam.tf.`;
+    writeJobSummary([
+      '## Projects sync — drift check could not run',
+      '',
+      'Projects synced successfully. Only the archetype drift check failed, so this run',
+      'cannot say whether the sheet and the archetype records agree.',
+      '',
+      '```',
+      String(err.message ?? err),
+      '```',
+      '',
+    ]);
+    // Still non-zero: a silently skipped drift alarm is worse than a visible failure.
+    fail(message);
+  }
 
   console.log();
   reportDrift(drift);

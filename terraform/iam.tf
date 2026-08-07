@@ -154,6 +154,21 @@ data "aws_iam_policy_document" "github_deploy_projects" {
     ]
     resources = [aws_dynamodb_table.projects.arn]
   }
+
+  # The sync's post-apply drift check reads the archetype partition of the
+  # reference table to decide whether the sheet names archetypes that exist.
+  #
+  # READ ONLY, and it must stay that way. The preceding plan deliberately kept the
+  # deploy role off this table entirely because its records are admin-authored and
+  # the seed is operator-run — CI must never be able to overwrite an edit made in
+  # the admin tabs. Query is the narrowest grant that lets the drift alarm work
+  # without reopening that. Do not add PutItem, UpdateItem, or DeleteItem here.
+  statement {
+    sid       = "DynamoDBArchetypeRead"
+    effect    = "Allow"
+    actions   = ["dynamodb:Query"]
+    resources = [aws_dynamodb_table.project_reference.arn]
+  }
 }
 
 resource "aws_iam_role_policy" "github_deploy_projects" {
