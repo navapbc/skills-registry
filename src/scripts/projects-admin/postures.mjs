@@ -198,6 +198,16 @@ export async function load(panel, ctx) {
     formEl.innerHTML = renderPostureForm(draft);
     formEl.classList.remove('hidden');
     wireForm();
+    revealForm();
+  }
+
+  // The form opens at the foot of the panel, so with a full list it lands below
+  // the fold and Edit looks like it did nothing. Bring it into view and put the
+  // caret in the first field — which also rescues keyboard and screen reader
+  // users, whose focus would otherwise stay on the Edit button they just left.
+  function revealForm() {
+    formEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    formEl.querySelector('#posture-label')?.focus({ preventScroll: true });
   }
 
   function closeForm() {
