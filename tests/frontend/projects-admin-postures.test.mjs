@@ -3,7 +3,6 @@ import {
   sortPostures,
   repositioned,
   renderPostureBadge,
-  renderPostureRow,
   renderPostureList,
   renderPostureForm,
   BADGE_FOREGROUND,
