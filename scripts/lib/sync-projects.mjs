@@ -12,6 +12,16 @@
  */
 
 import { rowsToObjects } from './sheet-export.mjs';
+// Imported rather than redeclared: the API side resolves archetype values by
+// these attribute names, and two agreeing copies would eventually stop agreeing.
+// A mismatch reports zero drift — a false all-clear, not a visible failure — so
+// the test asserts slugColumn reproduces them.
+import {
+  ARCHETYPE_PRIMARY_SLUG,
+  ARCHETYPE_ADDITIONAL_SLUG,
+} from '../../functions/api/lib/projects.mjs';
+
+export { ARCHETYPE_PRIMARY_SLUG, ARCHETYPE_ADDITIONAL_SLUG };
 
 export class SyncProjectsError extends Error {
   constructor(message) {
@@ -42,12 +52,6 @@ export const PROJECT_CODE_HEADER = 'Database code';
 // belong to no declared group. Without a synthetic one they render outside every
 // heading as an unlabelled dangling block.
 export const IDENTITY_GROUP = 'IDENTITY';
-
-// Read by the API side to resolve archetype values. A mismatch between the two
-// sides reports zero drift, which is a false all-clear rather than a visible
-// error, so tests assert these against slugColumn output directly.
-export const ARCHETYPE_PRIMARY_SLUG = 'archetype_primary';
-export const ARCHETYPE_ADDITIONAL_SLUG = 'archetype_additional';
 
 /**
  * Columns deliberately NOT mirrored into the hub.
