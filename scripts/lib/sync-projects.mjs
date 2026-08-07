@@ -227,14 +227,21 @@ export function shapeProjects(cells) {
   };
 }
 
-// Attributes that describe the sync rather than the project, and so must not
-// count toward whether a record changed.
-const SYNC_METADATA_FIELDS = new Set(['first_seen_at', 'last_synced_at']);
+// Attributes the sync adds at write time rather than reading from the sheet, so
+// they must not count toward whether a record changed. `record_type` is the
+// partition key and is present on every stored item but on no incoming record —
+// leaving it in makes every project compare as changed, which is the "53 updated
+// on every run forever" failure in a second guise.
+const NON_CARRIED_FIELDS = new Set([
+  'record_type',
+  'first_seen_at',
+  'last_synced_at',
+]);
 
 function carriedFieldsDiffer(incoming, stored) {
   const keys = new Set([
-    ...Object.keys(incoming).filter((k) => !SYNC_METADATA_FIELDS.has(k)),
-    ...Object.keys(stored).filter((k) => !SYNC_METADATA_FIELDS.has(k)),
+    ...Object.keys(incoming).filter((k) => !NON_CARRIED_FIELDS.has(k)),
+    ...Object.keys(stored).filter((k) => !NON_CARRIED_FIELDS.has(k)),
   ]);
   for (const key of keys) {
     if (String(incoming[key] ?? '') !== String(stored[key] ?? '')) return true;
