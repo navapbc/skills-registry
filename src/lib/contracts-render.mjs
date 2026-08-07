@@ -23,9 +23,9 @@ export function renderPostureBadge(posture) {
     </span>`;
   }
   return `<span
-    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-gray-900"
+    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase text-gray-900"
     style="background-color: ${escapeHtml(posture.color)}"
-  >${escapeHtml(posture.label)}</span>`;
+  >${escapeHtml(posture.id)}</span>`;
 }
 
 /** Index postures by id so callers resolve without rescanning the list. */
@@ -196,6 +196,54 @@ const row = (label, value) => (value
   : '');
 
 /**
+ * A field that gets the full width of the page rather than a grid cell.
+ *
+ * The survey's narrative answers run to sentences and paragraphs. In the two-column
+ * grid a long answer wraps to a tall thin column and drags its neighbour's row
+ * height with it, so a one-line value beside a six-line one reads as a layout bug.
+ * These rows are also rule-separated: without a divider, consecutive multiline
+ * values run together and the label is the only cue that a new field started.
+ */
+const stackedRow = (label, value, render = escapeHtml) => (value
+  ? `<div class="py-3 first:pt-0 last:pb-0">
+       <dt class="text-xs text-gray-400">${escapeHtml(label)}</dt>
+       <dd class="text-sm text-gray-800 mt-1 m-0 whitespace-pre-line">${render(value)}</dd>
+     </div>`
+  : '');
+
+/**
+ * A survey-sourced URL, linked only when it is one.
+ *
+ * The value reaches us as free text a human typed into a spreadsheet cell, so it is
+ * as often "N/A", "see attached", or a bare `docs.google.com/...` as it is a real
+ * URL. Two rules follow:
+ *
+ * - Only http and https are linked. Interpolating an arbitrary scheme into an href
+ *   makes `javascript:` a stored XSS vector, and a sheet any Nava staffer can edit
+ *   is not a trusted source. Anything else renders as the plain text it is.
+ * - A scheme-less host is linked as https rather than dropped, because relative
+ *   hrefs would resolve against /contracts/<id> and 404 on our own site.
+ *
+ * The link text stays the value the sheet holds, so a reader can see where it goes.
+ */
+function renderPolicyLink(value) {
+  const raw = value.trim();
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+  let url;
+  try {
+    url = new URL(candidate);
+  } catch {
+    return escapeHtml(value);
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return escapeHtml(value);
+  // A cell holding prose that happens to start with a word and a dot is not a link.
+  if (/\s/.test(raw)) return escapeHtml(value);
+
+  return `<a href="${escapeHtml(url.href)}" target="_blank" rel="noopener noreferrer"
+    class="text-plum-700 underline break-all">${escapeHtml(raw)}</a>`;
+}
+
+/**
  * The posture region: the answer the page exists to give.
  *
  * Rendered first and never buried. When no posture is recorded this says so plainly
@@ -289,20 +337,35 @@ const DETAIL_FIELDS = [
   ['Subcontractors', 'subcontractors'],
   ['Nava project manager', 'nava_project_mgr'],
   ['Nava program manager', 'nava_program_mgr'],
-  ['AI used in performance', 'ai_used'],
   ['AI tools used', 'tools'],
-  ['How AI is used', 'usage'],
-  ['Agency review process', 'review_process'],
+  ['Nava program AI policy', 'nava_policy'],
+];
+
+/**
+ * Fields whose values are prose, given a section and a full-width row each.
+ *
+ * Split from DETAIL_FIELDS because these are answers, not attributes: the survey
+ * records them as free text and several routinely run to multiple paragraphs. The
+ * short attributes above stay in the two-column grid, where a scanning reader can
+ * take in eight of them at once.
+ *
+ * The optional third element renders the value; it defaults to escaped plain text.
+ */
+const NARRATIVE_FIELDS = [
   ['Client AI policy', 'client_policy'],
   ['Client AI policy (summary)', 'client_policy_summary'],
-  ['Client AI policy link', 'client_policy_link'],
-  ['Nava program AI policy', 'nava_policy'],
+  ['Client AI policy link', 'client_policy_link', renderPolicyLink],
+  ['AI used in performance', 'ai_used'],
+  ['How AI is used', 'usage'],
+  ['Agency review process', 'review_process'],
   ['Notes', 'notes'],
 ];
 
 export function renderContractDetail(contract, postureById, capturedAt) {
   const posture = postureById?.get(contract.posture_id) ?? null;
   const fields = DETAIL_FIELDS.map(([label, key]) => row(label, contract[key])).join('');
+  const narrative = NARRATIVE_FIELDS
+    .map(([label, key, render]) => stackedRow(label, contract[key], render)).join('');
 
   // The clause text runs to multiple paragraphs. Behind a disclosure so it cannot
   // push the posture answer off-screen, but present and expandable.
@@ -342,6 +405,12 @@ export function renderContractDetail(contract, postureById, capturedAt) {
         ? `<section aria-label="Details" class="rounded-lg p-4 border border-gray-200 bg-white">
              <h2 class="text-sm font-semibold text-gray-900 m-0 mb-3">Details</h2>
              <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 m-0">${fields}</dl>
+           </section>`
+        : ''}
+      ${narrative
+        ? `<section aria-label="Policy and AI use" class="rounded-lg p-4 border border-gray-200 bg-white">
+             <h2 class="text-sm font-semibold text-gray-900 m-0 mb-1">Policy and AI use</h2>
+             <dl class="divide-y divide-gray-100 m-0">${narrative}</dl>
            </section>`
         : ''}
       ${renderPostureSection(contract, posture)}

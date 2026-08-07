@@ -207,6 +207,64 @@ describe('renderContractDetail', () => {
     expect(html).toMatch(/matches no posture on file/i);
   });
 
+  // The prose answers get their own section and a full-width row each, so a
+  // six-line answer cannot stretch a one-line neighbour in the two-column grid.
+  it('puts the narrative answers in their own section, outside the details grid', () => {
+    const html = renderContractDetail(
+      contract({ usage: 'Drafting only.\n\nNever for decisions.', notes: 'Reviewed Q3.' }),
+      byId, null,
+    );
+    expect(html).toContain('aria-label="Policy and AI use"');
+    expect(html).toContain('Never for decisions.');
+    expect(html).toContain('Reviewed Q3.');
+    // Outside the grid: the narrative section opens after the details grid closes.
+    expect(html.indexOf('grid-cols-1 sm:grid-cols-2'))
+      .toBeLessThan(html.indexOf('aria-label="Policy and AI use"'));
+  });
+
+  it('omits the narrative section when the survey answered none of it', () => {
+    const html = renderContractDetail(contract(), byId, null);
+    expect(html).not.toContain('aria-label="Policy and AI use"');
+  });
+
+  it('escapes narrative values, which are free text', () => {
+    const html = renderContractDetail(contract({ notes: '<img src=x onerror=1>' }), byId, null);
+    expect(html).not.toContain('<img src=x');
+  });
+
+  // The sheet is editable by any Nava staffer, so the URL is untrusted input.
+  describe('the client policy link', () => {
+    const linkFor = (client_policy_link) =>
+      renderContractDetail(contract({ client_policy_link }), byId, null);
+
+    it('links an http(s) URL and opens it safely in a new tab', () => {
+      const html = linkFor('https://agency.gov/ai-policy');
+      expect(html).toContain('href="https://agency.gov/ai-policy"');
+      expect(html).toContain('rel="noopener noreferrer"');
+    });
+
+    it('assumes https for a scheme-less host rather than making it relative', () => {
+      // A bare href would resolve against /contracts/<id> and 404 on our own site.
+      expect(linkFor('docs.google.com/d/policy')).toContain('href="https://docs.google.com/d/policy"');
+    });
+
+    it('refuses to put a javascript: URL in an href', () => {
+      const html = linkFor('javascript:alert(1)');
+      expect(html).not.toContain('href="javascript:');
+      expect(html).toContain('javascript:alert(1)');
+    });
+
+    it('leaves prose as text instead of guessing a link out of it', () => {
+      const html = linkFor('N/A, see the attached memo');
+      expect(html).not.toContain('<a href="https://N/A');
+      expect(html).toContain('N/A, see the attached memo');
+    });
+
+    it('escapes the link text, which the sheet controls', () => {
+      expect(linkFor('https://x.gov/"><img src=x>')).not.toContain('<img src=x>');
+    });
+  });
+
   it('renders the resolved project details', () => {
     const html = renderContractDetail(contract({ resolved_project: project }), byId, null);
     expect(html).toContain('DOJ Civil Rights Portal');
