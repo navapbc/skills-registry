@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createHmac } from 'crypto';
 
 const { TEST_SECRET, mockSend } = vi.hoisted(() => ({
@@ -378,5 +378,225 @@ describe('archetype drift', () => {
 
     expect(body.drift.unresolved).toHaveLength(1);
     expect(body.drift.archetype_count).toBe(0);
+  });
+});
+
+// ── Contract drift ────────────────────────────────────────────────────────
+// Reported on this endpoint rather than its own because the audience is
+// identical. The contracts table was added after this route existed and is
+// operator-populated, so "absent" is a legitimate state that must not take the
+// Projects tab down with it.
+describe('projects contract drift', () => {
+  const CONTRACT_POSTURES = [
+    { entity_type: 'posture', id: 'silent', label: 'AI SILENT', status: 'active' },
+    { entity_type: 'posture', id: 'allowed', label: 'AI ALLOWED', status: 'active' },
+  ];
+
+  function contract(overrides = {}) {
+    return {
+      record_type: 'contract',
+      contract_id: 'fedciv-co-cobees',
+      portfolio: 'FEDCIV',
+      project: 'CO COBEES',
+      project_name: 'CO COBEES',
+      ai_posture: 'silent',
+      ...overrides,
+    };
+  }
+
+  /** The two extra reads the handler makes when a contracts table is configured. */
+  function queueContractReads({ contracts = [contract()], postures = CONTRACT_POSTURES } = {}) {
+    mockSend.mockResolvedValueOnce({ Items: contracts });
+    mockSend.mockResolvedValueOnce({ Items: postures });
+  }
+
+  let previous;
+  beforeEach(() => {
+    previous = process.env.CONTRACTS_TABLE;
+    process.env.CONTRACTS_TABLE = 'skills-hub-contracts-staging';
+  });
+  afterEach(() => {
+    if (previous === undefined) delete process.env.CONTRACTS_TABLE;
+    else process.env.CONTRACTS_TABLE = previous;
+  });
+
+  it('reports a clean bill of health when every contract resolves', async () => {
+    const headers = as('projects-admin');
+    queueReads();
+    queueContractReads();
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.available).toBe(true);
+    expect(body.contract_drift.contract_count).toBe(1);
+    expect(body.contract_drift.unresolved_projects).toEqual([]);
+    expect(body.contract_drift.missing_posture).toEqual([]);
+  });
+
+  it('reports a project name matching no project, with the raw value', async () => {
+    const headers = as('projects-admin');
+    queueReads();
+    queueContractReads({ contracts: [contract({ project_name: 'MA PFML' })] });
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.unresolved_projects).toHaveLength(1);
+    expect(body.contract_drift.unresolved_projects[0].raw_value).toBe('MA PFML');
+    expect(body.contract_drift.unresolved_projects[0].contract_id).toBe('fedciv-co-cobees');
+  });
+
+  it('counts a contract with no posture separately from an unresolved project', async () => {
+    const headers = as('projects-admin');
+    queueReads();
+    queueContractReads({
+      contracts: [contract({ project_name: 'MA PFML', ai_posture: '' })],
+    });
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.missing_posture).toHaveLength(1);
+    expect(body.contract_drift.unresolved_projects).toHaveLength(1);
+  });
+
+  it('reports a posture value matching no posture record', async () => {
+    const headers = as('projects-admin');
+    queueReads();
+    queueContractReads({ contracts: [contract({ ai_posture: 'prohibited' })] });
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.unresolved_postures).toHaveLength(1);
+    expect(body.contract_drift.unresolved_postures[0].raw_value).toBe('prohibited');
+    expect(body.contract_drift.missing_posture).toHaveLength(0);
+  });
+
+  it('does not report a contract that names no project at all', async () => {
+    const headers = as('projects-admin');
+    queueReads();
+    queueContractReads({ contracts: [contract({ project_name: '' })] });
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.unresolved_projects).toEqual([]);
+  });
+
+  it('reports an empty contracts table as available with a zero count', async () => {
+    const headers = as('projects-admin');
+    queueReads();
+    queueContractReads({ contracts: [] });
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.available).toBe(true);
+    expect(body.contract_drift.contract_count).toBe(0);
+  });
+
+  it('serves the projects response when the contracts read fails', async () => {
+    const headers = as('projects-admin');
+    queueReads();
+    mockSend.mockRejectedValueOnce(Object.assign(new Error('Requested resource not found'), {
+      name: 'ResourceNotFoundException',
+    }));
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    // The Projects tab must not go down for a table it never needed.
+    expect(res.status).toBe(200);
+    expect(body.projects).toHaveLength(1);
+    expect(body.drift.unresolved).toEqual([]);
+    // Distinct from a zero count: the tab says "not checked", not "all clear".
+    expect(body.contract_drift.available).toBe(false);
+    expect(body.contract_drift.contract_count).toBe(0);
+  });
+
+  it('reports not-checked when no contracts table is configured', async () => {
+    delete process.env.CONTRACTS_TABLE;
+    const headers = as('projects-admin');
+    queueReads();
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.contract_drift.available).toBe(false);
+  });
+
+  it('still refuses a non-holder, contracts or not', async () => {
+    const res = await app.request('/api/projects', { headers: as('maintain') });
+    expect(res.status).toBe(403);
+  });
+
+  it('reads no table at all when refusing a non-holder', async () => {
+    await app.request('/api/projects', { headers: as('maintain') });
+    // Only the auth user lookup. Hoisting the contracts read above the gate would
+    // fail here rather than silently serving contract data to the wrong audience.
+    expect(mockSend).toHaveBeenCalledTimes(1);
+  });
+
+  it('never emits contract-confidential attributes in the drift payload', async () => {
+    // The payload is narrow because the locate helper is narrow. Spreading the
+    // whole contract into it would leak named individuals and clause text to a
+    // response that is rendered in a browser — and would pass every other test.
+    const headers = as('projects-admin');
+    queueReads();
+    queueContractReads({
+      contracts: [contract({
+        project_name: 'MA PFML',
+        ai_posture: 'nonsense',
+        nava_project_mgr: 'A Named Person',
+        nava_program_mgr: 'Another Named Person',
+        customer: 'SEC',
+        contract_num: '47QTCA18D008M',
+        task_order: '50310225F0004',
+        ai_use_terms_language: 'Verbatim BPA modification clause text.',
+      })],
+    });
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.text();
+
+    for (const secret of [
+      'A Named Person', 'Another Named Person', 'SEC',
+      '47QTCA18D008M', '50310225F0004', 'Verbatim BPA modification clause text.',
+    ]) {
+      expect(body).not.toContain(secret);
+    }
+    // The finding itself still made it through.
+    expect(JSON.parse(body).contract_drift.unresolved_projects).toHaveLength(1);
+  });
+
+  it('reports not_configured when no contracts table is set', async () => {
+    delete process.env.CONTRACTS_TABLE;
+    const headers = as('projects-admin');
+    queueReads();
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.available).toBe(false);
+    expect(body.contract_drift.reason).toBe('not_configured');
+  });
+
+  it('reports read_failed when a configured table throws', async () => {
+    // Distinct from not_configured: the tab must not offer the
+    // before-first-apply explanation for a live fault on a populated table.
+    const headers = as('projects-admin');
+    queueReads();
+    mockSend.mockRejectedValueOnce(Object.assign(new Error('denied'), {
+      name: 'AccessDeniedException',
+    }));
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.available).toBe(false);
+    expect(body.contract_drift.reason).toBe('read_failed');
+  });
+
+  it('reports read_failed when the postures read throws', async () => {
+    const headers = as('projects-admin');
+    queueReads();
+    mockSend.mockResolvedValueOnce({ Items: [contract()] });
+    mockSend.mockRejectedValueOnce(new Error('throttled'));
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.reason).toBe('read_failed');
   });
 });

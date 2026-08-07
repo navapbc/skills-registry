@@ -113,3 +113,28 @@ describe('upsertUser', () => {
     expect(result).toEqual(updated);
   });
 });
+
+describe('tables.contracts', () => {
+  it('returns the configured table name', () => {
+    const prev = process.env.CONTRACTS_TABLE;
+    process.env.CONTRACTS_TABLE = 'skills-hub-contracts-staging';
+    try {
+      expect(tables.contracts()).toBe('skills-hub-contracts-staging');
+    } finally {
+      if (prev === undefined) delete process.env.CONTRACTS_TABLE;
+      else process.env.CONTRACTS_TABLE = prev;
+    }
+  });
+
+  it('returns undefined when the variable is unset, rather than throwing', () => {
+    // The projects route treats this as "not checked" rather than failing, so an
+    // environment deployed before the table exists still serves its tab.
+    const prev = process.env.CONTRACTS_TABLE;
+    delete process.env.CONTRACTS_TABLE;
+    try {
+      expect(tables.contracts()).toBeUndefined();
+    } finally {
+      if (prev !== undefined) process.env.CONTRACTS_TABLE = prev;
+    }
+  });
+});

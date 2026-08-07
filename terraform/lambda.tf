@@ -163,6 +163,20 @@ data "aws_iam_policy_document" "lambda_api_policy" {
     actions   = ["dynamodb:GetItem", "dynamodb:Query"]
     resources = [aws_dynamodb_table.projects.arn]
   }
+
+  # Contracts are READ-ONLY to the API, for the same reason as projects above and
+  # enforced the same way — a separate statement, because the general DynamoDB
+  # statement grants writes to every table it names.
+  #
+  # The population script is the only write surface, and it runs as an operator
+  # with its own credentials. A future write route on this table fails against
+  # IAM rather than quietly succeeding.
+  statement {
+    sid       = "DynamoDBContractsRead"
+    effect    = "Allow"
+    actions   = ["dynamodb:GetItem", "dynamodb:Query"]
+    resources = [aws_dynamodb_table.contracts.arn]
+  }
 }
 
 resource "aws_iam_role" "lambda_api" {
@@ -200,6 +214,7 @@ resource "aws_lambda_function" "api" {
       ANALYTICS_TABLE         = aws_dynamodb_table.analytics_events.name
       PROJECT_REFERENCE_TABLE = aws_dynamodb_table.project_reference.name
       PROJECTS_TABLE          = aws_dynamodb_table.projects.name
+      CONTRACTS_TABLE         = aws_dynamodb_table.contracts.name
       ALLOWED_EMAIL_DOMAIN    = var.allowed_email_domain
     }
   }

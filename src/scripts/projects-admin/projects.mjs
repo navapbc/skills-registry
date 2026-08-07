@@ -167,6 +167,136 @@ export function renderDriftSummary(drift, sync) {
     ${missingBlock}`;
 }
 
+/**
+ * Findings about the populated contracts, rendered beside the archetype summary.
+ *
+ * Three states the reader must be able to tell apart, which is why a zero count
+ * is not enough on its own:
+ *
+ *   - not checked   — the contracts table is absent or unreadable
+ *   - not populated — the table is there and empty, so nothing has been run yet
+ *   - checked       — real findings, including "none", which is good news
+ *
+ * The missing-posture finding shows a count and no list. 82 of 119 contracts
+ * carry no posture today; listing them would bury the unresolved names, which
+ * are the entries someone can actually act on.
+ */
+export function renderContractDrift(contractDrift) {
+  const drift = contractDrift ?? {};
+  if (!drift.available) {
+    // Two very different situations. Offering the benign explanation for a live
+    // fault is worse than saying nothing — it actively tells the reader to stop
+    // looking, which is exactly wrong when a populated table has stopped reading.
+    // Only an explicit read_failed raises the alarm. An absent reason means an API
+    // that predates this field, which is a deploy-order artifact rather than a
+    // fault — defaulting THAT to red would cry wolf on every skewed deploy.
+    const failed = drift.reason === 'read_failed';
+    return `
+      <section aria-label="Contract drift" class="mt-3 p-3 border rounded ${
+        failed ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'
+      }">
+        <p class="text-xs font-semibold ${failed ? 'text-red-900' : 'text-gray-700'} m-0">
+          ${failed ? 'Contracts could not be read' : 'Contracts not checked'}
+        </p>
+        <p class="text-xs ${failed ? 'text-red-900' : 'text-gray-500'} mt-1 m-0">
+          ${failed
+            ? `The contracts table is configured but the read failed. This is a fault, not a
+               pending setup step — check the API logs for
+               <code>projects contract drift read failed</code>.`
+            : `No contracts table is configured for this environment. Expected before the first
+               <code>terraform apply</code> — it is not a finding about the data.`}
+        </p>
+      </section>`;
+  }
+
+  const count = drift.contract_count ?? 0;
+  if (count === 0) {
+    return `
+      <section aria-label="Contract drift" class="mt-3 p-3 border border-gray-200 bg-gray-50 rounded">
+        <p class="text-xs font-semibold text-gray-700 m-0">No contracts populated yet</p>
+        <p class="text-xs text-gray-500 mt-1 m-0">
+          Run <code>scripts/sync-contracts.mjs</code> to populate this environment.
+        </p>
+      </section>`;
+  }
+
+  const unresolvedProjects = drift.unresolved_projects ?? [];
+  const unresolvedPostures = drift.unresolved_postures ?? [];
+  const missingPosture = drift.missing_posture ?? [];
+
+  const entry = (u, detail) => `
+    <li>
+      <code>${escapeHtml(u.portfolio ?? '')}</code> ${escapeHtml(u.project ?? '')}
+      — ${detail}
+    </li>`;
+
+  const projectBlock = unresolvedProjects.length
+    ? `
+      <p class="text-sm font-semibold text-red-900 m-0">
+        ${unresolvedProjects.length} contract${unresolvedProjects.length === 1 ? '' : 's'}
+        name${unresolvedProjects.length === 1 ? 's' : ''} a project that does not exist
+      </p>
+      <p class="text-xs text-red-900 mt-1 mb-2">
+        Fix the name in the survey, or wait for the project to appear in the projects sheet.
+        The contract still shows its posture — only the project link is missing.
+      </p>
+      <ul class="text-xs text-red-900 m-0 pl-4 space-y-1">
+        ${unresolvedProjects.map((u) => entry(u,
+          `project name reads <code class="bg-white px-1 rounded">${escapeHtml(u.raw_value)}</code>`)).join('')}
+      </ul>`
+    : `
+      <p class="text-sm font-semibold text-green-900 m-0">
+        Every contract that names a project matches one
+      </p>`;
+
+  // An unknown posture is worse than a missing one: it renders no guidance at all
+  // on a page whose whole purpose is to deliver that guidance.
+  const postureBlock = unresolvedPostures.length
+    ? `
+      <div class="mt-3 pt-3 border-t border-red-200">
+        <p class="text-sm font-semibold text-red-900 m-0">
+          ${unresolvedPostures.length} contract${unresolvedPostures.length === 1 ? '' : 's'}
+          name${unresolvedPostures.length === 1 ? 's' : ''} a posture that does not exist
+        </p>
+        <p class="text-xs text-red-900 mt-1 mb-2">
+          These render no guidance. Fix the value in the survey, or add the posture on the
+          Policy Guidance tab.
+        </p>
+        <ul class="text-xs text-red-900 m-0 pl-4 space-y-1">
+          ${unresolvedPostures.map((u) => entry(u,
+            `posture reads <code class="bg-white px-1 rounded">${escapeHtml(u.raw_value)}</code>`)).join('')}
+        </ul>
+      </div>`
+    : '';
+
+  const wrapper = unresolvedProjects.length || unresolvedPostures.length
+    ? 'border-red-200 bg-red-50'
+    : 'border-green-200 bg-green-50';
+
+  // Not an error: the survey is still being filled in, and rendering an
+  // incomplete survey like a defect would make the common case look broken.
+  const missingBlock = missingPosture.length
+    ? `
+      <div class="mt-3 p-3 border border-gray-200 bg-gray-50 rounded">
+        <p class="text-xs font-semibold text-gray-700 m-0">
+          ${missingPosture.length} of ${count} contracts have no posture recorded yet
+        </p>
+        <p class="text-xs text-gray-500 mt-1 m-0">
+          Not an error — the survey has not been completed for these. They are hidden by
+          default on the Contract Explorer.
+        </p>
+      </div>`
+    : '';
+
+  return `
+    <section aria-label="Contract drift" class="mt-3 p-4 border rounded ${wrapper}">
+      ${projectBlock}
+      ${postureBlock}
+      <p class="text-xs text-gray-500 mt-2 m-0">${count} contract${count === 1 ? '' : 's'} checked</p>
+    </section>
+    ${missingBlock}`;
+}
+
 /** Marker for a value that resolves to no record. Text, not colour alone. */
 function unresolvedBadge() {
   return `<span class="ml-1 px-1 rounded bg-red-100 text-red-900 text-[10px] font-semibold uppercase tracking-wide">unresolved</span>`;
@@ -302,7 +432,10 @@ export async function load(panel) {
       <h2 class="text-base font-semibold text-gray-700 m-0">Projects</h2>
       <span class="text-xs text-gray-400">${projects.length} project${projects.length === 1 ? '' : 's'}</span>
     </div>
-    <div id="projects-drift" class="mb-4">${renderDriftSummary(data.drift, data.sync)}</div>
+    <div id="projects-drift" class="mb-4">
+      ${renderDriftSummary(data.drift, data.sync)}
+      ${renderContractDrift(data.contract_drift)}
+    </div>
     <div id="projects-list">${renderProjectList(projects, meta)}</div>`;
 
   // Disclosure: toggles on activation, which covers click and keyboard equally
