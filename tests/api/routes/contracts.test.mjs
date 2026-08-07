@@ -194,6 +194,15 @@ describe('contracts payload', () => {
     expect(body.contracts).toHaveLength(2);
   });
 
+  // Every card's href and the detail route's lookup key. Dropping it from the
+  // projection sent every link on the page to /contracts/undefined.
+  it('always carries the contract id, which every link on the page is built from', async () => {
+    const headers = as('user');
+    queueReads();
+    const body = await (await app.request('/api/contracts', { headers })).json();
+    expect(body.contracts[0].contract_id).toBe('fedciv-co-cobees');
+  });
+
   it('queries the contract partition, so metadata never appears among contracts', async () => {
     const headers = as('user');
     queueReads();

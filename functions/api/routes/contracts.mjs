@@ -49,7 +49,9 @@ import {
  * labelled that way on the page rather than by its sheet header.
  */
 const CONTRACT_FIELDS = [
-  // 'contract_id',
+  // Required, not cosmetic: every card's href and the detail route's lookup key.
+  // Dropping it renders every link as /contracts/undefined.
+  'contract_id',
   'portfolio',
   'project',
   'agreement_type',
