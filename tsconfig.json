@@ -1,5 +1,8 @@
 {
   "extends": "astro/tsconfigs/strict",
+  // Overrides the base config's exclude, which only lists dist/. Generated
+  // output is gitignored but astro check still walks it otherwise.
+  "exclude": ["dist", "coverage", "node_modules"],
   "compilerOptions": {
     "resolveJsonModule": true,
     "baseUrl": ".",
