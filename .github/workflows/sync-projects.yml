@@ -1,0 +1,136 @@
+name: Sync Projects
+
+# Mirrors the "All Columns (Full View)" tab of the Nava projects sheet into the
+# projects DynamoDB table, then checks every archetype value against the
+# archetype records.
+#
+# Weekly rather than hourly: the sheet is hand-maintained and this is a read-only
+# mirror, so polling more often buys nothing. Manual dispatch covers "I just
+# edited the sheet".
+#
+# The run FAILS when the sheet names an archetype that matches no record. That
+# failure is the drift alarm, not a sync error — the projects synced fine. It
+# exists because the admin tab is unlinked and its steady state is zero findings,
+# so nothing would prompt anyone to look. A project with no archetype assigned
+# yet only warns.
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # Mondays, 08:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report the diff and the safety verdict without writing'
+        required: false
+        type: boolean
+        default: false
+      force:
+        description: 'Waive the safety gate (row-count drop, delete ceiling, absolute floor). Never waives the zero-row refusal.'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  sync-staging:
+    name: Sync to staging
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write   # required for OIDC role assumption
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install API Lambda dependencies
+        run: cd functions/api && pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      # Written outside the workspace so nothing that archives the checkout can
+      # pick it up, and via a redirect rather than `echo` so the key never
+      # appears in an argument list.
+      - name: Write Google service-account key
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        run: |
+          umask 077
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/google-credentials.json"
+
+      - name: Sync projects (staging)
+        env:
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry-run' || '' }}
+          FORCE_FLAG: ${{ inputs.force && '--force' || '' }}
+        run: |
+          node scripts/sync-projects.mjs --env staging \
+            --credentials "$RUNNER_TEMP/google-credentials.json" \
+            $DRY_RUN_FLAG $FORCE_FLAG
+
+      - name: Remove credential
+        if: always()
+        run: rm -f "$RUNNER_TEMP/google-credentials.json"
+
+  sync-prod:
+    name: Sync to prod
+    runs-on: ubuntu-latest
+    environment: production
+    needs: sync-staging
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install API Lambda dependencies
+        run: cd functions/api && pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Write Google service-account key
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        run: |
+          umask 077
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/google-credentials.json"
+
+      - name: Sync projects (prod)
+        env:
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry-run' || '' }}
+          FORCE_FLAG: ${{ inputs.force && '--force' || '' }}
+        run: |
+          node scripts/sync-projects.mjs --env prod \
+            --credentials "$RUNNER_TEMP/google-credentials.json" \
+            $DRY_RUN_FLAG $FORCE_FLAG
+
+      - name: Remove credential
+        if: always()
+        run: rm -f "$RUNNER_TEMP/google-credentials.json"

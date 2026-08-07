@@ -29,8 +29,8 @@
  *   --env <staging|prod>   required
  *   --credentials <path>   GOOGLE_APPLICATION_CREDENTIALS   default ./credentials.json
  *   --spreadsheet <ref>    SYNC_PROJECTS_SHEET_ID           URL or ID
- *   --table <name>         PROJECTS_TABLE
- *   --reference-table <n>  PROJECT_REFERENCE_TABLE
+ *   --table <name>         PROJECTS_TABLE            default skills-registry-projects-<env>
+ *   --reference-table <n>  PROJECT_REFERENCE_TABLE   default skills-registry-project-reference-<env>
  *   --dry-run              report the diff and the gate verdict, write nothing
  *   --force                waive the gate's overridable conditions
  *
@@ -65,6 +65,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_SPREADSHEET_ID = '1hax9xwy69e5H8dfo4KI7g9Cvhe0j59CwjUSYRujShP4';
 const TAB_TITLE = 'All Columns (Full View)';
+const PROJECT = 'skills-registry';
 
 const USAGE =
   'Usage: node scripts/sync-projects.mjs --env <staging|prod> [--dry-run] [--force]\n' +
@@ -107,11 +108,9 @@ function parseArgs(argv) {
     fail(err.message);
   }
 
-  const table = opts.table ?? process.env.PROJECTS_TABLE;
-  if (!table) {
-    fail('No projects table given. Pass --table, or set PROJECTS_TABLE.');
-  }
-
+  // Derived from --env, matching scripts/seed-project-reference.mjs and
+  // sync-registry-v2. Keeps the workflow free of table configuration, so a table
+  // name cannot drift between Terraform and CI.
   return {
     env: opts.env,
     dryRun: opts.dryRun,
@@ -120,8 +119,9 @@ function parseArgs(argv) {
       opts.credentials ?? process.env.GOOGLE_APPLICATION_CREDENTIALS ?? 'credentials.json',
     ),
     spreadsheetId,
-    table,
-    referenceTable: opts.referenceTable ?? process.env.PROJECT_REFERENCE_TABLE,
+    table: opts.table ?? process.env.PROJECTS_TABLE ?? `${PROJECT}-projects-${opts.env}`,
+    referenceTable:
+      opts.referenceTable ?? process.env.PROJECT_REFERENCE_TABLE ?? `${PROJECT}-project-reference-${opts.env}`,
   };
 }
 
