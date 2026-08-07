@@ -1,6 +1,7 @@
 import { ddb, tables, GetCommand, QueryCommand } from '../lib/dynamo.mjs';
 import { can } from '../lib/permissions.mjs';
-import { ENTITY_ARCHETYPE } from '../lib/project-reference.mjs';
+import { ENTITY_ARCHETYPE, ENTITY_POSTURE } from '../lib/project-reference.mjs';
+import { RECORD_CONTRACT, collectContractIssues } from '../lib/contracts.mjs';
 import {
   RECORD_PROJECT,
   RECORD_SYNC_META,
@@ -86,6 +87,56 @@ function describeSync(item) {
   };
 }
 
+/**
+ * Resolve populated contracts against the projects they name and the postures
+ * they carry.
+ *
+ * Reported here rather than on a route of its own: the audience is identical —
+ * this endpoint is already gated to the same capability — and a second endpoint
+ * with the same gate would be unused surface.
+ *
+ * Degrades to empty findings rather than throwing. The contracts table was added
+ * after this route existed and is populated by an operator, so it can legitimately
+ * be absent or empty in an environment where projects are fine. Failing the whole
+ * response would take the Projects tab down for a table it never needed.
+ */
+async function readContractDrift(projects) {
+  const empty = {
+    contract_count: 0,
+    unresolved_projects: [],
+    missing_posture: [],
+    unresolved_postures: [],
+    available: false,
+  };
+
+  const table = tables.contracts();
+  if (!table) return empty;
+
+  try {
+    const contracts = await queryPartition(table, 'record_type', RECORD_CONTRACT);
+    const postures = await queryPartition(
+      tables.projectReference(),
+      'entity_type',
+      ENTITY_POSTURE,
+    );
+
+    const issues = collectContractIssues(contracts, projects, postures);
+
+    return {
+      contract_count: contracts.length,
+      unresolved_projects: issues.unresolvedProjects,
+      missing_posture: issues.missingPosture,
+      unresolved_postures: issues.unresolvedPostures,
+      available: true,
+    };
+  } catch {
+    // `available: false` is deliberately distinct from a zero count: the tab must
+    // be able to say "not checked" rather than claiming a clean bill of health it
+    // did not verify.
+    return empty;
+  }
+}
+
 export function projectsRoutes(app) {
   // One endpoint rather than two. 53 records at ~34 columns is far below a
   // payload where splitting buys anything, and a single response means the drift
@@ -119,6 +170,8 @@ export function projectsRoutes(app) {
 
     const sync = describeSync(metaItem);
 
+    const contractDrift = await readContractDrift(projects);
+
     return c.json({
       projects,
       column_groups: metaItem?.column_groups ?? {},
@@ -129,6 +182,7 @@ export function projectsRoutes(app) {
         unresolved,
         missing,
       },
+      contract_drift: contractDrift,
     });
   });
 }

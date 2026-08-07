@@ -25,6 +25,7 @@ export const tables = {
   // keyed by record_type. Read-only from the API — the sheet is the write
   // surface, and the Lambda's IAM grant on this table omits write actions.
   projects: () => process.env.PROJECTS_TABLE,
+  contracts: () => process.env.CONTRACTS_TABLE,
 };
 
 // Fast path for auth middleware: GetItem (read) on every request, write only on first login.

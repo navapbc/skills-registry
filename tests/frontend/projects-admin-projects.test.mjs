@@ -7,6 +7,7 @@ import {
   renderProjectList,
   groupColumns,
   indexUnresolved,
+  renderContractDrift,
 } from '../../src/scripts/projects-admin/projects.mjs';
 
 const COLUMN_HEADERS = {
@@ -352,5 +353,92 @@ describe('indexUnresolved', () => {
   it('handles an empty finding list', () => {
     expect(indexUnresolved([], COLUMN_HEADERS).size).toBe(0);
     expect(indexUnresolved(undefined, COLUMN_HEADERS).size).toBe(0);
+  });
+});
+
+describe('renderContractDrift', () => {
+  const contract = (over = {}) => ({
+    contract_id: 'fedciv-co-cobees', portfolio: 'FEDCIV', project: 'CO COBEES', ...over,
+  });
+
+  const drift = (over = {}) => ({
+    available: true,
+    contract_count: 10,
+    unresolved_projects: [],
+    missing_posture: [],
+    unresolved_postures: [],
+    ...over,
+  });
+
+  it('says not-checked when the contracts table could not be read', () => {
+    const html = renderContractDrift({ available: false, contract_count: 0 });
+    expect(html).toMatch(/not checked/i);
+    // Must not read as a clean bill of health for data it never looked at.
+    expect(html).not.toMatch(/every contract/i);
+  });
+
+  it('says not-checked when given nothing at all', () => {
+    expect(renderContractDrift(undefined)).toMatch(/not checked/i);
+  });
+
+  it('distinguishes an empty table from an unread one', () => {
+    const html = renderContractDrift(drift({ contract_count: 0 }));
+    expect(html).toMatch(/no contracts populated yet/i);
+    expect(html).toMatch(/sync-contracts/);
+    expect(html).not.toMatch(/not checked/i);
+  });
+
+  it('reports all-clear when every contract resolves', () => {
+    const html = renderContractDrift(drift());
+    expect(html).toMatch(/every contract that names a project matches one/i);
+    expect(html).toContain('border-green-200');
+  });
+
+  it('lists an unresolved project name with the raw sheet value', () => {
+    const html = renderContractDrift(drift({
+      unresolved_projects: [contract({ raw_value: 'MA PFML' })],
+    }));
+    expect(html).toContain('MA PFML');
+    expect(html).toContain('CO COBEES');
+    expect(html).toContain('border-red-200');
+  });
+
+  it('says the contract still shows its posture when only the project link is missing', () => {
+    const html = renderContractDrift(drift({
+      unresolved_projects: [contract({ raw_value: 'MA PFML' })],
+    }));
+    expect(html).toMatch(/only the project link is missing/i);
+  });
+
+  it('lists an unresolved posture and says it renders no guidance', () => {
+    const html = renderContractDrift(drift({
+      unresolved_postures: [contract({ raw_value: 'prohibited' })],
+    }));
+    expect(html).toContain('prohibited');
+    expect(html).toMatch(/render no guidance/i);
+    expect(html).toContain('border-red-200');
+  });
+
+  it('shows a count but no list for contracts with no posture yet', () => {
+    // 82 of 119 today — listing them would bury the actionable findings.
+    const missing = Array.from({ length: 82 }, (_, i) => contract({ contract_id: `c-${i}`, project: `P${i}` }));
+    const html = renderContractDrift(drift({ contract_count: 119, missing_posture: missing }));
+    expect(html).toMatch(/82 of 119/);
+    expect(html).toMatch(/not an error/i);
+    expect(html).not.toContain('P81');
+  });
+
+  it('does not colour a posture-not-recorded count as a failure', () => {
+    const html = renderContractDrift(drift({ missing_posture: [contract()] }));
+    expect(html).toContain('border-green-200');
+  });
+
+  it('escapes values coming from the sheet', () => {
+    const html = renderContractDrift(drift({
+      unresolved_projects: [contract({ project: '<script>x</script>', raw_value: '<img>' })],
+    }));
+    expect(html).not.toContain('<script>x</script>');
+    expect(html).not.toContain('<img>');
+    expect(html).toContain('&lt;');
   });
 });
