@@ -30,8 +30,9 @@ import { escapeHtml } from '../../lib/render.mjs';
 import {
   indexPostures,
   filterContracts,
+  countHiddenUnclassified,
   portfoliosOf,
-  hasPosture,
+  describePopulationNotice,
   renderContractGrid,
   renderContractDetail,
   renderUnclassifiedToggle,
@@ -39,9 +40,15 @@ import {
 } from '../../lib/contracts-render.mjs';
 
 const container = document.getElementById('contracts-content')!;
-const contractId = decodeURIComponent(
-  window.location.pathname.replace(/^\/contracts\/?/, '').replace(/\/$/, ''),
-);
+const rawContractId = window.location.pathname.replace(/^\/contracts\/?/, '').replace(/\/$/, '');
+let contractId: string;
+try {
+  contractId = decodeURIComponent(rawContractId);
+} catch {
+  // A malformed escape (/contracts/50%) throws here. Falling back to the raw
+  // segment lets the not-found path render instead of pinning the skeleton.
+  contractId = rawContractId;
+}
 
 function errorHtml(message: string) {
   return `<div class="max-w-xl">
@@ -63,9 +70,14 @@ function notFoundHtml() {
 
 let data: any = null;
 try {
-  data = await fetchApi('/api/contracts');
+  data = await fetchApi('/contracts');
 } catch (err: any) {
-  container.innerHTML = errorHtml(err?.message ?? 'Unknown error.');
+  // fetchApi has already started a redirect to /login for an expired session;
+  // rendering an error here flashes a broken screen before the browser navigates.
+  // Every sibling page suppresses this the same way.
+  if (!String(err?.message ?? '').startsWith('Unauthorized')) {
+    container.innerHTML = errorHtml(err?.message ?? 'Unknown error.');
+  }
 }
 
 if (data) {
@@ -80,7 +92,7 @@ if (data) {
       document.title = 'Contract not found · Skills Hub';
       container.innerHTML = notFoundHtml();
     } else {
-      document.title = `${contract.project ?? contract.contract_id} · Contract Explorer`;
+      document.title = `${contract.project || contract.contract_id} · Contract Explorer`;
       container.innerHTML = renderContractDetail(contract, postureById, capturedAt);
     }
   } else {
@@ -107,8 +119,8 @@ if (data) {
         <h1 class="text-2xl font-bold text-gray-900 m-0">Contract Explorer</h1>
         <p class="text-sm text-gray-500 mt-1 m-0">
           Whether AI may be used on a contract, and what follows from that.
-          Captured ${escapeHtml(formatCapturedAt(capturedAt))}.
         </p>
+        ${describePopulationNotice(data.population)}
       </div>
 
       <div class="flex flex-wrap items-center gap-3 mb-4">
@@ -138,13 +150,9 @@ if (data) {
 
     function render() {
       const visible = filterContracts(contracts, { posture, portfolio, query, includeUnclassified });
+      const hidden = countHiddenUnclassified(contracts, { portfolio, query });
 
-      // Counted against the other active filters, so the control never claims to be
-      // hiding contracts the posture or portfolio filter already excluded.
-      const hidden = filterContracts(contracts, { posture, portfolio, query, includeUnclassified: true })
-        .filter((c: any) => !hasPosture(c)).length;
-
-      toggleWrap.innerHTML = renderUnclassifiedToggle(hidden, includeUnclassified);
+      toggleWrap.innerHTML = renderUnclassifiedToggle(hidden, includeUnclassified, posture !== 'all');
       countEl.textContent = `${visible.length} of ${contracts.length} engagement${contracts.length === 1 ? '' : 's'}`;
       gridEl.innerHTML = renderContractGrid(visible, postureById);
 

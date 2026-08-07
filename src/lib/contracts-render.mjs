@@ -63,6 +63,44 @@ export function filterContracts(contracts, {
   });
 }
 
+/**
+ * How many contracts the default view is hiding.
+ *
+ * The posture filter is deliberately NOT applied. Selecting a posture excludes
+ * every unclassified contract by definition, so counting under it always yields
+ * zero — which would tell a user "nothing is hidden" at the exact moment 82
+ * contracts are. The count answers "how many would appear if you cleared the
+ * unclassified filter", which is what the control offers to do.
+ */
+export function countHiddenUnclassified(contracts, { portfolio = 'all', query = '' } = {}) {
+  return filterContracts(contracts, { portfolio, query, includeUnclassified: true })
+    .filter((c) => !hasPosture(c)).length;
+}
+
+/**
+ * A notice about the population run, shown only when there is something to say.
+ *
+ * The API reports three states and the page previously rendered only the date, so
+ * a half-written table read as a normal capture and a never-populated one read as
+ * "Captured unknown" beside an empty grid.
+ */
+export function describePopulationNotice(population) {
+  const state = population?.state;
+  if (state === 'never_populated') {
+    return `<p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2 m-0">
+      No contracts have been populated for this environment yet.
+    </p>`;
+  }
+  if (state === 'in_progress') {
+    return `<p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2 m-0">
+      A population run did not finish, so this data may be incomplete.
+    </p>`;
+  }
+  return `<p class="text-xs text-gray-400 mt-1 m-0">
+    Captured ${escapeHtml(formatCapturedAt(population?.captured_at ?? null))}.
+  </p>`;
+}
+
 /** Distinct portfolios, in a stable order, for the filter control. */
 export function portfoliosOf(contracts) {
   return [...new Set((contracts ?? []).map((c) => c.portfolio).filter(Boolean))].sort();
@@ -101,7 +139,7 @@ export function renderContractCard(contract, postureById) {
       ${renderPostureBadge(posture)}
     </div>
     <h3 class="text-sm font-semibold text-gray-900 m-0 leading-snug">
-      ${escapeHtml(contract.project ?? contract.contract_id)}
+      ${escapeHtml(contract.project || contract.contract_id)}
     </h3>
     ${parent}
     <p class="text-xs text-gray-500 mt-2 mb-0 line-clamp-3 flex-1">
@@ -126,9 +164,14 @@ export function renderContractGrid(contracts, postureById) {
  * Rendered even at zero, so "nothing hidden" is distinguishable from "the filter is
  * gone". A user whose contract is unclassified has to be able to find it.
  */
-export function renderUnclassifiedToggle(hiddenCount, includeUnclassified) {
+export function renderUnclassifiedToggle(hiddenCount, includeUnclassified, postureFiltered = false) {
   if (hiddenCount === 0 && !includeUnclassified) {
-    return `<p class="text-xs text-gray-400 m-0">Every contract has a posture recorded.</p>`;
+    // Only claim this when nothing else is narrowing the set. Saying "every
+    // contract has a posture recorded" while a posture filter is active is a flat
+    // falsehood for 82 of 119 records.
+    return postureFiltered
+      ? ''
+      : `<p class="text-xs text-gray-400 m-0">Every contract has a posture recorded.</p>`;
   }
   return `<button
     id="contracts-unclassified-toggle"
@@ -275,7 +318,7 @@ export function renderContractDetail(contract, postureById, capturedAt) {
       <span class="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
         ${escapeHtml(contract.portfolio ?? '')}
       </span>
-      <h1 class="text-2xl font-bold text-gray-900 mt-2 mb-1">${escapeHtml(contract.project ?? contract.contract_id)}</h1>
+      <h1 class="text-2xl font-bold text-gray-900 mt-2 mb-1">${escapeHtml(contract.project || contract.contract_id)}</h1>
       <p class="text-sm text-gray-500 m-0">
         ${UNIT_LABEL}${contract.contract_num
           ? ` under contract <code class="text-xs">${escapeHtml(contract.contract_num)}</code>`

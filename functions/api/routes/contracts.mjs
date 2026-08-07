@@ -41,6 +41,37 @@ import {
  * archetype fields matter because archetypes carry the AI-opportunity guidance the
  * page is for.
  */
+const CONTRACT_FIELDS = [
+  'contract_id',
+  'portfolio',
+  'project',
+  'agreement_type',
+  'contract_num',
+  'vehicle',
+  'vehicle_fullname',
+  'task_order',
+  'customer',
+  'nava_project_mgr',
+  'nava_program_mgr',
+  'subcontractors',
+  'ai_posture',
+  'ai_use_terms',
+  'ai_use_terms_language',
+  'terms_detail',
+  'client_policy',
+  'client_policy_summary',
+  'client_policy_link',
+  'nava_policy',
+  'ai_used',
+  'tools',
+  'usage',
+  'review_process',
+  'project_name',
+  'notes',
+  'first_seen_at',
+  'last_synced_at',
+];
+
 const PROJECT_FIELDS = [
   'project_code',
   'project_name',
@@ -52,6 +83,24 @@ const PROJECT_FIELDS = [
 
 const project_summary = (project) =>
   Object.fromEntries(PROJECT_FIELDS.map((f) => [f, project[f] ?? '']));
+
+/**
+ * Serve an allowlist rather than spreading the stored record.
+ *
+ * The population deliberately uses a DENYLIST — new survey columns are carried
+ * into the table automatically so a column is never silently dropped. Composed
+ * with a spread here, that means a new column added to the sheet would ship to
+ * every signed-in user with no code change and no review. The renderer and the
+ * project join both use allowlists; this was the one hop without one, and it is
+ * the hop visible in any user's devtools.
+ *
+ * A column added to the survey is therefore invisible here until someone adds it
+ * to this list, which is the review step the denylist upstream gives up.
+ */
+const contract_payload = (contract) =>
+  Object.fromEntries(
+    CONTRACT_FIELDS.filter((f) => contract[f] !== undefined).map((f) => [f, contract[f]]),
+  );
 
 /** Read one partition in full, paging until exhausted. */
 async function queryPartition(table, keyName, keyValue) {
@@ -97,8 +146,31 @@ export function contractsRoutes(app) {
   // splitting buys anything, and a single response means the grid, the detail view,
   // and the capture date cannot disagree about how fresh the data is.
   app.get('/api/contracts', async (c) => {
+    try {
+      return await serveContracts(c);
+    } catch (err) {
+      // Deliberately different from the projects route, which degrades to empty
+      // findings because contracts are incidental there. Here the page IS the
+      // contracts, so an empty success would be a lie — fail visibly and let the
+      // page render its error state.
+      console.error('contracts read failed', err);
+      return c.json({ error: 'Contracts could not be read' }, 500);
+    }
+  });
+}
+
+async function serveContracts(c) {
+  {
     const table = tables.contracts();
-    if (!table) return c.json({ error: 'Contracts are not configured' }, 503);
+    const referenceTable = tables.projectReference();
+    const projectsTable = tables.projects();
+
+    // All three are checked, not just the contracts table. A partial config
+    // rollout would otherwise degrade a deliberate 503 into an opaque SDK 500
+    // from `TableName: undefined`.
+    if (!table || !referenceTable || !projectsTable) {
+      return c.json({ error: 'Contracts are not configured' }, 503);
+    }
 
     const metaResult = await ddb.send(
       new GetCommand({
@@ -112,18 +184,14 @@ export function contractsRoutes(app) {
     // Resolved on read, not stored: editing a posture's guidance or fixing a
     // project name in the survey changes the page on the next load rather than
     // waiting for the next population run.
-    const postures = await queryPartition(
-      tables.projectReference(),
-      'entity_type',
-      ENTITY_POSTURE,
-    );
-    const projects = await queryPartition(tables.projects(), 'record_type', RECORD_PROJECT);
+    const postures = await queryPartition(referenceTable, 'entity_type', ENTITY_POSTURE);
+    const projects = await queryPartition(projectsTable, 'record_type', RECORD_PROJECT);
 
     const resolved = contracts.map((contract) => {
       const posture = resolvePosture(contract, postures);
       const project = resolveProject(contract, projects);
       return {
-        ...contract,
+        ...contract_payload(contract),
         // null rather than omitted: the page distinguishes "no posture recorded"
         // from "posture names no record", and both from a resolved one.
         posture_id: posture?.id ?? null,
@@ -142,5 +210,5 @@ export function contractsRoutes(app) {
       postures: [...postures].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
       population: describePopulation(metaResult.Item),
     });
-  });
+  }
 }

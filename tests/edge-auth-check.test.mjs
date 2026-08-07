@@ -51,7 +51,7 @@ describe('rewriteUri', () => {
   it('routes a contracts id containing hyphens and digits', () => {
     expect(rewriteUri('/contracts/states-maryland-statewide-agile-teams'))
       .toBe('/contracts/index.html');
-    expect(rewriteUri('/contracts/fedciv-va-bio-sc-va-bio-forms-36c10b25c0050-nava'))
+    expect(rewriteUri('/contracts/fedciv-example-agency-forms-aaa00a00a0000-nava'))
       .toBe('/contracts/index.html');
   });
 
@@ -83,5 +83,20 @@ describe('isPublicPath', () => {
     // unauthenticated — the edge gate must still challenge for a session.
     expect(isPublicPath('/contracts')).toBe(false);
     expect(isPublicPath('/contracts/labs-aecf')).toBe(false);
+  });
+});
+
+// The route list above is hand-maintained, which is the same drift this file
+// exists to catch. Derive the template's actual list and compare, so adding a
+// route to production without adding it here fails loudly.
+describe('CSR route list stays in sync with the template', () => {
+  it('covers every rewrite the template declares', () => {
+    const template = readFileSync(
+      resolve(process.cwd(), 'functions/edge/auth-check.js.tpl'),
+      'utf8',
+    );
+    const declared = [...template.matchAll(/uri\.indexOf\('\/([a-z-]+)'\) === 0\) return '\//g)]
+      .map((m) => m[1]);
+    expect(declared.sort()).toEqual([...CSR_ROUTES].sort());
   });
 });

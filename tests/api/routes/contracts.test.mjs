@@ -82,7 +82,7 @@ const PROJECT = {
   pop_start: '6/03/2021',
   link_to_program_health: 'https://confluence/secret-health-page',
   vehicle: 'GSA MAS',
-  program_review_channel: 'program-review-doj-crt',
+  program_review_channel: 'program-review-example-fixture',
 };
 
 function contract(overrides = {}) {
@@ -112,15 +112,26 @@ function queueReads({ contracts = [contract()], postures = POSTURES, projects = 
   mockSend.mockResolvedValueOnce({ Items: projects });
 }
 
-let previousTable;
+// All three tables must be configured: the route refuses with 503 unless every
+// one it reads is named, so a partial config rollout cannot become an opaque
+// SDK error from `TableName: undefined`.
+const TABLE_VARS = {
+  CONTRACTS_TABLE: 'skills-hub-contracts-staging',
+  PROJECT_REFERENCE_TABLE: 'skills-hub-project-reference-staging',
+  PROJECTS_TABLE: 'skills-hub-projects-staging',
+};
+
+let previousVars;
 beforeEach(() => {
   mockSend.mockReset();
-  previousTable = process.env.CONTRACTS_TABLE;
-  process.env.CONTRACTS_TABLE = 'skills-hub-contracts-staging';
+  previousVars = Object.fromEntries(Object.keys(TABLE_VARS).map((k) => [k, process.env[k]]));
+  Object.assign(process.env, TABLE_VARS);
 });
 afterEach(() => {
-  if (previousTable === undefined) delete process.env.CONTRACTS_TABLE;
-  else process.env.CONTRACTS_TABLE = previousTable;
+  for (const [key, value] of Object.entries(previousVars)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
 });
 
 // ── Authorization ─────────────────────────────────────────────────────────
@@ -255,10 +266,20 @@ describe('contracts payload', () => {
     expect((await res.json()).contracts).toEqual([]);
   });
 
-  it('refuses with 503 when no contracts table is configured', async () => {
-    delete process.env.CONTRACTS_TABLE;
+  it.each(Object.keys(TABLE_VARS))('refuses with 503 when %s is unconfigured', async (missing) => {
+    delete process.env[missing];
     const res = await app.request('/api/contracts', { headers: as('user') });
     expect(res.status).toBe(503);
+  });
+
+  it('fails visibly rather than serving an empty success when a read throws', async () => {
+    // Deliberately unlike the projects route, which degrades to empty findings.
+    // Here the page IS the contracts, so an empty success would be a lie.
+    const headers = as('user');
+    mockSend.mockRejectedValueOnce(new Error('throttled'));
+    const res = await app.request('/api/contracts', { headers });
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toMatch(/could not be read/i);
   });
 });
 
