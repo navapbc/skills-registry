@@ -208,7 +208,41 @@ describe('renderContractDetail', () => {
   it('numbers the guidance steps', () => {
     const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
     expect(html).toMatch(/<ol[^>]*class="[^"]*list-decimal/);
-    expect(html.match(/<li/g)).toHaveLength(2);
+    // Scoped to the ordered list: other blocks on the page carry their own items.
+    const orderedList = html.match(/<ol[\s\S]*?<\/ol>/)[0];
+    expect(orderedList.match(/<li/g)).toHaveLength(2);
+  });
+
+  describe('the pre-use checklist', () => {
+    it('lists every item to confirm before opening a tool', () => {
+      const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
+      expect(html).toContain('Pre-use checklist');
+      expect(html).toContain('PII, PHI, FTI, or regulated data');
+      expect(html).toContain('reviewed and validated by a human');
+      expect(html).toContain('formal approval process');
+    });
+
+    // Tailwind's preflight strips list markers, so the class is what makes these
+    // read as discrete items rather than one run-on block.
+    it('marks the items as a list', () => {
+      const html = renderContractDetail(contract(), byId, null);
+      expect(html).toMatch(/<ul[^>]*class="[^"]*list-disc/);
+    });
+
+    // Every item below it assumes AI is permitted at all. A reader who works the
+    // list without that premise could satisfy all six on a contract allowing none.
+    it('leads with the condition the rest of the list depends on', () => {
+      const html = renderContractDetail(contract(), byId, null);
+      expect(html).toContain('Always confirm that AI use is allowed on your project');
+      expect(html.indexOf('Always confirm that AI use is allowed'))
+        .toBeLessThan(html.indexOf('PII, PHI, FTI'));
+    });
+
+    it('says the same thing whether or not the record carries a posture', () => {
+      const not = renderContractDetail(contract({ posture_id: null, ai_posture: '' }), byId, null);
+      expect(not).toContain('Pre-use checklist');
+      expect(not).toContain('I can clearly explain my AI use');
+    });
   });
 
   describe('the client-facing script', () => {

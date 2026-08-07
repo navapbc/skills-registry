@@ -381,6 +381,41 @@ const CLIENT_ASK_SCRIPT = `<section aria-label="If the client asks about AI use"
 </section>`;
 
 /**
+ * What to confirm before opening an AI tool on this contract.
+ *
+ * Authored copy, identical on every record, like CLIENT_ASK_SCRIPT.
+ *
+ * The first line is the load-bearing one: every item below it is conditional on AI
+ * being allowed at all, and a reader who skips straight to the list could work
+ * through six satisfied checks on a contract that permits none of it.
+ *
+ * Rendered as a plain list rather than checkboxes. Real checkboxes would invite a
+ * reader to tick them, and nothing here persists — a checklist that forgets what you
+ * confirmed is worse than one that never claimed to remember.
+ */
+const PRE_USE_CHECKLIST_ITEMS = [
+  'No client or sensitive data (PII, PHI, FTI, or regulated data) is included in my prompt.',
+  'The tool I&rsquo;m using is approved or not restricted by the contract or client policy.',
+  'My output will be reviewed and validated by a human before use in a deliverable.',
+  'I can clearly explain my AI use if asked by the client or a colleague.',
+  'I am not skipping any disclosure requirement that applies to this contract.',
+  'If this contract has a formal approval process, I have followed it (or will before '
+    + 'expanding use).',
+];
+
+const PRE_USE_CHECKLIST = `<section aria-label="Pre-use checklist"
+  class="rounded-lg p-4 border border-gray-200 bg-white">
+  <h2 class="text-sm font-semibold text-gray-900 m-0">Pre-use checklist</h2>
+  <p class="text-sm text-gray-700 mt-2 mb-0">
+    Always confirm that AI use is allowed on your project. If AI is allowed, you also
+    need to confirm the following items before opening or using an AI tool.
+  </p>
+  <ul class="list-disc mt-3 mb-0 pl-5 space-y-1.5 marker:text-gray-400">
+    ${PRE_USE_CHECKLIST_ITEMS.map((item) => `<li class="text-sm text-gray-800">${item}</li>`).join('')}
+  </ul>
+</section>`;
+
+/**
  * The resolved project, when the engagement links to one.
  *
  * Three managers can appear across this page, so none of them is labelled just
@@ -521,6 +556,7 @@ export function renderContractDetail(contract, postureById, capturedAt) {
 
       ${renderProjectSection(contract)}
       ${clause}
+      ${PRE_USE_CHECKLIST}
     </div>
 
     <p class="text-xs text-gray-400 mt-6 m-0">
