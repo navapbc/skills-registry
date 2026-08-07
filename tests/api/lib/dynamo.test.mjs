@@ -82,6 +82,29 @@ describe('tables.projectReference', () => {
   });
 });
 
+describe('tables.projects', () => {
+  it('returns the configured table name', () => {
+    const prev = process.env.PROJECTS_TABLE;
+    process.env.PROJECTS_TABLE = 'skills-hub-projects-staging';
+    try {
+      expect(tables.projects()).toBe('skills-hub-projects-staging');
+    } finally {
+      if (prev === undefined) delete process.env.PROJECTS_TABLE;
+      else process.env.PROJECTS_TABLE = prev;
+    }
+  });
+
+  it('returns undefined when the variable is unset, rather than throwing', () => {
+    const prev = process.env.PROJECTS_TABLE;
+    delete process.env.PROJECTS_TABLE;
+    try {
+      expect(tables.projects()).toBeUndefined();
+    } finally {
+      if (prev !== undefined) process.env.PROJECTS_TABLE = prev;
+    }
+  });
+});
+
 describe('upsertUser', () => {
   it('updates user and returns attributes', async () => {
     const updated = { ...USER, role: 'user', last_seen_at: new Date().toISOString() };
