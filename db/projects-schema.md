@@ -1,15 +1,16 @@
 # Projects & Project Reference Schema
 
-Two DynamoDB tables back the Contract Explorer and the admin **Projects** tab, with a third (`contracts`) designed but not yet built — see [below](#contracts-table-planned--not-yet-created). The two live tables are deliberately separate because they have different origins and different blast radii:
+Three DynamoDB tables back the Contract Explorer and the admin **Projects** tab. They are deliberately separate because they have different origins, different audiences, and different blast radii:
 
 | Table | Resource | Origin | Deletion protection |
 |---|---|---|---|
 | `skills-registry-project-reference-{env}` | [`aws_dynamodb_table.project_reference`](../terraform/dynamodb.tf) | Admin-authored via the API (seeded once) | prod only |
-| `skills-registry-projects-{env}` | [`aws_dynamodb_table.projects`](../terraform/dynamodb.tf) | Mirrored from the Nava projects Google Sheet | none — fully re-derivable |
+| `skills-registry-projects-{env}` | [`aws_dynamodb_table.projects`](../terraform/dynamodb.tf) | Mirrored from the Nava projects Google Sheet by a scheduled sync | none — fully re-derivable |
+| `skills-registry-contracts-{env}` | [`aws_dynamodb_table.contracts`](../terraform/dynamodb.tf) | Mirrored from the AI Survey tab by an operator-run script | prod only |
 
-Both are `PAY_PER_REQUEST` with point-in-time recovery, and neither has a GSI: every read is a single `Query` on one partition. Table names reach the Lambda as `PROJECT_REFERENCE_TABLE` and `PROJECTS_TABLE` ([`terraform/lambda.tf`](../terraform/lambda.tf)), resolved through `tables.projectReference()` / `tables.projects()` in [`functions/api/lib/dynamo.mjs`](../functions/api/lib/dynamo.mjs).
+All three are `PAY_PER_REQUEST` with point-in-time recovery, and none has a GSI: every read is a single `Query` on one partition. Table names reach the Lambda as `PROJECT_REFERENCE_TABLE`, `PROJECTS_TABLE`, and `CONTRACTS_TABLE` ([`terraform/lambda.tf`](../terraform/lambda.tf)), resolved through the `tables.*()` accessors in [`functions/api/lib/dynamo.mjs`](../functions/api/lib/dynamo.mjs).
 
-Counts as sampled (prod and staging are identical): 9 reference records, 53 projects + 1 sync-metadata record.
+Counts as sampled 2026-08-07 (prod and staging are identical): 9 reference records, 53 projects + 1 sync-metadata record, 119 contracts + 1 population-metadata record.
 
 ---
 
@@ -240,9 +241,9 @@ The delete ceiling is not redundant with the row-count check: a header row shift
 
 ---
 
-## `contracts` table (planned — not yet created)
+## `contracts` table
 
-> **Status: design in progress.** No `aws_dynamodb_table.contracts` exists, no seed script, and no API route. Unlike the rest of this document, this section does not describe a live table. Requirements in [`docs/brainstorms/2026-08-07-contract-explorer-requirements.md`](../docs/brainstorms/2026-08-07-contract-explorer-requirements.md).
+> Live in staging and prod as of 2026-08-07. There is no read route for general users yet — the Contract Explorer page is [a separate plan](../docs/plans/2026-08-07-002-feat-contract-explorer-page-plan.md). Requirements in [`docs/brainstorms/2026-08-07-contract-explorer-requirements.md`](../docs/brainstorms/2026-08-07-contract-explorer-requirements.md).
 
 **Key:** hash `record_type` (S), range `contract_id` (S).
 
@@ -353,7 +354,9 @@ No record carries `prohibited`. The 82 records without a posture still carry `ai
 }
 ```
 
-Population is operator-run against staging and prod, written to reconcile rather than insert so a refresh is one command — following the [`scripts/seed-project-reference.mjs`](../scripts/seed-project-reference.mjs) precedent. As with `sync_meta` on the projects table, absent metadata is a distinct third state from `in_progress` and `complete`, so a populated table cannot read as never-populated.
+Population is operator-run against staging and prod by [`scripts/sync-contracts.mjs`](../scripts/sync-contracts.mjs), written to reconcile rather than insert so a refresh is one command. As with `sync_meta` on the projects table, absent metadata is a distinct third state from `in_progress` and `complete`, so a populated table cannot read as never-populated.
+
+There is no workflow calling this and the GitHub deploy role has no access to the table — unlike the projects sync, nothing exercises the workbook share on a schedule. A refresh depends on that share still being in place.
 
 ### Sensitivity
 
