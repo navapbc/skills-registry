@@ -19,7 +19,7 @@ import Base from '../layouts/Base.astro';
 import { fetchApi } from '../lib/api.mjs';
 import { renderWhatsNewGroups } from '../lib/render.mjs';
 
-const container = document.getElementById('whats-new-content');
+const container = document.getElementById('whats-new-content')!;
 
 fetchApi('/skills')
   .then(({ skills }) => {

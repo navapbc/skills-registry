@@ -14,8 +14,9 @@ import Base from '../../layouts/Base.astro';
 import { fetchApi } from '../../lib/api.mjs';
 import { renderPluginDetail } from '../../lib/render.mjs';
 import { initFavoriteButtons } from '../../lib/favorites.mjs';
+import type { Skill } from '../../lib/types';
 
-const container = document.getElementById('plugin-content');
+const container = document.getElementById('plugin-content')!;
 const slug = window.location.pathname.replace(/^\/plugins\//, '').replace(/\/$/, '');
 
 if (!slug) {
@@ -26,8 +27,8 @@ if (!slug) {
     fetchApi('/skills?plugin=' + slug),
   ])
     .then(([plugin, { skills }]) => {
-      const skillItems = skills.filter(s => s.type === 'skill');
-      const agentItems = skills.filter(s => s.type === 'agent');
+      const skillItems = skills.filter((s: Skill) => s.type === 'skill');
+      const agentItems = skills.filter((s: Skill) => s.type === 'agent');
       container.innerHTML = renderPluginDetail(plugin, skillItems, agentItems);
       document.title = plugin.name + ' · Skills Hub';
       initTabs();
@@ -44,7 +45,7 @@ if (!slug) {
 }
 
 function initTabs() {
-  const tabs = document.querySelectorAll('[data-tab]');
+  const tabs = document.querySelectorAll<HTMLElement>('[data-tab]');
   const activeClass = ['text-plum-700', 'border-plum-600'];
   const inactiveClass = ['text-gray-500', 'border-transparent'];
 
@@ -63,7 +64,7 @@ function initTabs() {
 }
 
 function initGithubLinks() {
-  document.querySelectorAll('[data-github-url]').forEach(el => {
+  document.querySelectorAll<HTMLElement>('[data-github-url]').forEach(el => {
     el.addEventListener('click', e => {
       const url = el.dataset.githubUrl;
       if (url) { e.preventDefault(); e.stopPropagation(); window.open(url, '_blank', 'noopener'); }

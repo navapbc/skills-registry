@@ -67,6 +67,7 @@ import Base from '../layouts/Base.astro';
 <script>
   import { getFavorites, getInstalled, removeFavorite, removeInstalled, clearInstalled, initFromUser } from '../lib/favorites.mjs';
   import { fetchApi } from '../lib/api.mjs';
+  import type { Skill, InstalledSkill } from '../lib/types';
 
   // Sync server-side favorites in the background; re-render if data changed
   fetchApi('/users/me').then(user => {
@@ -131,7 +132,7 @@ import Base from '../layouts/Base.astro';
     grid.classList.remove('hidden');
     countEl.textContent = `${favs.length} favorite${favs.length === 1 ? '' : 's'}`;
 
-    grid.innerHTML = favs.map(fav => {
+    grid.innerHTML = favs.map((fav: Skill) => {
       const typeTag = fav.type === 'agent'
         ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>`
         : `<span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">${fav.plugin}</span>`;
@@ -188,7 +189,7 @@ import Base from '../layouts/Base.astro';
     clearBtn.classList.remove('hidden');
     countEl.textContent = `${skills.length} skill${skills.length === 1 ? '' : 's'} installed`;
 
-    grid.innerHTML = skills.map(skill => {
+    grid.innerHTML = skills.map((skill: InstalledSkill) => {
       const typeTag = skill.type === 'agent'
         ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">agent</span>`
         : `<span class="px-1.5 py-0.5 text-xs font-medium bg-plum-50 text-plum-700 rounded">${skill.plugin}</span>`;

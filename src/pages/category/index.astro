@@ -27,7 +27,7 @@ import { CATEGORIES } from '../../lib/categories.mjs';
 import { initFavoriteButtons } from '../../lib/favorites.mjs';
 
 const NAVA_N = `███╗   ██╗\n████╗  ██║\n██╔██╗ ██║\n██║╚██╗██║\n██║ ╚████║\n╚═╝  ╚═══╝`;
-function notFoundHtml(entity) {
+function notFoundHtml(entity: string) {
   return `<div class="flex flex-col items-center justify-center py-24 text-center">
     <pre class="text-gray-200 text-sm leading-tight font-mono mb-8 select-none">${NAVA_N}</pre>
     <p class="text-base font-semibold text-gray-700 m-0 mb-1">${entity.charAt(0).toUpperCase() + entity.slice(1)} not found</p>
@@ -36,10 +36,10 @@ function notFoundHtml(entity) {
   </div>`;
 }
 
-const container = document.getElementById('category-content');
+const container = document.getElementById('category-content')!;
 const catSlug = window.location.pathname.replace(/^\/category\/?/, '').replace(/\/$/, '');
 
-const category = CATEGORIES.find(c => c.id === catSlug);
+const category = CATEGORIES.find((c: { id: string }) => c.id === catSlug);
 
 if (!category) {
   container.innerHTML = notFoundHtml('category');
@@ -61,7 +61,7 @@ if (!category) {
 }
 
 function initGithubLinks() {
-  document.querySelectorAll('[data-github-url]').forEach(el => {
+  document.querySelectorAll<HTMLElement>('[data-github-url]').forEach(el => {
     el.addEventListener('click', e => {
       const url = el.dataset.githubUrl;
       if (url) { e.preventDefault(); e.stopPropagation(); window.open(url, '_blank', 'noopener'); }
@@ -75,14 +75,14 @@ function initGithubLinks() {
 function initTagFilter() {
   const bar = document.querySelector('[data-tag-filter]');
   if (!bar) return;
-  const pills = Array.from(bar.querySelectorAll('.tag-pill'));
-  const rows = Array.from(document.querySelectorAll('[data-skill-row]'));
-  const selected = new Set();
+  const pills = Array.from(bar.querySelectorAll<HTMLElement>('.tag-pill'));
+  const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-skill-row]'));
+  const selected = new Set<string>();
 
   const ACTIVE = ['border-plum-300', 'bg-plum-50', 'text-plum-700'];
   const IDLE = ['border-gray-200', 'bg-white', 'text-gray-600'];
 
-  function paint(pill, active) {
+  function paint(pill: HTMLElement, active: boolean) {
     pill.setAttribute('aria-pressed', String(active));
     pill.classList.remove(...(active ? IDLE : ACTIVE));
     pill.classList.add(...(active ? ACTIVE : IDLE));
@@ -91,7 +91,7 @@ function initTagFilter() {
   function apply() {
     const allActive = selected.size === 0;
     pills.forEach(p => {
-      const tag = p.dataset.tag;
+      const tag = p.dataset.tag ?? '';
       paint(p, tag === '__all__' ? allActive : selected.has(tag));
     });
     rows.forEach(row => {
@@ -103,7 +103,7 @@ function initTagFilter() {
 
   pills.forEach(pill => {
     pill.addEventListener('click', () => {
-      const tag = pill.dataset.tag;
+      const tag = pill.dataset.tag ?? '';
       if (tag === '__all__') {
         selected.clear();
       } else if (selected.has(tag)) {

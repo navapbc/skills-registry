@@ -82,41 +82,46 @@ import Base from '../../layouts/Base.astro';
 </Base>
 
 <script>
-document.getElementById('f-name').addEventListener('input', e => {
-  document.getElementById('f-slug').value = e.target.value
+/** Typed lookup for form fields that are guaranteed to exist in this page's markup. */
+function field(id: string): HTMLInputElement | HTMLTextAreaElement {
+  return document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement;
+}
+
+field('f-name').addEventListener('input', e => {
+  field('f-slug').value = (e.target as HTMLInputElement).value
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 });
 
-document.getElementById('f-desc').addEventListener('input', e => {
-  document.getElementById('f-desc-count').textContent = e.target.value.length;
+field('f-desc').addEventListener('input', e => {
+  document.getElementById('f-desc-count')!.textContent = String((e.target as HTMLTextAreaElement).value.length);
 });
 
-document.getElementById('submit-form').addEventListener('submit', async e => {
+document.getElementById('submit-form')!.addEventListener('submit', async e => {
   e.preventDefault();
-  const errEl = document.getElementById('form-error');
-  const submitBtn = document.querySelector('[type="submit"]');
-  const submittingEl = document.getElementById('form-submitting');
+  const errEl = document.getElementById('form-error')!;
+  const submitBtn = document.querySelector('[type="submit"]') as HTMLButtonElement;
+  const submittingEl = document.getElementById('form-submitting')!;
   errEl.classList.add('hidden');
 
-  const compatibility = [...document.querySelectorAll('.compat-check:checked')].map(el => el.value);
+  const compatibility = [...document.querySelectorAll<HTMLInputElement>('.compat-check:checked')].map(el => el.value);
   if (!compatibility.length) {
     errEl.textContent = 'Select at least one compatibility option.';
     errEl.classList.remove('hidden');
     return;
   }
 
-  const plugin = document.getElementById('f-plugin').value.trim();
+  const plugin = field('f-plugin').value.trim();
   const payload = {
-    slug: document.getElementById('f-slug').value.trim(),
-    name: document.getElementById('f-name').value.trim(),
-    description: document.getElementById('f-desc').value.trim(),
+    slug: field('f-slug').value.trim(),
+    name: field('f-name').value.trim(),
+    description: field('f-desc').value.trim(),
     plugin,
     repo: plugin,
-    path: document.getElementById('f-path').value.trim(),
+    path: field('f-path').value.trim(),
     author: '',
     compatibility,
     type: 'skill',
-    tags: document.getElementById('f-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+    tags: field('f-tags').value.split(',').map(t => t.trim()).filter(Boolean),
   };
 
   submitBtn.disabled = true;
@@ -133,10 +138,10 @@ document.getElementById('submit-form').addEventListener('submit', async e => {
       const err = await res.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(err.error ?? `HTTP ${res.status}`);
     }
-    document.getElementById('submit-form').classList.add('hidden');
-    document.getElementById('form-success').classList.remove('hidden');
+    document.getElementById('submit-form')!.classList.add('hidden');
+    document.getElementById('form-success')!.classList.remove('hidden');
   } catch (err) {
-    errEl.textContent = err.message;
+    errEl.textContent = err instanceof Error ? err.message : String(err);
     errEl.classList.remove('hidden');
     submitBtn.disabled = false;
     submittingEl.classList.add('hidden');
