@@ -182,7 +182,7 @@ Every attribute except the three below is a string mirrored verbatim from a shee
 
 Both attributes appear on stored records only from the first sync run after this change; until then the contract detail page simply omits the rows. The `projects` table itself remains `manage:project-reference`-gated — the two reach a general reader only through the field projection in [`functions/api/routes/contracts.mjs`](../functions/api/routes/contracts.mjs), which carries both.
 
-`nava_contract_pp` is presented as **Contracts Program Manager**. The sheet header names no role a reader of the explorer would recognise, and the page already shows two other managers (the project's `program_manager` and the survey's own `nava_program_mgr`), so each is labelled by which one it is.
+`nava_contract_pp` is presented as **Contracts program manager** — sentence case, like every other row label on that page. The sheet header names no role a reader of the explorer would recognise, and the page already shows two other managers (the project's `program_manager` and the survey's own `nava_program_mgr`), so each is labelled by which one it is.
 
 #### Excluded columns
 

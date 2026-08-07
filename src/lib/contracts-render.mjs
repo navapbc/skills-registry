@@ -266,7 +266,7 @@ function renderProjectSection(contract) {
       ${row('Portfolio', p.portfolio)}
       ${row('Agency', p.agency)}
       ${row('Project program manager', p.program_manager)}
-      ${row('Contracts Program Manager', p.nava_contract_pp)}
+      ${row('Contracts program manager', p.nava_contract_pp)}
       ${row('Archetype', p.archetype_primary)}
       ${row('Additional archetype', p.archetype_additional)}
     </dl>

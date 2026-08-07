@@ -229,7 +229,7 @@ describe('renderContractDetail', () => {
     );
     expect(html).toContain('Project program manager');
     expect(html).toContain('Nancy Nussear');
-    expect(html).toContain('Contracts Program Manager');
+    expect(html).toContain('Contracts program manager');
     expect(html).toContain('Priya Contracts');
     expect(html).toContain('Nava program manager');
     expect(html).toContain('Other Person');
@@ -241,7 +241,7 @@ describe('renderContractDetail', () => {
       byId, null,
     );
     expect(html).not.toContain('Project program manager');
-    expect(html).not.toContain('Contracts Program Manager');
+    expect(html).not.toContain('Contracts program manager');
   });
 
   it('omits an empty archetype row rather than showing a blank label', () => {
