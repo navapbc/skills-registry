@@ -49,7 +49,7 @@ import {
  * labelled that way on the page rather than by its sheet header.
  */
 const CONTRACT_FIELDS = [
-  'contract_id',
+  // 'contract_id',
   'portfolio',
   'project',
   'agreement_type',
@@ -65,16 +65,18 @@ const CONTRACT_FIELDS = [
   'ai_use_terms',
   'ai_use_terms_language',
   'terms_detail',
+  'nava_policy',
+  'tools',
+  'project_name',
+
   'client_policy',
   'client_policy_summary',
   'client_policy_link',
-  'nava_policy',
   'ai_used',
-  'tools',
   'usage',
   'review_process',
-  'project_name',
   'notes',
+
   'first_seen_at',
   'last_synced_at',
 ];
