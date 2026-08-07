@@ -32,14 +32,19 @@ import {
  *
  * A deliberate projection rather than the whole record. Contracts were widened to
  * every signed-in user; the projects table was NOT — it remains
- * `manage:project-reference`-gated, and it carries 36 columns including
+ * `manage:project-reference`-gated, and it carries 38 columns including
  * period-of-performance dates, health links, and vehicle detail that the explorer
  * has no reason to publish. Serving whole project records here would widen a second
  * dataset by side effect, which no decision authorized.
  *
- * These six answer "which project is this, and what kind of team runs it" — the
+ * These answer "which project is this, and what kind of team runs it" — the
  * archetype fields matter because archetypes carry the AI-opportunity guidance the
  * page is for.
+ *
+ * `program_manager` names an individual, which is why it was excluded from the sync
+ * until now. It is included here on the same basis as `nava_program_mgr`, which this
+ * response already carries: the page's reader needs to know who to ask, and the
+ * contract-side manager alone leaves the project side unattributed.
  */
 const CONTRACT_FIELDS = [
   'contract_id',
@@ -77,6 +82,7 @@ const PROJECT_FIELDS = [
   'project_name',
   'portfolio',
   'agency',
+  'program_manager',
   'archetype_primary',
   'archetype_additional',
 ];

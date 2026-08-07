@@ -234,6 +234,14 @@ function renderPostureSection(contract, posture) {
   </section>`;
 }
 
+/**
+ * The resolved project, when the engagement links to one.
+ *
+ * "Project program manager" is labelled at length on purpose. The engagement
+ * details below carry the survey's own `nava_program_mgr`, and the two are often
+ * different people — a bare "Program manager" in both places reads as a
+ * contradiction rather than as two facts.
+ */
 function renderProjectSection(contract) {
   if (!contract.resolved_project) {
     return `<section aria-label="Project" class="rounded-lg p-4 border border-amber-200 bg-amber-50">
@@ -255,6 +263,7 @@ function renderProjectSection(contract) {
       ${row('Code', p.project_code)}
       ${row('Portfolio', p.portfolio)}
       ${row('Agency', p.agency)}
+      ${row('Project program manager', p.program_manager)}
       ${row('Archetype', p.archetype_primary)}
       ${row('Additional archetype', p.archetype_additional)}
     </dl>

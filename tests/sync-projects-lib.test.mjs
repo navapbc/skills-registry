@@ -74,9 +74,7 @@ describe('row and column constants', () => {
     expect(PROJECT_CODE_HEADER).toBe('Database code');
   });
 
-  it('excludes the individual-naming and health-assessment columns', () => {
-    expect(EXCLUDED_COLUMNS).toContain('Program Manager');
-    expect(EXCLUDED_COLUMNS).toContain('Nava Contract PP');
+  it('excludes the index-quality reviewer and health-assessment columns', () => {
     expect(EXCLUDED_COLUMNS).toContain('Project Index Owner');
     expect(EXCLUDED_COLUMNS).toContain('Assigned project-index-quality reviewer');
     expect(EXCLUDED_COLUMNS).toContain('Program Health Status');
@@ -90,6 +88,14 @@ describe('row and column constants', () => {
   it('keeps the health link columns', () => {
     expect(EXCLUDED_COLUMNS).not.toContain('Link to Program Health');
     expect(EXCLUDED_COLUMNS).not.toContain('Link to Team Health');
+  });
+
+  // Both name individuals, and both are carried anyway: the Contract Explorer
+  // already publishes the contract-side managers to every signed-in user, so
+  // withholding the project-side ones protected nothing.
+  it('carries the project people columns', () => {
+    expect(EXCLUDED_COLUMNS).not.toContain('Program Manager');
+    expect(EXCLUDED_COLUMNS).not.toContain('Nava Contract PP');
   });
 });
 
@@ -158,11 +164,15 @@ describe('shapeProjects', () => {
   it('omits excluded columns and retains their neighbours', () => {
     const { projects } = shapeProjects(grid({ headers: HEADERS, rows: [row()], groupRow: GROUP_ROW_CELLS }));
     const p = projects.FC026;
-    expect(p.program_manager).toBeUndefined();
     expect(p.program_health_status).toBeUndefined();
     expect(p.cpars).toBeUndefined();
     expect(p.project_name).toBe('CO COBEES');
     expect(p.archetype_primary).toBe('Product Team');
+  });
+
+  it('stores the program manager', () => {
+    const { projects } = shapeProjects(grid({ headers: HEADERS, rows: [row()], groupRow: GROUP_ROW_CELLS }));
+    expect(projects.FC026.program_manager).toBe('Nancy Nussear');
   });
 
   it('keeps the health link columns', () => {
@@ -178,16 +188,15 @@ describe('shapeProjects', () => {
   });
 
   // The full header set, excluded columns included — that is what makes a
-  // rename detectable. "Program Manager" becoming "Program Manager (Nava)"
-  // re-admits an excluded people-column, and comparing full header sets across
-  // runs is how it surfaces.
+  // rename detectable. "CPARS" becoming "CPARS Rating" re-admits an excluded
+  // column, and comparing full header sets across runs is how it surfaces.
   it('returns the full header set present now, and the original header per carried slug', () => {
     const { columnNames, columnHeaders } = shapeProjects(
       grid({ headers: HEADERS, rows: [row()], groupRow: GROUP_ROW_CELLS }),
     );
     expect(columnNames).toEqual(HEADERS);
     expect(columnHeaders.archetype_primary).toBe('Archetype (Primary)');
-    expect(columnHeaders.program_manager).toBeUndefined();
+    expect(columnHeaders.cpars).toBeUndefined();
   });
 
   // Decided with the user: the sync applies no validity judgement of its own.
@@ -240,8 +249,8 @@ describe('shapeProjects', () => {
   // a plausible-looking grouping, which is why only real sheet data caught it —
   // "Government Domain" came back HEALTH instead of FRAMEWORKS.
   it('aligns groups to original column positions despite excluded columns', () => {
-    const headers = ['Database code', 'Program Manager', 'Archetype (Primary)', 'CPARS', '2026 Capabilities'];
-    const groupRow = ['', 'TEAM', 'FRAMEWORKS', 'HEALTH', 'CAPABILITIES'];
+    const headers = ['Database code', 'Project Index Owner', 'Archetype (Primary)', 'CPARS', '2026 Capabilities'];
+    const groupRow = ['', 'PROJECT INDEX', 'FRAMEWORKS', 'HEALTH', 'CAPABILITIES'];
     const rows = [['FC026', 'Someone', 'Product Team', 'Exceptional', 'yes']];
     const { columnGroups } = shapeProjects(grid({ headers, rows, groupRow }));
     expect(columnGroups.archetype_primary).toBe('FRAMEWORKS');
@@ -249,11 +258,11 @@ describe('shapeProjects', () => {
   });
 
   it('reports groups only for columns it stores', () => {
-    const headers = ['Database code', 'Program Manager', 'Archetype (Primary)'];
-    const groupRow = ['', 'TEAM', 'FRAMEWORKS'];
+    const headers = ['Database code', 'Project Index Owner', 'Archetype (Primary)'];
+    const groupRow = ['', 'PROJECT INDEX', 'FRAMEWORKS'];
     const rows = [['FC026', 'Someone', 'Product Team']];
     const { columnGroups } = shapeProjects(grid({ headers, rows, groupRow }));
-    expect(columnGroups.program_manager).toBeUndefined();
+    expect(columnGroups.project_index_owner).toBeUndefined();
     expect(Object.keys(columnGroups).sort()).toEqual(['archetype_primary', 'database_code']);
   });
 

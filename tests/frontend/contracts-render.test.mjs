@@ -184,6 +184,7 @@ describe('renderContractDetail', () => {
   const project = {
     project_code: 'FC001', project_name: 'DOJ Civil Rights Portal', portfolio: 'FEDCIV',
     agency: 'Department of Justice', archetype_primary: 'Product Team', archetype_additional: '',
+    program_manager: 'Nancy Nussear',
   };
 
   it('renders the posture label and its guidance steps in order', () => {
@@ -218,6 +219,25 @@ describe('renderContractDetail', () => {
     expect(html).toContain('Department of Justice');
     expect(html).toContain('Product Team');
     expect(html).not.toMatch(/no matching project/i);
+  });
+
+  // Two managers appear on this page — the project's and the engagement's — and
+  // they are often different people, so the project one is labelled as such.
+  it('shows the project program manager, labelled apart from the contract one', () => {
+    const html = renderContractDetail(
+      contract({ resolved_project: project, nava_program_mgr: 'Other Person' }), byId, null,
+    );
+    expect(html).toContain('Project program manager');
+    expect(html).toContain('Nancy Nussear');
+    expect(html).toContain('Nava program manager');
+    expect(html).toContain('Other Person');
+  });
+
+  it('omits the project program manager row when the sheet leaves it blank', () => {
+    const html = renderContractDetail(
+      contract({ resolved_project: { ...project, program_manager: '' } }), byId, null,
+    );
+    expect(html).not.toContain('Project program manager');
   });
 
   it('omits an empty archetype row rather than showing a blank label', () => {

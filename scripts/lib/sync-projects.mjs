@@ -70,8 +70,13 @@ export const IDENTITY_GROUP = 'IDENTITY';
  */
 export const EXCLUDED_COLUMNS = [
   // Named individuals.
-  'Program Manager',
-  'Nava Contract PP',
+  //
+  // "Program Manager" and "Nava Contract PP" are deliberately NOT here. They name
+  // individuals too, but the Contract Explorer already publishes nava_project_mgr
+  // and nava_program_mgr to every signed-in user, so withholding the project-side
+  // program manager protected nothing while leaving the contract page unable to
+  // say who runs the project. The two index-quality columns stay excluded: they
+  // name reviewers of an internal process no reader of these surfaces acts on.
   'Project Index Owner',
   'Assigned project-index-quality reviewer',
   // Health assessments and contractor performance ratings.

@@ -117,7 +117,7 @@ Every attribute except the three below is a string mirrored verbatim from a shee
   first_seen_at:  string;  // ISO timestamp of the run that created this record
   last_synced_at: string;  // ISO timestamp of the run that last wrote it
 
-  // --- 36 mirrored sheet columns (43 headers minus 7 excluded), grouped as the sheet groups them ---
+  // --- 38 mirrored sheet columns (43 headers minus 5 excluded), grouped as the sheet groups them ---
   // IDENTITY
   database_project_code: string;  // present but empty on all 53 rows (see notes)
   database_code:         string;  // duplicates project_code
@@ -144,11 +144,13 @@ Every attribute except the three below is a string mirrored verbatim from a shee
   pop_periods:      string;   // multi-line: newline-separated POP/BP/OP lines
 
   // TEAM
-  agency:        string;
-  office:        string;
-  group:         string;
-  prime:         string;
-  subcontractor: string;
+  agency:           string;
+  office:           string;
+  group:            string;
+  prime:            string;
+  subcontractor:    string;
+  program_manager:  string;  // named individual — see Named individuals below
+  nava_contract_pp: string;  // named individual
 
   // FRAMEWORKS
   archetype_primary:    string;  // must match a project_reference archetype label
@@ -174,16 +176,20 @@ Every attribute except the three below is a string mirrored verbatim from a shee
 }
 ```
 
+#### Named individuals
+
+`program_manager` and `nava_contract_pp` are mirrored even though both name a person. They were excluded originally on a blanket "no named individuals" rule, which the contracts table then broke anyway: `nava_project_mgr` and `nava_program_mgr` are published to every signed-in user through the Contract Explorer. Withholding the project-side manager protected nothing and left the contract detail page unable to say who runs the project it links to.
+
+Both attributes appear on stored records only from the first sync run after this change; until then the contract detail page simply omits the row. The `projects` table itself remains `manage:project-reference`-gated. These two reach a general reader only through the field projection in [`functions/api/routes/contracts.mjs`](../functions/api/routes/contracts.mjs), which now carries `program_manager`; `nava_contract_pp` is stored but not projected, so no read route exposes it.
+
 #### Excluded columns
 
-Seven sheet columns are deliberately **not** mirrored (`EXCLUDED_COLUMNS`), so they exist in `column_names` on the metadata record but as no attribute here:
+Five sheet columns are deliberately **not** mirrored (`EXCLUDED_COLUMNS`), so they exist in `column_names` on the metadata record but as no attribute here:
 
 | Column | Why |
 |---|---|
-| Program Manager | Named individual |
-| Nava Contract PP | Named individual |
-| Project Index Owner | Named individual |
-| Assigned project-index-quality reviewer | Named individual |
+| Project Index Owner | Named individual, internal process role |
+| Assigned project-index-quality reviewer | Named individual, internal process role |
 | Program Health Status | Health assessment |
 | Team Health Status | Health assessment |
 | CPARS | Contractor performance rating |
@@ -208,8 +214,8 @@ The two health **link** columns are kept on purpose: they hold Confluence URLs, 
   deleted:      number;
   new_columns:  string[]; // headers that appeared since the previous run — [] when none
   column_names:   string[];                  // every sheet header, including excluded ones (43)
-  column_headers: Record<string, string>;    // stored attribute -> original header text (36)
-  column_groups:  Record<string, string>;    // stored attribute -> sheet group label (36)
+  column_headers: Record<string, string>;    // stored attribute -> original header text (38)
+  column_groups:  Record<string, string>;    // stored attribute -> sheet group label (38)
 }
 ```
 
@@ -360,7 +366,7 @@ There is no workflow calling this and the GitHub deploy role has no access to th
 
 ### Sensitivity
 
-Every signed-in Nava user can read this table, which is a wider audience than any other table documented here. It carries named individuals (`nava_project_mgr`, `nava_program_mgr`), contract and task-order numbers, customer names, and verbatim contract clause language in `ai_use_terms_language`. That exposure is a deliberate decision with a named accountable owner — see the requirements document.
+Every signed-in Nava user can read this table, which is a wider audience than any other table documented here. It carries named individuals (`nava_project_mgr`, `nava_program_mgr`, and the resolved project's `program_manager`), contract and task-order numbers, customer names, and verbatim contract clause language in `ai_use_terms_language`. That exposure is a deliberate decision with a named accountable owner — see the requirements document.
 
 ---
 
