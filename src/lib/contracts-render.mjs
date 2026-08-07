@@ -188,12 +188,29 @@ export function renderUnclassifiedToggle(hiddenCount, includeUnclassified, postu
   }</button>`;
 }
 
-const row = (label, value) => (value
+const row = (label, value, render = escapeHtml) => (value
   ? `<div class="flex flex-col gap-0.5">
        <dt class="text-xs text-gray-400">${escapeHtml(label)}</dt>
-       <dd class="text-sm text-gray-800 m-0 whitespace-pre-line">${escapeHtml(value)}</dd>
+       <dd class="text-sm text-gray-800 m-0 whitespace-pre-line">${render(value)}</dd>
      </div>`
   : '');
+
+const CONFLUENCE_SPACES = 'https://navasage.atlassian.net/wiki/spaces/';
+
+/**
+ * The project name, linked to its Confluence space when the space key is known.
+ *
+ * The key is `project_index_code` on the resolved project. Not every project has
+ * one, and a link built from a missing key would point at `/wiki/spaces/` — a page
+ * that exists and is wrong, which is worse than no link. So the name renders as
+ * plain text unless there is a key to link it to.
+ */
+function renderProjectNameLink(name, spaceKey) {
+  if (!spaceKey) return escapeHtml(name);
+  const href = CONFLUENCE_SPACES + encodeURIComponent(spaceKey.trim());
+  return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"
+    class="text-plum-700 underline">${escapeHtml(name)}</a>`;
+}
 
 /**
  * A field that gets the full width of the page rather than a grid cell.
@@ -308,8 +325,7 @@ function renderProjectSection(contract) {
   return `<section aria-label="Project" class="rounded-lg p-4 border border-gray-200 bg-white">
     <h2 class="text-sm font-semibold text-gray-900 m-0 mb-3">Project</h2>
     <dl class="grid grid-cols-2 gap-3 m-0">
-      ${row('Project', p.project_name)}
-      ${row('Code', p.project_code)}
+      ${row('Project', p.project_name, (v) => renderProjectNameLink(v, p.project_index_code))}
       ${row('Portfolio', p.portfolio)}
       ${row('Agency', p.agency)}
       ${row('Project program manager', p.program_manager)}
@@ -338,7 +354,6 @@ const DETAIL_FIELDS = [
   ['Nava project manager', 'nava_project_mgr'],
   ['Nava program manager', 'nava_program_mgr'],
   ['AI tools used', 'tools'],
-  ['Nava program AI policy', 'nava_policy'],
 ];
 
 /**
@@ -352,9 +367,10 @@ const DETAIL_FIELDS = [
  * The optional third element renders the value; it defaults to escaped plain text.
  */
 const NARRATIVE_FIELDS = [
-  ['Client AI policy', 'client_policy'],
   ['Client AI policy (summary)', 'client_policy_summary'],
+  ['Client AI policy', 'client_policy'],
   ['Client AI policy link', 'client_policy_link', renderPolicyLink],
+  ['Nava program AI policy', 'nava_policy'],
   ['AI used in performance', 'ai_used'],
   ['How AI is used', 'usage'],
   ['Agency review process', 'review_process'],

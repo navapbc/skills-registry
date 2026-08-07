@@ -80,6 +80,7 @@ const PROJECT = {
   archetype_additional: '',
   program_manager: 'Nancy Nussear',
   nava_contract_pp: 'Priya Contracts',
+  project_index_code: 'COCOBEES',
   // Fields the explorer must not publish — projects remain projects-admin-gated.
   pop_start: '6/03/2021',
   link_to_program_health: 'https://confluence/secret-health-page',
@@ -307,6 +308,8 @@ describe('project resolution', () => {
       // same basis as the contract's own nava_program_mgr.
       program_manager: 'Nancy Nussear',
       nava_contract_pp: 'Priya Contracts',
+      // The Confluence space key the detail page links the project name to.
+      project_index_code: 'COCOBEES',
     });
   });
 

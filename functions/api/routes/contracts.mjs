@@ -85,6 +85,9 @@ const CONTRACT_FIELDS = [
 
 const PROJECT_FIELDS = [
   'project_code',
+  // The Confluence space key. The detail page links the project name to its space,
+  // so without this in the projection the link points at /wiki/spaces/undefined.
+  'project_index_code',
   'project_name',
   'portfolio',
   'agency',

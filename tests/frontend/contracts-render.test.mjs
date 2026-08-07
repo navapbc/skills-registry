@@ -279,10 +279,34 @@ describe('renderContractDetail', () => {
     });
   });
 
+  describe('the project name link', () => {
+    const withProject = (extra) =>
+      renderContractDetail(contract({ resolved_project: { ...project, ...extra } }), byId, null);
+
+    it('links the project name to its Confluence space', () => {
+      const html = withProject({ project_index_code: 'DOJCRP' });
+      expect(html).toContain('href="https://navasage.atlassian.net/wiki/spaces/DOJCRP"');
+      expect(html).toContain('rel="noopener noreferrer"');
+    });
+
+    it('escapes a space key rather than letting it break out of the href', () => {
+      const html = withProject({ project_index_code: 'A B/"><img src=x>' });
+      expect(html).not.toContain('<img src=x>');
+      expect(html).toContain('/wiki/spaces/A%20B%2F');
+    });
+
+    // A link built from a missing key lands on /wiki/spaces/ — a real page, and the
+    // wrong one. Plain text is the honest rendering.
+    it('leaves the name unlinked when the project has no space key', () => {
+      const html = withProject({ project_index_code: '' });
+      expect(html).toContain('DOJ Civil Rights Portal');
+      expect(html).not.toContain('/wiki/spaces/');
+    });
+  });
+
   it('renders the resolved project details', () => {
     const html = renderContractDetail(contract({ resolved_project: project }), byId, null);
     expect(html).toContain('DOJ Civil Rights Portal');
-    expect(html).toContain('FC001');
     expect(html).toContain('Department of Justice');
     expect(html).toContain('Product Team');
     expect(html).not.toMatch(/no matching project/i);
