@@ -177,7 +177,7 @@ human_in_loop: Describe where human review happens before outputs are used
 ---
 ```
 
-See [`registry/schema.md`](registry/schema.md) for the complete frontmatter field reference — required vs. optional, defaults, agent-only fields, and submission metadata fields.
+See [`db/skills-schema.md`](db/skills-schema.md) for the complete frontmatter field reference — required vs. optional, defaults, agent-only fields, and submission metadata fields.
 
 Enterprise-only skills (not sourced from a public GitHub repo) go in `enterprise/<slug>/SKILL.md` in this repository. They're synced directly via the Git Trees API, bypassing GitHub's search indexing delay.
 

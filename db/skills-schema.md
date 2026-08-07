@@ -1,4 +1,6 @@
-# Registry Schema
+# Registry Schema — Skills, Agents, Plugins
+
+See [`projects-schema.md`](projects-schema.md) for the projects and project-reference tables.
 
 Skills and agents are stored in DynamoDB (`skills-registry-skills-{env}`) and served via the API Lambda. The shape of each record is defined by `src/lib/registry-schema.mjs` (Zod) and built by `src/lib/parse-skill.mjs`.
 
