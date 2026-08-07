@@ -25,9 +25,10 @@ import Base from '../../layouts/Base.astro';
 import { fetchApi } from '../../lib/api.mjs';
 import { renderSkillDetail, renderSkillGrid } from '../../lib/render.mjs';
 import { isFavorited, toggleFavorite, initFavoriteButtons } from '../../lib/favorites.mjs';
+import type { Skill } from '../../lib/types';
 
 const NAVA_N = `███╗   ██╗\n████╗  ██║\n██╔██╗ ██║\n██║╚██╗██║\n██║ ╚████║\n╚═╝  ╚═══╝`;
-function notFoundHtml(entity) {
+function notFoundHtml(entity: string) {
   return `<div class="flex flex-col items-center justify-center py-24 text-center">
     <pre class="text-gray-200 text-sm leading-tight font-mono mb-8 select-none">${NAVA_N}</pre>
     <p class="text-base font-semibold text-gray-700 m-0 mb-1">${entity.charAt(0).toUpperCase() + entity.slice(1)} not found</p>
@@ -36,7 +37,7 @@ function notFoundHtml(entity) {
   </div>`;
 }
 
-const container = document.getElementById('agent-content');
+const container = document.getElementById('agent-content')!;
 
 const slug = window.location.pathname.replace(/^\/agents\/?/, '').replace(/\/$/, '');
 
@@ -55,7 +56,7 @@ if (!slug) {
     .then(({ skills }) => {
       const countEl = document.getElementById('agents-count');
       if (countEl) countEl.textContent = skills.length + ' agents';
-      document.getElementById('agents-list-grid').innerHTML = renderSkillGrid(skills);
+      document.getElementById('agents-list-grid')!.innerHTML = renderSkillGrid(skills);
       initGithubLinks();
       initFavoriteButtons();
     })
@@ -84,8 +85,8 @@ if (!slug) {
     });
 }
 
-function initCopyButtons(skill) {
-  document.querySelectorAll('[data-copy]').forEach(btn => {
+function initCopyButtons(skill: Skill) {
+  document.querySelectorAll<HTMLElement>('[data-copy]').forEach(btn => {
     btn.addEventListener('click', () => {
       const text = btn.dataset.copy || '';
       navigator.clipboard.writeText(text).then(() => {
@@ -97,7 +98,7 @@ function initCopyButtons(skill) {
 }
 
 function initGithubLinks() {
-  document.querySelectorAll('[data-github-url]').forEach(el => {
+  document.querySelectorAll<HTMLElement>('[data-github-url]').forEach(el => {
     el.addEventListener('click', e => {
       const url = el.dataset.githubUrl;
       if (url) { e.preventDefault(); e.stopPropagation(); window.open(url, '_blank', 'noopener'); }
@@ -105,14 +106,14 @@ function initGithubLinks() {
   });
 }
 
-function updateFavBtn(btn, isFav) {
+function updateFavBtn(btn: Element, isFav: boolean) {
   btn.setAttribute('aria-pressed', String(isFav));
   btn.setAttribute('aria-label', isFav ? 'Remove from favorites' : 'Add to favorites');
   btn.className = `favorite-btn inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg transition-colors ${isFav ? 'bg-amber-50 border-amber-300 text-amber-700' : 'bg-white border-gray-200 text-gray-600 hover:border-amber-300 hover:text-amber-600'}`;
   btn.innerHTML = `<span aria-hidden="true">${isFav ? '★' : '☆'}</span> ${isFav ? 'Favorited' : 'Favorite'}`;
 }
 
-function initFavoriteButton(skill) {
+function initFavoriteButton(skill: Skill) {
   const favBtn = document.querySelector('.favorite-btn');
   if (!favBtn) return;
   const currentlyFav = isFavorited(skill.slug);

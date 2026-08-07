@@ -26,9 +26,10 @@ import { fetchApi } from '../../lib/api.mjs';
 import { renderSkillDetail, renderSkillGrid, escapeHtml } from '../../lib/render.mjs';
 import { isFavorited, toggleFavorite, initFavoriteButtons, addInstalled } from '../../lib/favorites.mjs';
 import { track, referrerSource, debounce } from '../../lib/usage.mjs';
+import type { Skill } from '../../lib/types';
 
 const NAVA_N = `███╗   ██╗\n████╗  ██║\n██╔██╗ ██║\n██║╚██╗██║\n██║ ╚████║\n╚═╝  ╚═══╝`;
-function notFoundHtml(entity) {
+function notFoundHtml(entity: string) {
   return `<div class="flex flex-col items-center justify-center py-24 text-center">
     <pre class="text-gray-200 text-sm leading-tight font-mono mb-8 select-none">${NAVA_N}</pre>
     <p class="text-base font-semibold text-gray-700 m-0 mb-1">${entity.charAt(0).toUpperCase() + entity.slice(1)} not found</p>
@@ -37,7 +38,7 @@ function notFoundHtml(entity) {
   </div>`;
 }
 
-const container = document.getElementById('skill-content');
+const container = document.getElementById('skill-content')!;
 
 const slug = window.location.pathname.replace(/^\/skills\/?/, '').replace(/\/$/, '');
 
@@ -102,8 +103,8 @@ if (!slug) {
     </div>
   `;
 
-  let orgWide = [];
-  let community = [];
+  let orgWide: Skill[] = [];
+  let community: Skill[] = [];
   let activeFilter = 'all';
   let searchQuery = '';
   let lastResultCount = 0;
@@ -113,10 +114,10 @@ if (!slug) {
   }, 500);
 
   function applyFilter() {
-    const listView = document.getElementById('skills-list-view');
-    const searchResultsView = document.getElementById('skills-search-results');
-    const orgSection = document.getElementById('orgwide-section');
-    const communitySection = document.getElementById('community-section');
+    const listView = document.getElementById('skills-list-view')!;
+    const searchResultsView = document.getElementById('skills-search-results')!;
+    const orgSection = document.getElementById('orgwide-section')!;
+    const communitySection = document.getElementById('community-section')!;
 
     if (searchQuery) {
       listView.classList.add('hidden');
@@ -130,12 +131,12 @@ if (!slug) {
         s.name?.toLowerCase().includes(q) ||
         s.description?.toLowerCase().includes(q) ||
         s.plugin?.toLowerCase().includes(q) ||
-        (s.tags ?? []).some(t => t.toLowerCase().includes(q))
+        (s.tags ?? []).some((t: string) => t.toLowerCase().includes(q))
       );
 
-      const summary = document.getElementById('skills-search-summary');
-      const grid = document.getElementById('skills-search-grid');
-      const noResults = document.getElementById('skills-no-results');
+      const summary = document.getElementById('skills-search-summary')!;
+      const grid = document.getElementById('skills-search-grid')!;
+      const noResults = document.getElementById('skills-no-results')!;
       lastResultCount = matches.length;
       summary.textContent = `${matches.length} result${matches.length !== 1 ? 's' : ''} for "${searchQuery}"`;
       noResults.classList.toggle('hidden', matches.length > 0);
@@ -156,8 +157,8 @@ if (!slug) {
 
   fetchApi('/skills?type=skill')
     .then(({ skills }) => {
-      orgWide = skills.filter(s => s.source === 'enterprise');
-      community = skills.filter(s => s.source !== 'enterprise');
+      orgWide = skills.filter((s: Skill) => s.source === 'enterprise');
+      community = skills.filter((s: Skill) => s.source !== 'enterprise');
 
       const countEl = document.getElementById('skills-count');
       if (countEl) countEl.textContent = `${skills.length} skills`;
@@ -175,7 +176,7 @@ if (!slug) {
           : '<p class="text-sm text-gray-400 italic">No org-wide skills yet.</p>';
       }
 
-      document.getElementById('skills-list-grid').innerHTML = community.length
+      document.getElementById('skills-list-grid')!.innerHTML = community.length
         ? renderSkillGrid(community)
         : '<p class="text-sm text-gray-400 italic">No Claude Code Skills yet.</p>';
 
@@ -190,16 +191,16 @@ if (!slug) {
     });
 
   document.getElementById('skills-search')?.addEventListener('input', e => {
-    searchQuery = e.target.value.trim();
+    searchQuery = (e.target as HTMLInputElement).value.trim();
     applyFilter();
     trackSearch();
   });
 
-  document.querySelectorAll('.skills-filter-btn').forEach(btn => {
+  document.querySelectorAll<HTMLElement>('.skills-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      activeFilter = btn.dataset.filter;
+      activeFilter = btn.dataset.filter ?? 'all';
       track('filter_applied', { filter_name: 'source', filter_value: activeFilter });
-      document.querySelectorAll('.skills-filter-btn').forEach(b => {
+      document.querySelectorAll<HTMLElement>('.skills-filter-btn').forEach(b => {
         const active = b === btn;
         b.className = `skills-filter-btn text-xs px-3 py-1.5 rounded-lg border transition-colors ${active ? 'border-plum-600 bg-plum-600 text-white' : 'border-gray-200 text-gray-600 hover:border-plum-300'}`;
       });
@@ -227,8 +228,8 @@ if (!slug) {
     });
 }
 
-function initCopyButtons(skill) {
-  document.querySelectorAll('[data-copy]').forEach(btn => {
+function initCopyButtons(skill: Skill) {
+  document.querySelectorAll<HTMLElement>('[data-copy]').forEach(btn => {
     btn.addEventListener('click', () => {
       const text = btn.dataset.copy || '';
       navigator.clipboard.writeText(text).then(() => {
@@ -241,7 +242,7 @@ function initCopyButtons(skill) {
 }
 
 function initGithubLinks() {
-  document.querySelectorAll('[data-github-url]').forEach(el => {
+  document.querySelectorAll<HTMLElement>('[data-github-url]').forEach(el => {
     el.addEventListener('click', e => {
       const url = el.dataset.githubUrl;
       if (url) { e.preventDefault(); e.stopPropagation(); window.open(url, '_blank', 'noopener'); }
@@ -249,14 +250,14 @@ function initGithubLinks() {
   });
 }
 
-function updateFavBtn(btn, isFav) {
+function updateFavBtn(btn: Element, isFav: boolean) {
   btn.setAttribute('aria-pressed', String(isFav));
   btn.setAttribute('aria-label', isFav ? 'Remove from favorites' : 'Add to favorites');
   btn.className = `favorite-btn inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg transition-colors ${isFav ? 'bg-amber-50 border-amber-300 text-amber-700' : 'bg-white border-gray-200 text-gray-600 hover:border-amber-300 hover:text-amber-600'}`;
   btn.innerHTML = `<span aria-hidden="true">${isFav ? '★' : '☆'}</span> ${isFav ? 'Favorited' : 'Favorite'}`;
 }
 
-function initFavoriteButton(skill) {
+function initFavoriteButton(skill: Skill) {
   const favBtn = document.querySelector('.favorite-btn');
   if (!favBtn) return;
   const currentlyFav = isFavorited(skill.slug);

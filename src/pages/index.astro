@@ -157,6 +157,7 @@ import { track, debounce } from '../lib/usage.mjs';
 import { renderSkillCard, escapeHtml, renderCategoryTiles, renderNewThisWeek, renderSkillGrid } from '../lib/render.mjs';
 import { CATEGORIES } from '../lib/categories.mjs';
 import { getFavorites, initFavoriteButtons, initFromUser, removeFavorite } from '../lib/favorites.mjs';
+import type { Skill, Plugin, SearchItem } from '../lib/types';
 
 const PREVIEW_COUNT = 6;
 
@@ -171,7 +172,7 @@ function renderHomepageFavorites() {
   }
   section.classList.remove('hidden');
   grid.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-    ${favs.map(f => `<div class="relative h-full">
+    ${favs.map((f: Skill) => `<div class="relative h-full">
       <a href="/${f.type === 'agent' ? 'agents' : 'skills'}/${escapeHtml(f.slug)}" class="h-full flex flex-col gap-3 p-4 bg-white border border-amber-200 rounded-lg hover:shadow-md hover:border-amber-300 transition-all no-underline text-gray-900">
         <div class="flex items-start pr-6 gap-2">
           <span class="font-semibold text-sm text-gray-900">${escapeHtml(f.name)}</span>
@@ -208,19 +209,19 @@ fetchApi('/users/me').then(user => {
 }).catch(() => {});
 
 const globalSearch = document.getElementById('global-search');
-const browseView = document.getElementById('browse-view');
-const searchResults = document.getElementById('search-results');
-const resultsList = document.getElementById('results-list');
-const searchSummary = document.getElementById('search-summary');
-const noResults = document.getElementById('no-results');
+const browseView = document.getElementById('browse-view')!;
+const searchResults = document.getElementById('search-results')!;
+const resultsList = document.getElementById('results-list')!;
+const searchSummary = document.getElementById('search-summary')!;
+const noResults = document.getElementById('no-results')!;
 
-const TYPE_STYLES = {
+const TYPE_STYLES: Record<string, string> = {
   plugin: 'bg-plum-50 text-plum-700',
   skill:  'bg-gray-100 text-gray-600',
   agent:  'bg-blue-50 text-blue-700',
 };
 
-let searchIndex = [];
+let searchIndex: SearchItem[] = [];
 
 // Categories section is hidden — fetch skills and plugins directly.
 // Previously fetched ?slugs= for the category grid which poisoned the CloudFront cache
@@ -228,24 +229,24 @@ let searchIndex = [];
 Promise.all([
   fetchApi('/skills'),
   fetchApi('/plugins'),
-]).then(([{ skills }, { plugins }]) => {
+]).then(([{ skills }, { plugins }]: [{ skills: Skill[] }, { plugins: Plugin[] }]) => {
   // Category tiles — skill count is driven by s.category membership over the
   // full /skills payload (includes org-wide skills), computed here rather than
   // via a scoped ?slugs= fetch (which poisoned the CloudFront cache).
-  document.getElementById('category-grid').innerHTML = renderCategoryTiles(CATEGORIES, skills);
+  document.getElementById('category-grid')!.innerHTML = renderCategoryTiles(CATEGORIES, skills);
   // "New This Week" is scoped to org-wide (enterprise) skills/agents only.
   const newThisWeekHtml = renderNewThisWeek(
     skills.filter(s => s.source === 'enterprise'),
     CATEGORIES,
   );
-  document.getElementById('new-this-week').innerHTML = newThisWeekHtml;
+  document.getElementById('new-this-week')!.innerHTML = newThisWeekHtml;
   // Hide the heading when there's nothing new, so it doesn't read as a label
   // for the Org-wide section that follows.
   if (!newThisWeekHtml) document.getElementById('new-this-week-heading')?.classList.add('hidden');
 
   // Org-wide (enterprise) skills get their own callout — show 6 most recent with link to /skills.
   const orgWide = skills.filter(s => s.type === 'skill' && s.source === 'enterprise')
-    .sort((a, b) => new Date(b.last_updated || 0) - new Date(a.last_updated || 0));
+    .sort((a, b) => new Date(b.last_updated || 0).getTime() - new Date(a.last_updated || 0).getTime());
   const orgSection = document.getElementById('orgwide-section');
   const orgGrid = document.getElementById('orgwide-grid');
   const orgViewAll = document.getElementById('orgwide-view-all');
@@ -287,20 +288,20 @@ Promise.all([
   */
 
   // Skills grid
-  document.getElementById('skills-count').textContent = `(${allSkills.length})`;
+  document.getElementById('skills-count')!.textContent = `(${allSkills.length})`;
   renderGrid('skills-grid', 'skills-expand', allSkills);
 
   // Agents grid — always render (section is visible by default with skeleton)
-  document.getElementById('agents-count').textContent = `(${allAgents.length})`;
+  document.getElementById('agents-count')!.textContent = `(${allAgents.length})`;
   if (allAgents.length) {
     renderGrid('agents-grid', 'agents-expand', allAgents);
   } else {
-    document.getElementById('agents-grid').innerHTML = '<p class="text-sm text-gray-400 italic">No agents in the registry yet.</p>';
+    document.getElementById('agents-grid')!.innerHTML = '<p class="text-sm text-gray-400 italic">No agents in the registry yet.</p>';
   }
 
   // Build search index
   searchIndex = [
-    ...plugins.map(p => ({
+    ...plugins.map((p): SearchItem => ({
       type: 'plugin',
       name: p.name,
       description: p.description || '',
@@ -308,7 +309,7 @@ Promise.all([
       meta: `${p.skills_count || 0} skills`,
       keywords: '',
     })),
-    ...[...orgWide, ...allSkills].map(s => ({
+    ...[...orgWide, ...allSkills].map((s): SearchItem => ({
       type: 'skill',
       name: s.name,
       description: s.description || '',
@@ -316,7 +317,7 @@ Promise.all([
       meta: s.plugin,
       keywords: [s.plugin, ...(s.compatibility || [])].join(' '),
     })),
-    ...allAgents.map(s => ({
+    ...allAgents.map((s): SearchItem => ({
       type: 'agent',
       name: s.name,
       description: s.description || '',
@@ -337,13 +338,13 @@ Promise.all([
   });
 }).catch(err => {
   if (!err.message.startsWith('Unauthorized')) {
-    document.getElementById('skills-grid').innerHTML = '<p class="text-sm text-gray-500">Failed to load skills. Please refresh the page.</p>';
+    document.getElementById('skills-grid')!.innerHTML = '<p class="text-sm text-gray-500">Failed to load skills. Please refresh the page.</p>';
   }
 });
 
-function renderGrid(gridId, expandBtnId, items) {
-  const grid = document.getElementById(gridId);
-  const expandLink = document.getElementById(expandBtnId);
+function renderGrid(gridId: string, expandBtnId: string, items: Skill[]) {
+  const grid = document.getElementById(gridId)!;
+  const expandLink = document.getElementById(expandBtnId)!;
 
   grid.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     ${items.slice(0, PREVIEW_COUNT).map(skill => `<div>${renderSkillCard(skill)}</div>`).join('')}
@@ -356,7 +357,7 @@ function renderGrid(gridId, expandBtnId, items) {
 }
 
 function initGithubLinks() {
-  document.querySelectorAll('[data-github-url]').forEach(el => {
+  document.querySelectorAll<HTMLElement>('[data-github-url]').forEach(el => {
     el.addEventListener('click', e => {
       const url = el.dataset.githubUrl;
       if (url) { e.preventDefault(); e.stopPropagation(); window.open(url, '_blank', 'noopener'); }
@@ -365,7 +366,7 @@ function initGithubLinks() {
 }
 
 // Search
-function renderResults(query) {
+function renderResults(query: string) {
   const q = query.toLowerCase().trim();
   if (!q) {
     browseView.classList.remove('hidden');
