@@ -7,7 +7,7 @@
 import { escapeHtml } from './render.mjs';
 
 /** A record here is one survey row: an engagement under a contract, not a contract. */
-export const UNIT_LABEL = 'Engagement';
+// export const UNIT_LABEL = 'Engagement';
 
 /**
  * Posture colours come from the posture records and are applied as INLINE STYLES.
@@ -143,9 +143,8 @@ export function renderContractCard(contract, postureById) {
     </h3>
     ${parent}
     <p class="text-xs text-gray-500 mt-2 mb-0 line-clamp-3 flex-1">
-      ${escapeHtml((contract.ai_use_terms ?? '').slice(0, 180))}
+      ${escapeHtml((contract.client_policy_summary ?? '').slice(0, 180))}
     </p>
-    <p class="text-xs text-gray-400 mt-3 m-0">${UNIT_LABEL}</p>
   </a>`;
 }
 
@@ -226,7 +225,7 @@ function renderPostureSection(contract, posture) {
   return `<section aria-label="AI posture" class="rounded-lg p-4 border border-gray-200 bg-gray-50">
     <h2 class="text-sm font-semibold text-gray-900 m-0">No AI posture recorded yet</h2>
     <p class="text-xs text-gray-500 mt-1 m-0">
-      The AI-use survey has not been completed for this engagement. What the contract
+      The AI-use survey has not been completed. What the contract
       itself says is below — treat it as the source, not as guidance.
     </p>
     ${named}
@@ -250,8 +249,8 @@ function renderProjectSection(contract) {
       <h2 class="text-sm font-semibold text-amber-900 m-0">No matching project</h2>
       <p class="text-xs text-amber-900 mt-1 m-0">
         ${contract.project_name
-          ? `This engagement names <code>${escapeHtml(contract.project_name)}</code>, which matches no project on file.`
-          : 'This engagement has not been matched to a project.'}
+          ? `This record names <code>${escapeHtml(contract.project_name)}</code>, which matches no project on file.`
+          : 'This record has not been matched to a project.'}
         The posture above does not depend on the link.
       </p>
     </section>`;
@@ -317,8 +316,8 @@ export function renderContractDetail(contract, postureById, capturedAt) {
     : '';
 
   const termsDetail = contract.terms_detail
-    ? `<section aria-label="Terms summary" class="rounded-lg p-4 border border-gray-200 bg-white">
-        <h2 class="text-sm font-semibold text-gray-900 m-0 mb-2">Terms summary</h2>
+    ? `<section aria-label="Terms" class="rounded-lg p-4 border border-gray-200 bg-white">
+        <h2 class="text-sm font-semibold text-gray-900 m-0 mb-2">Terms</h2>
         <p class="text-sm text-gray-700 m-0 whitespace-pre-line">${escapeHtml(contract.terms_detail)}</p>
       </section>`
     : '';
@@ -331,23 +330,23 @@ export function renderContractDetail(contract, postureById, capturedAt) {
         ${escapeHtml(contract.portfolio ?? '')}
       </span>
       <h1 class="text-2xl font-bold text-gray-900 mt-2 mb-1">${escapeHtml(contract.project || contract.contract_id)}</h1>
-      <p class="text-sm text-gray-500 m-0">
-        ${UNIT_LABEL}${contract.contract_num
-          ? ` under contract <code class="text-xs">${escapeHtml(contract.contract_num)}</code>`
-          : ''}
-      </p>
+      ${contract.contract_num
+        ? `<p class="text-sm text-gray-500 m-0">
+             Under contract <code class="text-xs">${escapeHtml(contract.contract_num)}</code>
+           </p>`
+        : ''}
     </div>
 
     <div class="space-y-4">
-      ${renderPostureSection(contract, posture)}
-      ${termsDetail}
-      ${renderProjectSection(contract)}
       ${fields
-        ? `<section aria-label="Engagement details" class="rounded-lg p-4 border border-gray-200 bg-white">
-             <h2 class="text-sm font-semibold text-gray-900 m-0 mb-3">Engagement details</h2>
+        ? `<section aria-label="Details" class="rounded-lg p-4 border border-gray-200 bg-white">
+             <h2 class="text-sm font-semibold text-gray-900 m-0 mb-3">Details</h2>
              <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 m-0">${fields}</dl>
            </section>`
         : ''}
+      ${renderPostureSection(contract, posture)}
+      ${termsDetail}
+      ${renderProjectSection(contract)}
       ${clause}
     </div>
 
