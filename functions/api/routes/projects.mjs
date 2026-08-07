@@ -129,7 +129,12 @@ async function readContractDrift(projects) {
       unresolved_postures: issues.unresolvedPostures,
       available: true,
     };
-  } catch {
+  } catch (err) {
+    // Logged rather than swallowed: a missing table is expected before an
+    // environment's first apply, but a bug in the resolution rules would land
+    // here too and would otherwise be invisible forever behind "not checked".
+    console.error('projects contract drift read failed', err);
+
     // `available: false` is deliberately distinct from a zero count: the tab must
     // be able to say "not checked" rather than claiming a clean bill of health it
     // did not verify.
