@@ -21,10 +21,10 @@ import {
   SYNC_NEVER,
   collectArchetypeIssues,
 } from '../../functions/api/lib/projects.mjs';
-import { shapeProjects, reconcile, safetyVerdict, SyncProjectsError } from './sync-projects.mjs';
+import { shapeProjects, reconcile, safetyVerdict } from './sync-projects.mjs';
 
 /** Read every project record. 53 rows is one page, but paginate anyway. */
-export async function readStoredProjects({ ddb, table, QueryCommand }) {
+async function readStoredProjects({ ddb, table, QueryCommand }) {
   const stored = {};
   let lastKey;
   do {
@@ -69,7 +69,7 @@ export async function readSyncMeta({ ddb, table, GetCommand }) {
 }
 
 /** Read the archetype records the drift check compares against. */
-export async function readArchetypes({ ddb, referenceTable, QueryCommand }) {
+async function readArchetypes({ ddb, referenceTable, QueryCommand }) {
   const page = await ddb.send(
     new QueryCommand({
       TableName: referenceTable,
@@ -228,4 +228,3 @@ export async function checkDrift({ ddb, referenceTable, projects, QueryCommand }
   return { archetypeCount: archetypes.length, unresolved, missing };
 }
 
-export { SyncProjectsError };

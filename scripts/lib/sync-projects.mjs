@@ -38,9 +38,10 @@ export class SyncProjectsError extends Error {
 // an empty group mapping, which fails the grouping requirement silently.
 //
 // Sheet row 3 -> group labels, row 4 -> owning team, row 5 -> blank,
-// row 6 -> headers.
+// row 6 -> headers. The owner row is not parsed: importing per-column ownership
+// is out of scope, and it is named here only to explain the gap between the group
+// row and the header.
 export const GROUP_ROW = 2;
-export const OWNER_ROW = 3;
 export const HEADER_ROW = 5;
 
 // The sheet carries two code columns. "Database project code" reads like the key

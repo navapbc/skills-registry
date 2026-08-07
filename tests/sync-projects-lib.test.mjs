@@ -6,7 +6,6 @@ import {
   PROJECT_CODE_HEADER,
   IDENTITY_GROUP,
   GROUP_ROW,
-  OWNER_ROW,
   HEADER_ROW,
   slugColumn,
   parseColumnGroups,
@@ -66,9 +65,8 @@ function row(overrides = {}) {
 describe('row and column constants', () => {
   // The blank grid row at index 4 is why these are named rather than derived as
   // "the two rows above the header" — that would pick up the blank.
-  it('names the group, owner, and header rows as 0-based grid indices', () => {
+  it('names the group and header rows as 0-based grid indices', () => {
     expect(GROUP_ROW).toBe(2);
-    expect(OWNER_ROW).toBe(3);
     expect(HEADER_ROW).toBe(5);
   });
 
