@@ -168,6 +168,79 @@ describe('atLeast helper', () => {
   });
 });
 
+// `projects-admin` is orthogonal to the rank ladder, not a rung in it: it grants
+// the project-reference capability and confers no rank. These tests are the guard
+// against it silently acquiring a rank-gated action later.
+const projectsAdmin = { user_id: 'pa@navapbc.com', role: 'projects-admin' };
+
+describe('can — manage:project-reference', () => {
+  it('projects-admin is granted the capability', () => {
+    expect(can(projectsAdmin, 'manage:project-reference')).toBe(true);
+  });
+  it('admin is granted the capability', () => {
+    expect(can(admin, 'manage:project-reference')).toBe(true);
+  });
+  it('maintain is denied the capability', () => {
+    expect(can(maintain, 'manage:project-reference')).toBe(false);
+  });
+  it('user is denied the capability', () => {
+    expect(can(user, 'manage:project-reference')).toBe(false);
+  });
+  it('an unauthenticated caller is denied the capability', () => {
+    expect(can(null, 'manage:project-reference')).toBe(false);
+  });
+});
+
+describe('can — projects-admin is denied every privileged action', () => {
+  // Asserted individually, not in aggregate, so an action added to a rank-gated
+  // set in future cannot silently leak to this role.
+  const PRIVILEGED = [
+    'approve:skill',
+    'reject:skill',
+    'edit:any-skill',
+    'manage:plugins',
+    'manage:enterprise',
+    'read:users',
+    'set:role',
+    'read:audit',
+    'delete:skill',
+    'delete:plugin',
+  ];
+  for (const action of PRIVILEGED) {
+    it(`denies ${action}`, () => {
+      expect(can(projectsAdmin, action)).toBe(false);
+    });
+  }
+});
+
+describe('can — projects-admin retains the baseline user floor', () => {
+  // "Grants these two tabs and nothing else" means nothing else *privileged*.
+  // The permission module grants these unconditionally to any signed-in user,
+  // so the floor is deliberate — asserting it stops a future implementer from
+  // "fixing" what looks like a leak.
+  it('can submit a skill', () => {
+    expect(can(projectsAdmin, 'create:skill')).toBe(true);
+  });
+  it('can read an approved public skill', () => {
+    expect(can(projectsAdmin, 'read:skill', publicApproved)).toBe(true);
+  });
+  it('can update a skill it created', () => {
+    expect(can(projectsAdmin, 'update:skill', { created_by: projectsAdmin.user_id })).toBe(true);
+  });
+  it('cannot update a skill someone else created', () => {
+    expect(can(projectsAdmin, 'update:skill', { created_by: 'other@navapbc.com' })).toBe(false);
+  });
+});
+
+describe('atLeast — projects-admin sits outside the ladder', () => {
+  it('is not at least maintain', () => {
+    expect(atLeast(projectsAdmin, 'maintain')).toBe(false);
+  });
+  it('is not at least admin', () => {
+    expect(atLeast(projectsAdmin, 'admin')).toBe(false);
+  });
+});
+
 describe('can — unknown action returns false', () => {
   it('user returns false for unrecognised action', () => {
     expect(can(user, 'nonexistent:action')).toBe(false);

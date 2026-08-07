@@ -143,6 +143,8 @@ data "aws_iam_policy_document" "lambda_api_policy" {
       "${aws_dynamodb_table.audit_log.arn}/index/*",
       aws_dynamodb_table.analytics_events.arn,
       "${aws_dynamodb_table.analytics_events.arn}/index/*",
+      aws_dynamodb_table.project_reference.arn,
+      "${aws_dynamodb_table.project_reference.arn}/index/*",
     ]
   }
 }
@@ -174,13 +176,14 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      JWT_SECRET_PARAM     = aws_ssm_parameter.jwt_secret_lambda.name
-      SKILLS_TABLE         = aws_dynamodb_table.skills.name
-      PLUGINS_TABLE        = aws_dynamodb_table.plugins.name
-      USERS_TABLE          = aws_dynamodb_table.users.name
-      AUDIT_TABLE          = aws_dynamodb_table.audit_log.name
-      ANALYTICS_TABLE      = aws_dynamodb_table.analytics_events.name
-      ALLOWED_EMAIL_DOMAIN = var.allowed_email_domain
+      JWT_SECRET_PARAM        = aws_ssm_parameter.jwt_secret_lambda.name
+      SKILLS_TABLE            = aws_dynamodb_table.skills.name
+      PLUGINS_TABLE           = aws_dynamodb_table.plugins.name
+      USERS_TABLE             = aws_dynamodb_table.users.name
+      AUDIT_TABLE             = aws_dynamodb_table.audit_log.name
+      ANALYTICS_TABLE         = aws_dynamodb_table.analytics_events.name
+      PROJECT_REFERENCE_TABLE = aws_dynamodb_table.project_reference.name
+      ALLOWED_EMAIL_DOMAIN    = var.allowed_email_domain
     }
   }
 }

@@ -18,7 +18,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
 }));
 
 // Must import AFTER mocks are set up
-const { getOrCreateUser, upsertUser } = await import('../../../functions/api/lib/dynamo.mjs');
+const { getOrCreateUser, upsertUser, tables } = await import('../../../functions/api/lib/dynamo.mjs');
 
 const USER = { user_id: 'test@navapbc.com', email: 'test@navapbc.com', name: 'Test', avatar_url: null };
 
@@ -54,6 +54,31 @@ describe('getOrCreateUser', () => {
       .mockResolvedValueOnce({ Item: undefined })
       .mockRejectedValueOnce(new Error('DynamoDB timeout'));
     await expect(getOrCreateUser(USER)).rejects.toThrow('DynamoDB timeout');
+  });
+});
+
+describe('tables.projectReference', () => {
+  it('returns the configured table name', () => {
+    const prev = process.env.PROJECT_REFERENCE_TABLE;
+    process.env.PROJECT_REFERENCE_TABLE = 'skills-hub-project-reference-staging';
+    try {
+      expect(tables.projectReference()).toBe('skills-hub-project-reference-staging');
+    } finally {
+      if (prev === undefined) delete process.env.PROJECT_REFERENCE_TABLE;
+      else process.env.PROJECT_REFERENCE_TABLE = prev;
+    }
+  });
+
+  // Matches every other accessor: a missing variable surfaces later as a
+  // DynamoDB error naming the table, not as a module-load crash.
+  it('returns undefined when the variable is unset, rather than throwing', () => {
+    const prev = process.env.PROJECT_REFERENCE_TABLE;
+    delete process.env.PROJECT_REFERENCE_TABLE;
+    try {
+      expect(tables.projectReference()).toBeUndefined();
+    } finally {
+      if (prev !== undefined) process.env.PROJECT_REFERENCE_TABLE = prev;
+    }
   });
 });
 

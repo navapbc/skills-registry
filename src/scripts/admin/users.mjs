@@ -19,9 +19,10 @@ export async function load(panel, ctx) {
             <td class="py-2 text-gray-500">${escapeHtml(u.email ?? '')}</td>
             <td class="py-2">
               <select class="role-select text-xs border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-plum-300">
-                <option value="user"     ${u.role === 'user'     ? 'selected' : ''}>user</option>
-                <option value="maintain" ${u.role === 'maintain' ? 'selected' : ''}>maintain</option>
-                <option value="admin"    ${u.role === 'admin'    ? 'selected' : ''}>admin</option>
+                <option value="user"           ${u.role === 'user'           ? 'selected' : ''}>user</option>
+                <option value="maintain"       ${u.role === 'maintain'       ? 'selected' : ''}>maintain</option>
+                <option value="admin"          ${u.role === 'admin'          ? 'selected' : ''}>admin</option>
+                <option value="projects-admin" ${u.role === 'projects-admin' ? 'selected' : ''}>projects-admin</option>
               </select>
             </td>
             <td class="py-2 text-gray-400 text-xs">${escapeHtml(u.last_seen_at ? new Date(u.last_seen_at).toLocaleDateString() : '')}</td>

@@ -9,10 +9,18 @@ import { load as loadValidate } from './validate.mjs';
 import { load as loadUsers } from './users.mjs';
 import { load as loadAudit } from './audit.mjs';
 
+// Curation roles only. This is an allowlist rather than a blocklist on purpose:
+// gating on `role === 'user'` admitted every other role, so a capability role such
+// as `projects-admin` would land on this page and watch all seven tab loaders 403
+// in turn. Capability roles have their own pages; anything not listed here goes home.
+const ADMIN_PAGE_ROLES = ['maintain', 'admin'];
+
+export const canAccessAdminPage = (me) => ADMIN_PAGE_ROLES.includes(me?.role);
+
 export async function initAdmin() {
   // The __user cookie only has name/email/picture, not role — fetch it.
   const me = await fetchApi('/users/me').catch(() => null);
-  if (!me || me.role === 'user') {
+  if (!canAccessAdminPage(me)) {
     window.location.href = '/';
     return;
   }

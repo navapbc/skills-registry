@@ -1,5 +1,5 @@
 import { ddb, tables, GetCommand, PutCommand, UpdateCommand, DeleteCommand, ScanCommand } from '../lib/dynamo.mjs';
-import { can } from '../lib/permissions.mjs';
+import { can, ASSIGNABLE_ROLES } from '../lib/permissions.mjs';
 import { writeAudit } from '../lib/audit.mjs';
 import { aggregateAnalytics } from '../lib/analytics.mjs';
 
@@ -183,9 +183,8 @@ export function adminRoutes(app) {
     if (!can(user, 'set:role')) return c.json({ error: 'Forbidden' }, 403);
 
     const body = await c.req.json().catch(() => null);
-    const VALID = new Set(['user', 'maintain', 'admin']);
-    if (!body?.role || !VALID.has(body.role)) {
-      return c.json({ error: 'role must be "user", "maintain", or "admin"' }, 400);
+    if (!body?.role || !ASSIGNABLE_ROLES.includes(body.role)) {
+      return c.json({ error: `role must be one of: ${ASSIGNABLE_ROLES.join(', ')}` }, 400);
     }
 
     const targetId = decodeURIComponent(c.req.param('id'));
