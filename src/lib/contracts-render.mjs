@@ -500,6 +500,7 @@ export function renderContractDetail(contract, postureById, capturedAt) {
              Under contract <code class="text-xs">${escapeHtml(contract.contract_num)}</code>
            </p>`
         : ''}
+      ${termsDetail}
     </div>
 
     <div class="space-y-4">
@@ -509,13 +510,15 @@ export function renderContractDetail(contract, postureById, capturedAt) {
         <h2 class="text-sm font-semibold text-gray-900 m-0 mb-3">Details</h2>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 m-0">${fields}</dl>
       </section>
+
+      ${renderPostureSection(contract, posture)}
+      ${CLIENT_ASK_SCRIPT}
+
       <section aria-label="Policy and AI use" class="rounded-lg p-4 border border-gray-200 bg-white">
         <h2 class="text-sm font-semibold text-gray-900 m-0 mb-1">Policy and AI use</h2>
         <dl class="divide-y divide-gray-100 m-0">${narrative}</dl>
       </section>
-      ${renderPostureSection(contract, posture)}
-      ${CLIENT_ASK_SCRIPT}
-      ${termsDetail}
+
       ${renderProjectSection(contract)}
       ${clause}
     </div>
