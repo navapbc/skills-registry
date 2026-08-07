@@ -236,9 +236,13 @@ describe('renderContractDetail', () => {
       .toBeLessThan(html.indexOf('aria-label="Policy and AI use"'));
   });
 
-  it('omits the narrative section when the survey answered none of it', () => {
+  // The section is a fixed part of the page. A record that answered none of it
+  // still shows every label, so a reader can see what the survey did not cover.
+  it('keeps the narrative section even when the survey answered none of it', () => {
     const html = renderContractDetail(contract(), byId, null);
-    expect(html).not.toContain('aria-label="Policy and AI use"');
+    expect(html).toContain('aria-label="Policy and AI use"');
+    expect(html).toContain('Agency review process');
+    expect(html).toContain('None listed');
   });
 
   it('escapes narrative values, which are free text', () => {
@@ -279,6 +283,32 @@ describe('renderContractDetail', () => {
     });
   });
 
+  describe('the AI tools row', () => {
+    const toolsRow = (tools) => renderContractDetail(contract({ tools }), byId, null);
+
+    it('lists the tools when the survey names any', () => {
+      expect(toolsRow('Copilot, Claude')).toContain('Copilot, Claude');
+    });
+
+    // On a page about whether AI may be used, "none recorded" is a fact worth
+    // stating rather than one to infer from a row that is not there.
+    it('states that none are listed rather than dropping the row', () => {
+      const html = toolsRow('');
+      expect(html).toContain('AI tools used');
+      expect(html).toContain('None listed');
+    });
+
+    // "N/A" is an answer someone typed. Rewriting it would hide what the record
+    // says; only an empty cell is genuinely unanswered.
+    it('shows a literal N/A as written rather than rewriting it', () => {
+      expect(toolsRow('N/A')).toContain('N/A');
+    });
+
+    it('does not mistake a real tool name for an absent answer', () => {
+      expect(toolsRow('NAVA Assistant')).toContain('NAVA Assistant');
+    });
+  });
+
   describe("the Nava AI policy row", () => {
     it('appends the policy link after the survey answer', () => {
       const html = renderContractDetail(contract({ nava_policy: 'Yes' }), byId, null);
@@ -293,9 +323,12 @@ describe('renderContractDetail', () => {
       expect(html.indexOf('No program policy')).toBeLessThan(html.indexOf('Open policy'));
     });
 
-    it('shows nothing when the survey left the answer blank', () => {
+    // The policy exists whether or not this row mentions it, so a reader who sees
+    // only "None listed" must still have somewhere to go.
+    it('links the policy even when the survey left the answer blank', () => {
       const html = renderContractDetail(contract({ nava_policy: '' }), byId, null);
-      expect(html).not.toContain('Open policy');
+      expect(html).toContain('Open policy');
+      expect(html).toContain('None listed');
     });
   });
 
@@ -320,7 +353,9 @@ describe('renderContractDetail', () => {
     it('leaves the name unlinked when the project has no space key', () => {
       const html = withProject({ project_index_code: '' });
       expect(html).toContain('DOJ Civil Rights Portal');
-      expect(html).not.toContain('/wiki/spaces/');
+      // The fixed Nava policy link also lives under /wiki/spaces/, so this asserts
+      // no anchor wraps the project name rather than no Confluence URL at all.
+      expect(html).not.toContain('>DOJ Civil Rights Portal</a>');
     });
   });
 
@@ -346,18 +381,19 @@ describe('renderContractDetail', () => {
     expect(html).toContain('Other Person');
   });
 
-  it('omits the manager rows the sheet leaves blank', () => {
+  it('keeps the manager rows the sheet leaves blank, marked as unlisted', () => {
     const html = renderContractDetail(
       contract({ resolved_project: { ...project, program_manager: '', nava_contract_pp: '' } }),
       byId, null,
     );
-    expect(html).not.toContain('Project program manager');
-    expect(html).not.toContain('Contracts program manager');
+    expect(html).toContain('Project program manager');
+    expect(html).toContain('Contracts program manager');
+    expect(html).toContain('None listed');
   });
 
-  it('omits an empty archetype row rather than showing a blank label', () => {
+  it('labels an empty archetype row rather than dropping it', () => {
     const html = renderContractDetail(contract({ resolved_project: project }), byId, null);
-    expect(html).not.toContain('Additional archetype');
+    expect(html).toContain('Additional archetype');
   });
 
   it('marks the project link as missing when it did not resolve', () => {
@@ -380,10 +416,13 @@ describe('renderContractDetail', () => {
     expect(html.indexOf('AI SILENT')).toBeLessThan(html.indexOf('<details'));
   });
 
-  it('omits rows for fields the survey left empty', () => {
+  // A missing row is indistinguishable from a field the page does not show, so
+  // every label stays and the absent value is named.
+  it('keeps rows for fields the survey left empty', () => {
     const html = renderContractDetail(contract({ notes: '', customer: '' }), byId, null);
-    expect(html).not.toContain('>Notes<');
-    expect(html).not.toContain('>Customer<');
+    expect(html).toContain('>Notes<');
+    expect(html).toContain('>Customer<');
+    expect(html).toContain('None listed');
   });
 
   it('offers no control that mutates data', () => {

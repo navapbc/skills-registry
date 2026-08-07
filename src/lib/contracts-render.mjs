@@ -188,12 +188,37 @@ export function renderUnclassifiedToggle(hiddenCount, includeUnclassified, postu
   }</button>`;
 }
 
-const row = (label, value, render = escapeHtml) => (value
-  ? `<div class="flex flex-col gap-0.5">
-       <dt class="text-xs text-gray-400">${escapeHtml(label)}</dt>
-       <dd class="text-sm text-gray-800 m-0 whitespace-pre-line">${render(value)}</dd>
-     </div>`
-  : '');
+const rowShell = (label, body) => `<div class="flex flex-col gap-0.5">
+     <dt class="text-xs text-gray-400">${escapeHtml(label)}</dt>
+     <dd class="text-sm text-gray-800 m-0 whitespace-pre-line">${body}</dd>
+   </div>`;
+
+/** Styled unlike a real value, so an absent answer never reads as one. */
+const NONE_LISTED = '<span class="text-gray-400 italic">None listed</span>';
+
+const isBlank = (value) => !value || !String(value).trim();
+
+/**
+ * The default renderer for any field: the value as written, or "None listed".
+ *
+ * Only a genuinely empty cell becomes the placeholder. Whatever the sheet holds is
+ * shown as written, including a literal "N/A" — that is the answer someone typed
+ * into the survey, and rewriting it would hide what the record actually says.
+ *
+ * Renderers that build markup take a blank value themselves rather than being
+ * skipped, so a field can still show a fixed link beside an absent answer.
+ */
+const plain = (value) => (isBlank(value) ? NONE_LISTED : escapeHtml(value));
+
+/**
+ * A row in the two-column details grid.
+ *
+ * Every field renders, blank or not. Dropping empty rows made the grid a different
+ * shape on every record, and left a reader unable to tell "the survey has no answer
+ * here" from "this page does not show that field". An unanswered field is a fact
+ * about the survey's coverage — 82 of 119 records are unclassified — so it is said.
+ */
+const row = (label, value, render = plain) => rowShell(label, render(value));
 
 const CONFLUENCE_SPACES = 'https://navasage.atlassian.net/wiki/spaces/';
 
@@ -206,7 +231,7 @@ const CONFLUENCE_SPACES = 'https://navasage.atlassian.net/wiki/spaces/';
  * plain text unless there is a key to link it to.
  */
 function renderProjectNameLink(name, spaceKey) {
-  if (!spaceKey) return escapeHtml(name);
+  if (isBlank(name) || isBlank(spaceKey)) return plain(name);
   const href = CONFLUENCE_SPACES + encodeURIComponent(spaceKey.trim());
   return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"
     class="text-plum-700 underline">${escapeHtml(name)}</a>`;
@@ -222,9 +247,13 @@ const NAVA_POLICY_URL = `${CONFLUENCE_SPACES}NH/pages/763494410/AI+Tool+Use+Poli
  * without telling them where. The link is a fixed destination rather than anything
  * the sheet supplies, so it is appended rather than substituted — the survey's
  * answer is still what the record says, and the link is what to read next.
+ *
+ * It is appended to an unanswered row too. The policy exists whether or not this
+ * survey row mentions it, and a reader who sees only "None listed" would conclude
+ * there is nothing to read.
  */
 function renderNavaPolicy(value) {
-  return `${escapeHtml(value)}
+  return `${plain(value)}
     <a href="${NAVA_POLICY_URL}" target="_blank" rel="noopener noreferrer"
       class="block mt-1 text-plum-700 underline">Open policy</a>`;
 }
@@ -237,13 +266,13 @@ function renderNavaPolicy(value) {
  * height with it, so a one-line value beside a six-line one reads as a layout bug.
  * These rows are also rule-separated: without a divider, consecutive multiline
  * values run together and the label is the only cue that a new field started.
+ *
+ * Blank values render as "None listed", on the same reasoning as `row`.
  */
-const stackedRow = (label, value, render = escapeHtml) => (value
-  ? `<div class="py-3 first:pt-0 last:pb-0">
-       <dt class="text-xs text-gray-400">${escapeHtml(label)}</dt>
-       <dd class="text-sm text-gray-800 mt-1 m-0 whitespace-pre-line">${render(value)}</dd>
-     </div>`
-  : '');
+const stackedRow = (label, value, render = plain) => `<div class="py-3 first:pt-0 last:pb-0">
+     <dt class="text-xs text-gray-400">${escapeHtml(label)}</dt>
+     <dd class="text-sm text-gray-800 mt-1 m-0 whitespace-pre-line">${render(value)}</dd>
+   </div>`;
 
 /**
  * A survey-sourced URL, linked only when it is one.
@@ -261,7 +290,8 @@ const stackedRow = (label, value, render = escapeHtml) => (value
  * The link text stays the value the sheet holds, so a reader can see where it goes.
  */
 function renderPolicyLink(value) {
-  const raw = value.trim();
+  if (isBlank(value)) return NONE_LISTED;
+  const raw = String(value).trim();
   const candidate = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
   let url;
   try {
@@ -396,7 +426,8 @@ const NARRATIVE_FIELDS = [
 
 export function renderContractDetail(contract, postureById, capturedAt) {
   const posture = postureById?.get(contract.posture_id) ?? null;
-  const fields = DETAIL_FIELDS.map(([label, key]) => row(label, contract[key])).join('');
+  const fields = DETAIL_FIELDS
+    .map(([label, key, render]) => row(label, contract[key], render)).join('');
   const narrative = NARRATIVE_FIELDS
     .map(([label, key, render]) => stackedRow(label, contract[key], render)).join('');
 
@@ -437,18 +468,16 @@ export function renderContractDetail(contract, postureById, capturedAt) {
     </div>
 
     <div class="space-y-4">
-      ${fields
-        ? `<section aria-label="Details" class="rounded-lg p-4 border border-gray-200 bg-white">
-             <h2 class="text-sm font-semibold text-gray-900 m-0 mb-3">Details</h2>
-             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 m-0">${fields}</dl>
-           </section>`
-        : ''}
-      ${narrative
-        ? `<section aria-label="Policy and AI use" class="rounded-lg p-4 border border-gray-200 bg-white">
-             <h2 class="text-sm font-semibold text-gray-900 m-0 mb-1">Policy and AI use</h2>
-             <dl class="divide-y divide-gray-100 m-0">${narrative}</dl>
-           </section>`
-        : ''}
+      <!-- Both sections render unconditionally: every field in them now renders,
+           so every record shows the same shape and the same set of labels. -->
+      <section aria-label="Details" class="rounded-lg p-4 border border-gray-200 bg-white">
+        <h2 class="text-sm font-semibold text-gray-900 m-0 mb-3">Details</h2>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 m-0">${fields}</dl>
+      </section>
+      <section aria-label="Policy and AI use" class="rounded-lg p-4 border border-gray-200 bg-white">
+        <h2 class="text-sm font-semibold text-gray-900 m-0 mb-1">Policy and AI use</h2>
+        <dl class="divide-y divide-gray-100 m-0">${narrative}</dl>
+      </section>
       ${renderPostureSection(contract, posture)}
       ${termsDetail}
       ${renderProjectSection(contract)}
