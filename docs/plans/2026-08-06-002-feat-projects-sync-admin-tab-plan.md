@@ -275,7 +275,24 @@ graph LR
 
 **Verification:**
 - A Terraform plan shows one table added, one Lambda environment variable added, a new read-only Lambda DynamoDB statement, the deploy role gaining a projects-table grant, and **no changes to any existing table or index**.
-- The plan shows **no change to `aws_iam_group_policy.github_automated_deploys`**. If it does, the grant landed in the shared policy document instead of the role-only one, and humans with CLI deploy access just gained delete rights on contract data.
+- **Do not verify the human-group grant from the plan — it cannot be done there.** `data.aws_iam_policy_document.github_deploy` references `aws_lambda_function.api.arn`, and this unit changes that function's environment, so the data source is re-read during apply and both of its attachments — `aws_iam_role_policy.github_deploy` *and* `aws_iam_group_policy.github_automated_deploys` — render as `(known after apply)`. That diff reads as "remove every statement", which is Terraform reporting an unknown value, not a change. Every plan touching the API Lambda produces it.
+
+  Verify these three things instead:
+
+  1. **At review time**, that the diff to `terraform/iam.tf` is purely additive — a new `data.aws_iam_policy_document.github_deploy_projects` and a new `aws_iam_role_policy` — and that no line of the shared `github_deploy` document changed. This is the actual design invariant.
+  2. **At review time**, that the new policy resource sets `role = ...` and nothing sets a `group`.
+  3. **Across the apply**, that the live group policy is byte-identical. Capture it before and diff after:
+
+     ```
+     aws iam get-group-policy --group-name github-automated-deploys \
+       --policy-name deploy-policy --query PolicyDocument --output json > before.json
+     # ...terraform apply...
+     diff <(jq -S . before.json) <(jq -S . after.json)
+     ```
+
+     Expect four statements — S3Deploy, CloudFrontInvalidate, LambdaDeploy, DynamoDBSync — with no `dynamodb:DeleteItem` and no projects-table ARN, unchanged on both sides.
+
+- Note the environment asymmetry: `manage_shared_iam` is `true` in staging and `false` in prod, so the group and its policy exist only in staging state. This check is a staging check; in prod the resource has `count = 0` and cannot appear either way.
 
 ---
 
