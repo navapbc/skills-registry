@@ -1,7 +1,7 @@
 ---
 title: "feat: Projects admin page for archetypes and policy guidance"
 type: feat
-status: active
+status: completed
 date: 2026-08-06
 origin: docs/brainstorms/2026-08-06-projects-admin-archetypes-policy-requirements.md
 ---
