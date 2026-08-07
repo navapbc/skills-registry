@@ -2,6 +2,7 @@ import { fetchApi } from '../../lib/api.mjs';
 import { createTabController } from '../admin/controller.mjs';
 import { load as loadArchetypes } from './archetypes.mjs';
 import { load as loadPostures } from './postures.mjs';
+import { load as loadProjects } from './projects.mjs';
 
 // Site admins are superusers everywhere; projects-admin holders have this page
 // and nothing else privileged. Any other role is refused.
@@ -26,7 +27,7 @@ export async function initProjectsAdmin() {
 
   document.getElementById('projects-admin-root')?.classList.remove('hidden');
 
-  const loaders = { archetypes: loadArchetypes, postures: loadPostures };
+  const loaders = { archetypes: loadArchetypes, postures: loadPostures, projects: loadProjects };
   const { activateTab } = createTabController({ loaders, role: me.role });
 
   document.querySelectorAll('.tab-btn').forEach((btn) => {
