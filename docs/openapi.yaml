@@ -38,6 +38,8 @@ tags:
     description: Admin and moderation endpoints
   - name: project-reference
     description: Contract Explorer reference data — archetypes and policy postures
+  - name: projects
+    description: Projects mirrored from the Nava projects sheet (read-only)
 
 components:
   securitySchemes:
@@ -277,6 +279,89 @@ components:
         timestamp:
           type: string
           format: date-time
+
+    ProjectsSyncState:
+      type: object
+      description: >
+        State of the last projects sync. Three states rather than two: an
+        in-progress marker means a run wrote projects and then died, so the table
+        is mid-flight. Reporting that as complete would vouch for a half-written
+        table; reporting it as never-synced would label a populated table empty.
+      required: [state]
+      properties:
+        state:
+          type: string
+          enum: [never_synced, in_progress, complete]
+        last_run_at:
+          type: [string, "null"]
+          format: date-time
+        row_count:
+          type: [integer, "null"]
+          description: Rows read from the sheet on the last completed run. Also the safety gate's baseline.
+        created:
+          type: [integer, "null"]
+        updated:
+          type: [integer, "null"]
+        deleted:
+          type: [integer, "null"]
+        new_columns:
+          type: array
+          description: >
+            Headers that appeared since the previous run, recorded by the sync —
+            the only thing that sees both header sets. A renamed column is
+            indistinguishable from a new one, which is the point: a rename can
+            re-admit a column the sync's exclusion list was dropping.
+          items:
+            type: string
+
+    ProjectsDrift:
+      type: object
+      description: >
+        Archetype values in the sheet checked against the archetype records.
+        Resolved on read, so adding a missing archetype clears its findings on the
+        next request rather than the next sync.
+      required: [archetype_count, unresolved, missing]
+      properties:
+        archetype_count:
+          type: integer
+          description: Archetype records compared against. Zero means the seed has not run.
+        unresolved:
+          type: array
+          description: >
+            A value is present and matches no archetype label — a typo or a
+            rename. This is what fails the scheduled sync.
+          items:
+            type: object
+            required: [project_code, column, raw_value]
+            properties:
+              project_code:
+                type: string
+                example: FC026
+              project_name:
+                type: string
+              column:
+                type: string
+                example: Archetype (Primary)
+              raw_value:
+                type: string
+                description: The sheet's exact string, never the normalized comparison form.
+                example: Prodcut Team
+        missing:
+          type: array
+          description: >
+            The primary archetype is empty — an unassigned new project rather than
+            an error. Carries no raw_value because there is nothing to reproduce,
+            and only warns rather than failing a sync.
+          items:
+            type: object
+            required: [project_code, column]
+            properties:
+              project_code:
+                type: string
+              project_name:
+                type: string
+              column:
+                type: string
 
     ProjectReferenceRecord:
       type: object
@@ -1410,6 +1495,98 @@ paths:
                 $ref: "#/components/schemas/Error"
         "404":
           description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/projects:
+    get:
+      tags: [projects]
+      summary: List synced projects with sync state and archetype drift
+      description: >
+        Projects mirrored from the "All Columns (Full View)" tab of the Nava
+        Projects and Programs Database. Read-only — the sheet is the only write
+        surface, and the API Lambda's IAM grant on this table omits write actions.
+        Requires projects-admin or admin, reads included.
+
+
+        One endpoint rather than two, so the drift summary and the project table
+        cannot disagree about how fresh the data is.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Projects, column metadata, sync state, and drift findings
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [projects, column_groups, column_headers, sync, drift]
+                properties:
+                  projects:
+                    type: array
+                    description: >
+                      One object per project. Attribute names are slugs derived
+                      from the sheet headers, so the property set follows the
+                      sheet rather than a fixed schema.
+                    items:
+                      type: object
+                      required: [project_code]
+                      properties:
+                        project_code:
+                          type: string
+                          description: From the sheet's "Database code" column.
+                          example: FC026
+                        project_name:
+                          type: string
+                          example: CO COBEES
+                        archetype_primary:
+                          type: string
+                          example: Product Team
+                        archetype_additional:
+                          type: string
+                          description: Comma-separated; resolved per value.
+                          example: Strategic Consulting Team, Data Modernization Team
+                        first_seen_at:
+                          type: string
+                          format: date-time
+                        last_synced_at:
+                          type: string
+                          format: date-time
+                      additionalProperties:
+                        type: string
+                  column_groups:
+                    type: object
+                    description: >
+                      Group label per stored column, from the row the sheet
+                      declares above its header. Columns preceding the first
+                      label are grouped as IDENTITY.
+                    additionalProperties:
+                      type: string
+                    example:
+                      database_code: IDENTITY
+                      archetype_primary: FRAMEWORKS
+                  column_headers:
+                    type: object
+                    description: The original sheet header for each stored slug.
+                    additionalProperties:
+                      type: string
+                    example:
+                      database_code: Database code
+                      archetype_primary: Archetype (Primary)
+                  sync:
+                    $ref: "#/components/schemas/ProjectsSyncState"
+                  drift:
+                    $ref: "#/components/schemas/ProjectsDrift"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden — lacks the project-reference capability
           content:
             application/json:
               schema:

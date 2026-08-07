@@ -147,6 +147,22 @@ data "aws_iam_policy_document" "lambda_api_policy" {
       "${aws_dynamodb_table.project_reference.arn}/index/*",
     ]
   }
+
+  # Projects are READ-ONLY to the API. Deliberately a separate statement rather
+  # than another ARN on the one above: that statement's action list includes
+  # PutItem/UpdateItem/DeleteItem for every table it names, so adding the
+  # projects ARN there would make the API able to rewrite synced project data.
+  #
+  # The sheet is the only write surface for projects (see the plan's R17). This
+  # statement is what enforces that in infrastructure rather than by the mere
+  # absence of a write route — a future write route fails against IAM instead of
+  # quietly succeeding.
+  statement {
+    sid       = "DynamoDBProjectsRead"
+    effect    = "Allow"
+    actions   = ["dynamodb:GetItem", "dynamodb:Query"]
+    resources = [aws_dynamodb_table.projects.arn]
+  }
 }
 
 resource "aws_iam_role" "lambda_api" {
@@ -183,6 +199,7 @@ resource "aws_lambda_function" "api" {
       AUDIT_TABLE             = aws_dynamodb_table.audit_log.name
       ANALYTICS_TABLE         = aws_dynamodb_table.analytics_events.name
       PROJECT_REFERENCE_TABLE = aws_dynamodb_table.project_reference.name
+      PROJECTS_TABLE          = aws_dynamodb_table.projects.name
       ALLOWED_EMAIL_DOMAIN    = var.allowed_email_domain
     }
   }

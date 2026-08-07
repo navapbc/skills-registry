@@ -21,6 +21,10 @@ export const tables = {
   analyticsEvents: () => process.env.ANALYTICS_TABLE,
   // Archetypes and policy postures share one table, keyed by entity_type.
   projectReference: () => process.env.PROJECT_REFERENCE_TABLE,
+  // Projects mirrored from the Google Sheet, plus one sync-metadata record,
+  // keyed by record_type. Read-only from the API — the sheet is the write
+  // surface, and the Lambda's IAM grant on this table omits write actions.
+  projects: () => process.env.PROJECTS_TABLE,
 };
 
 // Fast path for auth middleware: GetItem (read) on every request, write only on first login.

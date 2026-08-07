@@ -128,6 +128,40 @@ resource "aws_iam_role_policy" "github_deploy" {
   policy = data.aws_iam_policy_document.github_deploy.json
 }
 
+# The projects sync is the first CI job in this repo that DELETES rows, and this
+# grant is deliberately NOT part of data.aws_iam_policy_document.github_deploy
+# above.
+#
+# That document is attached twice: to the OIDC role (aws_iam_role_policy
+# .github_deploy) and to the human IAM group (aws_iam_group_policy
+# .github_automated_deploys, further down this file). Putting DeleteItem there
+# would hand every human with manual CLI deploy access direct delete rights on
+# non-public contract data, outside the sync's safety gate and reconcile diff
+# entirely. Resource scoping does not help — the problem is the principal set,
+# not the resource set.
+#
+# So: a second document, attached to the role alone. Anything added here reaches
+# CI only. Do not merge it back into the shared document.
+data "aws_iam_policy_document" "github_deploy_projects" {
+  statement {
+    sid    = "DynamoDBProjectsSync"
+    effect = "Allow"
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:GetItem",
+      "dynamodb:Query",
+      "dynamodb:DeleteItem",
+    ]
+    resources = [aws_dynamodb_table.projects.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "github_deploy_projects" {
+  name   = "deploy-policy-projects"
+  role   = aws_iam_role.github_deploy.id
+  policy = data.aws_iam_policy_document.github_deploy_projects.json
+}
+
 # -------------------------------------------------------------------------
 # IAM group for humans who need manual CLI deploy access
 # Add users to this group; they get the same scoped permissions as the

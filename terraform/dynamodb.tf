@@ -108,6 +108,40 @@ resource "aws_dynamodb_table" "project_reference" {
   }
 }
 
+# Projects mirrored from the "All Columns (Full View)" tab of the Nava projects
+# sheet, plus one metadata record describing the last sync run. Partitioned by
+# record_type so the metadata record can never be mistaken for a project, and so
+# each read is a single Query on one partition — no GSI needed.
+#
+# ADMISSION RULE (deliberately narrower than project_reference's): only record
+# types wholly derived from an external sync and re-creatable by re-running it
+# may live here. The GitHub deploy role holds DeleteItem on this table, so any
+# hub-authored or human-authored record type must NOT join it — including a
+# future ai-survey, if surveys are filled in through the hub. `contracts` may,
+# if and only if they are sheet-mirrored.
+#
+# No deletion protection, unlike project_reference: that data is admin-authored
+# and unrecoverable, this is fully re-derivable by one workflow run.
+resource "aws_dynamodb_table" "projects" {
+  name         = "${var.project_name}-projects-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "record_type"
+  range_key    = "project_code"
+
+  attribute {
+    name = "record_type"
+    type = "S"
+  }
+  attribute {
+    name = "project_code"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
 resource "aws_dynamodb_table" "users" {
   name         = "${var.project_name}-users-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"

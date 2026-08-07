@@ -179,6 +179,58 @@ Set `status` to `active` or `inactive`. Separate from the update endpoint so the
 
 ---
 
+## Projects
+
+Projects mirrored from the "All Columns (Full View)" tab of the Nava Projects and Programs Database by `scripts/sync-projects.mjs`. The sheet is authoritative and is the only write surface.
+
+Requires `projects-admin` or `admin` — the same capability as project reference data, reads included. These records carry contract names, agencies, offices, and period-of-performance dates.
+
+**Read-only.** There is no create, update, or delete endpoint, and the API Lambda's IAM grant on this table omits write actions, so a write route added later would fail against infrastructure rather than succeed quietly.
+
+### `GET /api/projects`
+
+Everything the Projects admin tab needs in one response — the drift summary and the project table cannot disagree about freshness if they come from the same read.
+
+```json
+{
+  "projects": [
+    { "project_code": "FC026", "project_name": "CO COBEES", "archetype_primary": "Product Team", "...": "" }
+  ],
+  "column_groups":  { "database_code": "IDENTITY", "archetype_primary": "FRAMEWORKS" },
+  "column_headers": { "database_code": "Database code", "archetype_primary": "Archetype (Primary)" },
+  "sync": {
+    "state": "complete",
+    "last_run_at": "2026-08-06T08:00:00.000Z",
+    "row_count": 53,
+    "created": 1, "updated": 2, "deleted": 0,
+    "new_columns": []
+  },
+  "drift": {
+    "archetype_count": 5,
+    "unresolved": [
+      { "project_code": "FC026", "project_name": "CO COBEES", "column": "Archetype (Primary)", "raw_value": "Prodcut Team" }
+    ],
+    "missing": [
+      { "project_code": "LB007", "project_name": "New Project", "column": "Archetype (Primary)" }
+    ]
+  }
+}
+```
+
+Attribute names are slugs derived from the sheet headers; `column_headers` maps each back to the header it came from, and `column_groups` to the group the sheet declares above it. Columns preceding the sheet's first group label are grouped as `IDENTITY`.
+
+`sync.state` is one of:
+
+- `never_synced` — no sync has run. Not an error.
+- `in_progress` — a run wrote projects and then died, so the table is mid-flight and its contents should not be trusted.
+- `complete` — the recorded counts describe a finished run.
+
+`sync.new_columns` lists headers that appeared since the previous run, as recorded by the sync (which is the only thing that sees both header sets). A renamed column is indistinguishable from a new one, which is the point: a rename can re-admit a column the sync's exclusion list was dropping.
+
+`drift.unresolved` and `drift.missing` are deliberately distinct. Unresolved means a value is present and matches no archetype label — a typo or a rename, and what fails the scheduled sync. Missing means the primary archetype is empty, which is an unassigned new project rather than an error, and carries no `raw_value` because there is nothing to reproduce. Deactivated archetype records count as resolved. Values are compared case- and whitespace-insensitively, but `raw_value` is always the sheet's exact string.
+
+---
+
 ## Users
 
 ### `GET /api/users/me`
