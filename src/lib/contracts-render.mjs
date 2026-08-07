@@ -237,10 +237,12 @@ function renderPostureSection(contract, posture) {
 /**
  * The resolved project, when the engagement links to one.
  *
- * "Project program manager" is labelled at length on purpose. The engagement
- * details below carry the survey's own `nava_program_mgr`, and the two are often
- * different people — a bare "Program manager" in both places reads as a
- * contradiction rather than as two facts.
+ * Three managers can appear across this page, so none of them is labelled just
+ * "Program manager": the project's own (`program_manager`), the contracts-side one
+ * (`nava_contract_pp`, whose sheet header names no role a reader would recognise),
+ * and the survey's `nava_program_mgr` in the engagement details below. They are
+ * often different people, and identical labels would read as a contradiction
+ * rather than as three facts.
  */
 function renderProjectSection(contract) {
   if (!contract.resolved_project) {
@@ -264,6 +266,7 @@ function renderProjectSection(contract) {
       ${row('Portfolio', p.portfolio)}
       ${row('Agency', p.agency)}
       ${row('Project program manager', p.program_manager)}
+      ${row('Contracts Program Manager', p.nava_contract_pp)}
       ${row('Archetype', p.archetype_primary)}
       ${row('Additional archetype', p.archetype_additional)}
     </dl>

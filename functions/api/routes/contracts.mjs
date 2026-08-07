@@ -41,10 +41,12 @@ import {
  * archetype fields matter because archetypes carry the AI-opportunity guidance the
  * page is for.
  *
- * `program_manager` names an individual, which is why it was excluded from the sync
- * until now. It is included here on the same basis as `nava_program_mgr`, which this
- * response already carries: the page's reader needs to know who to ask, and the
- * contract-side manager alone leaves the project side unattributed.
+ * `program_manager` and `nava_contract_pp` name individuals, which is why both were
+ * excluded from the sync until now. They are included here on the same basis as
+ * `nava_program_mgr`, which this response already carries: the page's reader needs
+ * to know who to ask, and the contract-side manager alone leaves the project side
+ * unattributed. `nava_contract_pp` is the contracts-side program manager and is
+ * labelled that way on the page rather than by its sheet header.
  */
 const CONTRACT_FIELDS = [
   'contract_id',
@@ -83,6 +85,7 @@ const PROJECT_FIELDS = [
   'portfolio',
   'agency',
   'program_manager',
+  'nava_contract_pp',
   'archetype_primary',
   'archetype_additional',
 ];

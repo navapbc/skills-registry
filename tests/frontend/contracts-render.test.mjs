@@ -184,7 +184,7 @@ describe('renderContractDetail', () => {
   const project = {
     project_code: 'FC001', project_name: 'DOJ Civil Rights Portal', portfolio: 'FEDCIV',
     agency: 'Department of Justice', archetype_primary: 'Product Team', archetype_additional: '',
-    program_manager: 'Nancy Nussear',
+    program_manager: 'Nancy Nussear', nava_contract_pp: 'Priya Contracts',
   };
 
   it('renders the posture label and its guidance steps in order', () => {
@@ -221,23 +221,27 @@ describe('renderContractDetail', () => {
     expect(html).not.toMatch(/no matching project/i);
   });
 
-  // Two managers appear on this page — the project's and the engagement's — and
-  // they are often different people, so the project one is labelled as such.
-  it('shows the project program manager, labelled apart from the contract one', () => {
+  // Three managers can appear on this page and they are often different people,
+  // so each is labelled by which one it is.
+  it('distinguishes the project, contracts, and engagement managers', () => {
     const html = renderContractDetail(
       contract({ resolved_project: project, nava_program_mgr: 'Other Person' }), byId, null,
     );
     expect(html).toContain('Project program manager');
     expect(html).toContain('Nancy Nussear');
+    expect(html).toContain('Contracts Program Manager');
+    expect(html).toContain('Priya Contracts');
     expect(html).toContain('Nava program manager');
     expect(html).toContain('Other Person');
   });
 
-  it('omits the project program manager row when the sheet leaves it blank', () => {
+  it('omits the manager rows the sheet leaves blank', () => {
     const html = renderContractDetail(
-      contract({ resolved_project: { ...project, program_manager: '' } }), byId, null,
+      contract({ resolved_project: { ...project, program_manager: '', nava_contract_pp: '' } }),
+      byId, null,
     );
     expect(html).not.toContain('Project program manager');
+    expect(html).not.toContain('Contracts Program Manager');
   });
 
   it('omits an empty archetype row rather than showing a blank label', () => {

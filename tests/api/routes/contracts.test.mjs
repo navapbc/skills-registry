@@ -79,8 +79,8 @@ const PROJECT = {
   archetype_primary: 'Product Team',
   archetype_additional: '',
   program_manager: 'Nancy Nussear',
+  nava_contract_pp: 'Priya Contracts',
   // Fields the explorer must not publish — projects remain projects-admin-gated.
-  nava_contract_pp: 'Some Partner',
   pop_start: '6/03/2021',
   link_to_program_health: 'https://confluence/secret-health-page',
   vehicle: 'GSA MAS',
@@ -297,10 +297,8 @@ describe('project resolution', () => {
       // Published deliberately: the detail page names who runs the project, on the
       // same basis as the contract's own nava_program_mgr.
       program_manager: 'Nancy Nussear',
+      nava_contract_pp: 'Priya Contracts',
     });
-    // The other people column stays behind the projects-admin gate — mirrored by
-    // the sync, but not projected here.
-    expect(body.contracts[0].resolved_project.nava_contract_pp).toBeUndefined();
   });
 
   it('attaches null when the name resolves to nothing', async () => {
