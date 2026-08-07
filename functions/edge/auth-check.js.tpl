@@ -30,6 +30,7 @@ function rewriteUri(uri) {
   if (uri.indexOf('/category') === 0) return '/category/index.html';
   if (uri.indexOf('/admin') === 0) return '/admin/index.html';
   if (uri.indexOf('/submit') === 0) return '/submit/index.html';
+  if (uri.indexOf('/contracts') === 0) return '/contracts/index.html';
 
   return uri + '/index.html';
 }
