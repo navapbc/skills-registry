@@ -59,6 +59,7 @@ import {
 } from './lib/sheets-client.mjs';
 import { SyncProjectsError } from './lib/sync-projects.mjs';
 import { syncProjects, checkDrift } from './lib/sync-projects-apply.mjs';
+import { buildRunSummary } from './lib/sync-projects-summary.mjs';
 import { SYNC_IN_PROGRESS, SYNC_NEVER } from '../functions/api/lib/projects.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -134,49 +135,7 @@ function writeJobSummary(lines) {
   appendFileSync(path, `${lines.join('\n')}\n`);
 }
 
-function reportDrift(drift) {
-  const lines = ['## Projects sync — archetype drift', ''];
-
-  if (drift.archetypeCount === 0) {
-    lines.push(
-      '> No archetype records exist yet, so every archetype value is unresolved.',
-      '> Run `scripts/seed-project-reference.mjs` before reading anything into these counts.',
-      '',
-    );
-  }
-
-  if (drift.unresolved.length === 0) {
-    lines.push('No unresolved archetype values. ✅', '');
-  } else {
-    lines.push(
-      `**${drift.unresolved.length} unresolved archetype value(s).** Each names a real archetype in`,
-      'neither label nor spelling — fix these in the sheet.',
-      '',
-      '| Project | Column | Value in sheet |',
-      '| --- | --- | --- |',
-      ...drift.unresolved.map(
-        (u) => `| \`${u.project_code}\` ${u.project_name} | ${u.column} | \`${u.raw_value}\` |`,
-      ),
-      '',
-    );
-  }
-
-  // Warned, never failed: an unassigned archetype on a new project is normal
-  // in-progress state, and failing on it would train people to ignore red runs.
-  if (drift.missing.length > 0) {
-    lines.push(
-      `<details><summary>${drift.missing.length} project(s) with no archetype assigned yet ` +
-        '(not a failure)</summary>',
-      '',
-      ...drift.missing.map((m) => `- \`${m.project_code}\` ${m.project_name}`),
-      '',
-      '</details>',
-      '',
-    );
-  }
-
-  writeJobSummary(lines);
-
+function logDrift(drift) {
   for (const u of drift.unresolved) {
     console.error(`  UNRESOLVED  ${u.project_code}  ${u.column} = "${u.raw_value}"`);
   }
@@ -252,23 +211,22 @@ async function main() {
         '  A renamed column is indistinguishable from a new one, so check whether any of\n' +
         '  these is an excluded column that came back under a different name.',
     );
-    writeJobSummary([
-      '## Projects sync — new columns',
-      '',
-      ...report.newColumns.map((c) => `- \`${c}\``),
-      '',
-      'A rename looks identical to a new column here. Check whether any of these is an',
-      'excluded column re-admitted under a new name.',
-      '',
-    ]);
   }
 
+  // The summary is written on every exit path below, including the clean one. A run
+  // that reports nothing looks identical on the Actions page to a run that did
+  // nothing — and since the steady state here is "no drift", the reassuring case is
+  // exactly the one that has to be legible.
+  const summarise = (extra = {}) =>
+    writeJobSummary(buildRunSummary({ env: args.env, report, dryRun: args.dryRun, ...extra }));
+
   if (report.refusal) {
-    writeJobSummary(['## Projects sync — refused', '', report.refusal, '']);
+    summarise();
     fail(report.refusal);
   }
 
   if (args.dryRun) {
+    summarise();
     console.log('\n--dry-run: nothing written.\n');
     return;
   }
@@ -276,6 +234,7 @@ async function main() {
   console.log(`\n  applied.${report.created + report.updated + report.deleted === 0 ? ' (nothing to do)' : ''}`);
 
   if (!args.referenceTable) {
+    summarise();
     console.log(
       '\n  Skipping the archetype drift check: no reference table given.\n' +
         '  Pass --reference-table, or set PROJECT_REFERENCE_TABLE, to enable it.\n',
@@ -287,10 +246,11 @@ async function main() {
   // the tab must resolve on request so an archetype edit clears findings at once,
   // and the run must resolve so a typo reaches a human without a page load. Both
   // call the same rule in functions/api/lib/projects.mjs.
+  //
   // A drift-check failure is reported separately from a sync failure, because by
   // this point the projects have already been written successfully. Letting the
-  // exception escape produced a raw stack trace on a run that had actually done
-  // its job, which reads as "the sync broke" when nothing of the sort happened.
+  // exception escape produced a raw stack trace on a run that had actually done its
+  // job, which reads as "the sync broke" when nothing of the sort happened.
   let drift;
   try {
     drift = await checkDrift({
@@ -300,29 +260,20 @@ async function main() {
       QueryCommand,
     });
   } catch (err) {
-    const message =
+    summarise({ driftError: err.message ?? err });
+    fail(
       `The projects synced successfully, but the archetype drift check could not run: ` +
-      `${err.message ?? err}\n\n` +
-      `  The table is correct — only the alarm failed. Most likely the caller lacks\n` +
-      `  dynamodb:Query on ${args.referenceTable}; see the DynamoDBArchetypeRead\n` +
-      `  statement in terraform/iam.tf.`;
-    writeJobSummary([
-      '## Projects sync — drift check could not run',
-      '',
-      'Projects synced successfully. Only the archetype drift check failed, so this run',
-      'cannot say whether the sheet and the archetype records agree.',
-      '',
-      '```',
-      String(err.message ?? err),
-      '```',
-      '',
-    ]);
-    // Still non-zero: a silently skipped drift alarm is worse than a visible failure.
-    fail(message);
+        `${err.message ?? err}\n\n` +
+        `  The table is correct — only the alarm failed. Most likely the caller lacks\n` +
+        `  dynamodb:Query on ${args.referenceTable}; see the DynamoDBArchetypeRead\n` +
+        `  statement in terraform/iam.tf.`,
+    );
   }
 
+  summarise({ drift });
+
   console.log();
-  reportDrift(drift);
+  logDrift(drift);
 
   if (drift.unresolved.length > 0) {
     fail(
