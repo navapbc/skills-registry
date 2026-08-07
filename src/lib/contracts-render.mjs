@@ -321,7 +321,12 @@ function renderPostureSection(contract, posture) {
     return `<section aria-label="AI posture" class="rounded-lg p-4 border border-gray-200"
       style="background-color: ${escapeHtml(posture.color)}">
       <h2 class="text-sm font-semibold text-gray-900 m-0">${escapeHtml(posture.label)}</h2>
-      ${steps ? `<ol class="mt-3 mb-0 pl-5 space-y-1.5">${steps}</ol>` : ''}
+      ${steps
+        // `list-decimal` is required, not decorative: Tailwind's preflight resets
+        // ol to list-style:none, so an unclassed <ol> renders the guidance as an
+        // unnumbered stack and loses the order the steps are meant to be done in.
+        ? `<ol class="list-decimal mt-3 mb-0 pl-5 space-y-1.5 marker:text-gray-500">${steps}</ol>`
+        : ''}
     </section>`;
   }
 

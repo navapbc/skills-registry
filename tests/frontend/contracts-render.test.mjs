@@ -202,6 +202,15 @@ describe('renderContractDetail', () => {
     expect(html.indexOf('Step one.')).toBeLessThan(html.indexOf('Step two.'));
   });
 
+  // Tailwind's preflight resets ol to list-style:none, so the class is what makes
+  // the steps numbered at all. Without it the guidance reads as an unordered pile
+  // and the order a reader is meant to work through is lost.
+  it('numbers the guidance steps', () => {
+    const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
+    expect(html).toMatch(/<ol[^>]*class="[^"]*list-decimal/);
+    expect(html.match(/<li/g)).toHaveLength(2);
+  });
+
   it('takes the posture colour from the record as an inline style', () => {
     const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
     expect(html).toContain('background-color: #e0f5f0');
