@@ -52,8 +52,16 @@ Two consequences worth knowing before adding either:
 | Manage user roles | ✗ | ✗ | ✓ | ✗ |
 | View audit log | ✗ | ✗ | ✓ | ✗ |
 | Manage archetypes and policy guidance | ✗ | ✗ | ✓ | ✓ |
+| Read synced project data | ✗ | ✗ | ✓ | ✓ |
 
 The first four rows are the baseline floor every signed-in user has. `projects-admin` keeps that floor — "grants one capability and nothing else" means nothing else *privileged*.
+
+**One capability, now spanning two tables and three tabs.** `manage:project-reference` gates the archetypes tab, the policy guidance tab, *and* reads of synced project data — the last of which lives in a separate `projects` table. The action name is therefore narrower than what it grants; it was left unrenamed because renaming a permission action is a wider change than the accuracy is worth. Two consequences worth knowing:
+
+- Anyone who can edit archetypes can also read contract names, agencies, offices, and period-of-performance dates for every project. That was the intent — the same people own both — but it is a single grant, not two.
+- Splitting those audiences later means a permission change as well as a route change, since no separate action exists to hand out.
+
+Project data is **read-only through the API**. There is no write route, and the API Lambda's IAM grant on that table omits write actions, so a write route added later fails against infrastructure rather than succeeding quietly. The Google Sheet is the only write surface.
 
 ---
 
@@ -74,7 +82,7 @@ Maintainers cannot delete skills or plugins, and cannot manage user roles.
 
 ### Projects Admin
 
-Content owners for the Contract Explorer's reference data. A `projects-admin` holder can add and edit delivery archetypes and AI-posture policy guidance from the unlinked `/projects-admin` page, and can do nothing else privileged anywhere in the hub — they cannot open `/admin`, review submissions, or manage plugins or users.
+Content owners for the Contract Explorer's reference data. A `projects-admin` holder can add and edit delivery archetypes and AI-posture policy guidance from the unlinked `/projects-admin` page, and read the project data synced from the Nava projects sheet on that page's Projects tab. They can do nothing else privileged anywhere in the hub — they cannot open `/admin`, review submissions, or manage plugins or users, and they cannot modify project data anywhere.
 
 The page is not linked from any navigation. That is a discoverability measure, not a boundary: the whole site is behind login at the edge, and every read and mutation on this data is authorised server-side.
 

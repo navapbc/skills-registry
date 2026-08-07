@@ -201,6 +201,9 @@ export async function syncProjects({
         updated: diff.updates.length,
         deleted: diff.deletes.length,
         column_names: shaped.columnNames,
+        // Stored rather than derived at read time: only this run sees both the
+        // previous and current header sets, so the read path cannot recompute it.
+        new_columns: newColumns,
         column_groups: shaped.columnGroups,
         column_headers: shaped.columnHeaders,
       },
