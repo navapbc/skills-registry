@@ -127,7 +127,10 @@ export function contractsRoutes(app) {
         // null rather than omitted: the page distinguishes "no posture recorded"
         // from "posture names no record", and both from a resolved one.
         posture_id: posture?.id ?? null,
-        project: project ? project_summary(project) : null,
+        // NOT `project`: the survey has its own `project` column holding the
+        // engagement name, and spreading a resolved object over it would replace
+        // every card's title with an object.
+        resolved_project: project ? project_summary(project) : null,
       };
     });
 

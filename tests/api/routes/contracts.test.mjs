@@ -267,7 +267,7 @@ describe('project resolution', () => {
     const headers = as('user');
     queueReads();
     const body = await (await app.request('/api/contracts', { headers })).json();
-    expect(body.contracts[0].project).toMatchObject({
+    expect(body.contracts[0].resolved_project).toMatchObject({
       project_code: 'FC026',
       project_name: 'CO COBEES',
       archetype_primary: 'Product Team',
@@ -278,7 +278,7 @@ describe('project resolution', () => {
     const headers = as('user');
     queueReads({ contracts: [contract({ project_name: 'MA PFML' })] });
     const body = await (await app.request('/api/contracts', { headers })).json();
-    expect(body.contracts[0].project).toBeNull();
+    expect(body.contracts[0].resolved_project).toBeNull();
     // The contract is still served — the posture answer does not depend on the join.
     expect(body.contracts[0].posture_id).toBe('silent');
   });
@@ -287,7 +287,7 @@ describe('project resolution', () => {
     const headers = as('user');
     queueReads({ contracts: [contract({ project_name: '' })] });
     const body = await (await app.request('/api/contracts', { headers })).json();
-    expect(body.contracts[0].project).toBeNull();
+    expect(body.contracts[0].resolved_project).toBeNull();
   });
 
   it('never publishes project fields outside the deliberate projection', async () => {
