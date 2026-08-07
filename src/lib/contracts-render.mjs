@@ -212,6 +212,23 @@ function renderProjectNameLink(name, spaceKey) {
     class="text-plum-700 underline">${escapeHtml(name)}</a>`;
 }
 
+/** Nava's own AI tool use policy — one page, the same for every contract. */
+const NAVA_POLICY_URL = `${CONFLUENCE_SPACES}NH/pages/763494410/AI+Tool+Use+Policy`;
+
+/**
+ * The survey's answer about a program-specific Nava policy, followed by the policy.
+ *
+ * The answer is usually a bare "Yes" or "No", which tells a reader a policy exists
+ * without telling them where. The link is a fixed destination rather than anything
+ * the sheet supplies, so it is appended rather than substituted — the survey's
+ * answer is still what the record says, and the link is what to read next.
+ */
+function renderNavaPolicy(value) {
+  return `${escapeHtml(value)}
+    <a href="${NAVA_POLICY_URL}" target="_blank" rel="noopener noreferrer"
+      class="block mt-1 text-plum-700 underline">Open policy</a>`;
+}
+
 /**
  * A field that gets the full width of the page rather than a grid cell.
  *
@@ -370,7 +387,7 @@ const NARRATIVE_FIELDS = [
   ['Client AI policy (summary)', 'client_policy_summary'],
   ['Client AI policy', 'client_policy'],
   ['Client AI policy link', 'client_policy_link', renderPolicyLink],
-  ['Nava program AI policy', 'nava_policy'],
+  ['Nava program AI policy', 'nava_policy', renderNavaPolicy],
   ['AI used in performance', 'ai_used'],
   ['How AI is used', 'usage'],
   ['Agency review process', 'review_process'],

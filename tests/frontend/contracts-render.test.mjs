@@ -279,6 +279,26 @@ describe('renderContractDetail', () => {
     });
   });
 
+  describe("the Nava AI policy row", () => {
+    it('appends the policy link after the survey answer', () => {
+      const html = renderContractDetail(contract({ nava_policy: 'Yes' }), byId, null);
+      expect(html).toContain('Yes');
+      expect(html).toContain('href="https://navasage.atlassian.net/wiki/spaces/NH/pages/763494410/AI+Tool+Use+Policy"');
+      expect(html).toContain('Open policy');
+    });
+
+    // The link is a fixed destination, so it must not read as the sheet's answer.
+    it('keeps the answer, rather than replacing it with the link', () => {
+      const html = renderContractDetail(contract({ nava_policy: 'No program policy' }), byId, null);
+      expect(html.indexOf('No program policy')).toBeLessThan(html.indexOf('Open policy'));
+    });
+
+    it('shows nothing when the survey left the answer blank', () => {
+      const html = renderContractDetail(contract({ nava_policy: '' }), byId, null);
+      expect(html).not.toContain('Open policy');
+    });
+  });
+
   describe('the project name link', () => {
     const withProject = (extra) =>
       renderContractDetail(contract({ resolved_project: { ...project, ...extra } }), byId, null);
