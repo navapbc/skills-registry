@@ -234,6 +234,16 @@ function renderPostureSection(contract, posture) {
   </section>`;
 }
 
+/**
+ * The resolved project, when the engagement links to one.
+ *
+ * Three managers can appear across this page, so none of them is labelled just
+ * "Program manager": the project's own (`program_manager`), the contracts-side one
+ * (`nava_contract_pp`, whose sheet header names no role a reader would recognise),
+ * and the survey's `nava_program_mgr` in the engagement details below. They are
+ * often different people, and identical labels would read as a contradiction
+ * rather than as three facts.
+ */
 function renderProjectSection(contract) {
   if (!contract.resolved_project) {
     return `<section aria-label="Project" class="rounded-lg p-4 border border-amber-200 bg-amber-50">
@@ -255,6 +265,8 @@ function renderProjectSection(contract) {
       ${row('Code', p.project_code)}
       ${row('Portfolio', p.portfolio)}
       ${row('Agency', p.agency)}
+      ${row('Project program manager', p.program_manager)}
+      ${row('Contracts program manager', p.nava_contract_pp)}
       ${row('Archetype', p.archetype_primary)}
       ${row('Additional archetype', p.archetype_additional)}
     </dl>

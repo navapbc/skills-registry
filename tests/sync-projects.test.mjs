@@ -73,8 +73,8 @@ function fakeDdb({ projects = {}, meta = null, archetypes = [] } = {}) {
   };
 }
 
-const HEADERS = ['Database code', 'Project Name', 'Archetype (Primary)', 'Program Manager'];
-const GROUP_ROW = ['', '', 'FRAMEWORKS', 'TEAM'];
+const HEADERS = ['Database code', 'Project Name', 'Archetype (Primary)', 'Project Index Owner'];
+const GROUP_ROW = ['', '', 'FRAMEWORKS', 'PROJECT INDEX'];
 
 function grid(rows) {
   return [[], [], GROUP_ROW, ['DelOps', 'DelOps', 'Practice Leadership', 'Staffing'], [], HEADERS, ...rows];
@@ -228,7 +228,7 @@ describe('applying', () => {
     expect(meta.column_names).toEqual(HEADERS);
     expect(meta.column_groups.archetype_primary).toBe('FRAMEWORKS');
     // Excluded columns get no group entry, because they are not stored.
-    expect(meta.column_groups.program_manager).toBeUndefined();
+    expect(meta.column_groups.project_index_owner).toBeUndefined();
   });
 
   it('writes an in-progress marker before touching any project', async () => {
@@ -272,7 +272,7 @@ describe('applying', () => {
   it('does not store excluded columns', async () => {
     const ddb = fakeDdb();
     await run(ddb, manyRows(45));
-    expect(ddb.store.get(`${RECORD_PROJECT}#FC000`).program_manager).toBeUndefined();
+    expect(ddb.store.get(`${RECORD_PROJECT}#FC000`).project_index_owner).toBeUndefined();
     expect(ddb.store.get(`${RECORD_PROJECT}#FC000`).project_name).toBe('Project 0');
   });
 
@@ -285,7 +285,7 @@ describe('applying', () => {
       },
     });
     const report = await run(ddb, manyRows(45));
-    expect(report.newColumns).toEqual(['Program Manager']);
+    expect(report.newColumns).toEqual(['Project Index Owner']);
   });
 
   // On a first run every column is trivially new. Reporting all of them buries the

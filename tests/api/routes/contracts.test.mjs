@@ -78,6 +78,8 @@ const PROJECT = {
   agency: 'Department of Justice',
   archetype_primary: 'Product Team',
   archetype_additional: '',
+  program_manager: 'Nancy Nussear',
+  nava_contract_pp: 'Priya Contracts',
   // Fields the explorer must not publish — projects remain projects-admin-gated.
   pop_start: '6/03/2021',
   link_to_program_health: 'https://confluence/secret-health-page',
@@ -292,6 +294,10 @@ describe('project resolution', () => {
       project_code: 'FC026',
       project_name: 'CO COBEES',
       archetype_primary: 'Product Team',
+      // Published deliberately: the detail page names who runs the project, on the
+      // same basis as the contract's own nava_program_mgr.
+      program_manager: 'Nancy Nussear',
+      nava_contract_pp: 'Priya Contracts',
     });
   });
 
