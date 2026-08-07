@@ -142,6 +142,53 @@ resource "aws_dynamodb_table" "projects" {
   }
 }
 
+# Contracts mirrored from the "AI Survey (Contracts and Delivery Completes)" tab,
+# plus one metadata record describing the last population run. A contract exists
+# to associate a project with an AI posture indirectly and to carry the
+# contract-level AI-use terms behind that posture.
+#
+# Partitioned by record_type so the metadata record can never be returned among
+# the contracts, and so each read is a single Query on one partition — no GSI.
+#
+# Range key is a slug of the source's portfolio and project columns. Both are
+# populated on every row, which is the property that matters: a key drawn from a
+# sparse column would re-key itself as the survey is filled in, and reconcile
+# would read that as a delete plus a create. Neither the contract number nor the
+# project is safe alone — one contract number spans 17 rows, and a project may
+# have several contracts.
+#
+# ADMISSION RULE: this table is READABLE BY EVERY SIGNED-IN USER, which is why it
+# is its own table rather than a partition of either neighbour. project_reference
+# admits only entity types governed by manage:project-reference, and this audience
+# is far wider. projects admits only record types re-creatable by a scheduled
+# sync, and this is operator-populated. Do not move records between the three.
+#
+# Deletion protection in prod: the data is re-derivable by re-running the
+# population script, but only while its workbook stays shared with the service
+# account — a weaker guarantee than the projects sync, which exercises its share
+# on a schedule. Nothing here exercises this one.
+resource "aws_dynamodb_table" "contracts" {
+  name         = "${var.project_name}-contracts-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "record_type"
+  range_key    = "contract_id"
+
+  deletion_protection_enabled = var.environment == "prod"
+
+  attribute {
+    name = "record_type"
+    type = "S"
+  }
+  attribute {
+    name = "contract_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
 resource "aws_dynamodb_table" "users" {
   name         = "${var.project_name}-users-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"
