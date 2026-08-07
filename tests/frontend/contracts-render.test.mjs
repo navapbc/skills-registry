@@ -211,6 +211,26 @@ describe('renderContractDetail', () => {
     expect(html.match(/<li/g)).toHaveLength(2);
   });
 
+  describe('the client-facing script', () => {
+    it('gives the reader words to say, directly after the posture guidance', () => {
+      const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
+      expect(html).toContain('If the client asks about AI use');
+      expect(html).toContain('all outputs are reviewed and validated by the team');
+      expect(html.indexOf('aria-label="AI posture"'))
+        .toBeLessThan(html.indexOf('If the client asks about AI use'));
+    });
+
+    // Authored copy, not a surveyed field: it must not vary by record or vanish on
+    // the 82 contracts the survey never classified.
+    it('says the same thing on every record, classified or not', () => {
+      const classified = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
+      const not = renderContractDetail(contract({ posture_id: null, ai_posture: '' }), byId, null);
+      expect(not).toContain('If the client asks about AI use');
+      expect(not).toContain('Nava uses AI-assisted tools in a controlled manner');
+      expect(classified).toContain('Nava uses AI-assisted tools in a controlled manner');
+    });
+  });
+
   it('takes the posture colour from the record as an inline style', () => {
     const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
     expect(html).toContain('background-color: #e0f5f0');
