@@ -123,7 +123,13 @@ export async function syncProjects({
     override,
   });
 
-  const newColumns = shaped.columnNames.filter((name) => !meta.columnNames.includes(name));
+  // Only meaningful against a previous header set. On a first run every column is
+  // trivially "new", and reporting all 43 with a check-these-for-renames warning
+  // is noise that trains the reader to ignore the one signal guarding against a
+  // renamed column re-admitting excluded data. Mirrors the gate's no-baseline case.
+  const newColumns = meta.columnNames.length
+    ? shaped.columnNames.filter((name) => !meta.columnNames.includes(name))
+    : [];
 
   const report = {
     // Returned so the caller's drift check reuses this shaping rather than

@@ -288,6 +288,14 @@ describe('applying', () => {
     expect(report.newColumns).toEqual(['Program Manager']);
   });
 
+  // On a first run every column is trivially new. Reporting all of them buries the
+  // signal that a rename can re-admit an excluded column.
+  it('reports no new columns on a first run', async () => {
+    const ddb = fakeDdb();
+    const report = await run(ddb, manyRows(45));
+    expect(report.newColumns).toEqual([]);
+  });
+
   it('skips and counts a wholly blank row without failing', async () => {
     const ddb = fakeDdb();
     const report = await run(ddb, [...manyRows(45), ['', '', '', '']]);
