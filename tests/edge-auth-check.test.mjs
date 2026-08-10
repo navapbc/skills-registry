@@ -37,7 +37,9 @@ beforeAll(async () => {
 
 // Every client-rendered route. A route absent here resolves at its index path and
 // 404s on every detail URL beneath it.
-const CSR_ROUTES = ['skills', 'plugins', 'agents', 'category', 'admin', 'submit', 'contracts'];
+const CSR_ROUTES = [
+  'skills', 'plugins', 'agents', 'category', 'admin', 'submit', 'contracts', 'initiatives',
+];
 
 describe('rewriteUri', () => {
   it.each(CSR_ROUTES)('routes /%s to its own index.html', (route) => {
@@ -53,6 +55,17 @@ describe('rewriteUri', () => {
       .toBe('/contracts/index.html');
     expect(rewriteUri('/contracts/fedciv-example-agency-forms-aaa00a00a0000-nava'))
       .toBe('/contracts/index.html');
+  });
+
+  it('routes an initiatives id, including the longest real slug', () => {
+    // Initiative ids are uncapped slugs of prose titles — the longest real one is 89
+    // characters. A length-sensitive rewrite would break exactly the detail URLs
+    // that matter and leave the grid working.
+    expect(rewriteUri('/initiatives/askca-california-wide-chatbot'))
+      .toBe('/initiatives/index.html');
+    expect(rewriteUri(
+      '/initiatives/government-services-navigator-prototype-labs-user-facing-ai-team',
+    )).toBe('/initiatives/index.html');
   });
 
   it('leaves the root alone', () => {
