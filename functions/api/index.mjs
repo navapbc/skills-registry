@@ -10,6 +10,7 @@ import { eventsRoutes } from './routes/events.mjs';
 import { projectReferenceRoutes } from './routes/project-reference.mjs';
 import { projectsRoutes } from './routes/projects.mjs';
 import { contractsRoutes } from './routes/contracts.mjs';
+import { initiativesRoutes } from './routes/initiatives.mjs';
 
 export const app = new Hono();
 
@@ -24,5 +25,6 @@ eventsRoutes(app);
 projectReferenceRoutes(app);
 projectsRoutes(app);
 contractsRoutes(app);
+initiativesRoutes(app);
 
 export const handler = handle(app);

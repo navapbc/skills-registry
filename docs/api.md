@@ -231,6 +231,75 @@ Attribute names are slugs derived from the sheet headers; `column_headers` maps 
 
 ---
 
+## Initiatives
+
+AI initiatives mirrored from the first tab of the AI-initiatives workbook by `scripts/sync-initiatives.mjs`, run from the `sync-initiatives` workflow on manual dispatch. The sheet is authoritative and is the only write surface.
+
+Requires only a session — **not** capability-gated, matching the Contract Explorer and unlike Projects above. The hub exists so any delivery team member can see what AI work is running and where; a capability role would be assigned to nobody.
+
+**Read-only.** There is no create, update, or delete endpoint, and the API Lambda's IAM grant on this table omits write actions, so a write route added later would fail against infrastructure rather than succeed quietly.
+
+### `GET /api/initiatives`
+
+Everything the Initiatives Hub needs in one response — the grid, the detail view, and the capture date cannot disagree about freshness if they come from the same read.
+
+```json
+{
+  "initiatives": [
+    {
+      "initiative_id": "benefits-navigator-prototype",
+      "title": "Benefits navigator prototype",
+      "desc": "Exploring a navigator for multiple benefit types.",
+      "use_case_label": "AI-powered benefits assistant",
+      "use_case_theme": "AI-powered assistant that makes benefits easier to access",
+      "exposure": "client",
+      "people": "Ada Lovelace; Grace Hopper",
+      "status": "Apr 7–14, 2026",
+      "tags": "internal",
+      "links": "Demo: https://example.gov/demo",
+      "project_name": "User-Facing AI",
+      "resolved_project": {
+        "project_code": "LB001",
+        "project_index_code": "UFAI",
+        "project_name": "User-Facing AI",
+        "portfolio": "LABS",
+        "agency": "Nava Labs",
+        "program_manager": "Nancy Nussear",
+        "nava_contract_pp": "Priya Contracts",
+        "archetype_primary": "Product Team",
+        "archetype_additional": ""
+      },
+      "first_seen_at": "2026-08-10T12:00:00.000Z",
+      "last_synced_at": "2026-08-10T12:00:00.000Z"
+    }
+  ],
+  "population": {
+    "state": "complete",
+    "captured_at": "2026-08-10T12:00:00.000Z",
+    "row_count": 37
+  }
+}
+```
+
+`initiative_id` is a slug of the initiative's `title`, and doubles as the detail-page URL segment. The workbook supplies no id column, and `title` is the only column both populated on every row and unique across them. The consequence is worth knowing: **retitling an initiative re-keys the record**, so a rename presents as a delete plus a create, `first_seen_at` does not survive it, and the URL changes.
+
+Attribute names are slugs derived from the sheet headers. Unlike Projects, the served set is a fixed **allowlist** rather than whatever the sheet holds: the sync carries new columns into the table automatically so none is ever silently dropped, so the allowlist here is the review step that keeps a new column from reaching every signed-in user unannounced. A column added to the sheet is invisible to this endpoint until it is added to `INITIATIVE_FIELDS`.
+
+`resolved_project` is the project whose `project_name` matches this initiative's `project_name`, case- and whitespace-insensitively, or `null`. It is a nine-field projection rather than the whole project record — initiatives are readable by every signed-in user while the projects table is not, and the full record carries period-of-performance dates and health links this audience has no reason to receive. Resolution happens on read, so correcting a name in the sheet fixes the page on the next load rather than the next sync.
+
+`project_name` is served even when it resolves, so a client can name the value that failed when it does not. Two distinct non-resolving cases:
+
+- `project_name` empty — the initiative names no project. Normal, not a defect; 14 of 37 rows as of 2026-08-10, and plenty of initiatives are internal.
+- `project_name` set but matching nothing — real drift. This is what fails a sync run, and it should be rare; it is reachable between a sheet edit and the next sync.
+
+`population.state` is one of:
+
+- `never_populated` — no sync has run. Not an error.
+- `in_progress` — a run wrote initiatives and then died, so the table is mid-flight and its contents should not be trusted.
+- `complete` — `captured_at` and `row_count` describe a finished run.
+
+---
+
 ## Users
 
 ### `GET /api/users/me`

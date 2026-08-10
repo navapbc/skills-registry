@@ -26,6 +26,11 @@ export const tables = {
   // surface, and the Lambda's IAM grant on this table omits write actions.
   projects: () => process.env.PROJECTS_TABLE,
   contracts: () => process.env.CONTRACTS_TABLE,
+  // Initiatives mirrored from the AI-initiatives workbook, plus one
+  // population-metadata record, keyed by record_type. Read-only from the API for
+  // the same reason as projects and contracts — the sheet is the write surface,
+  // and the Lambda's IAM grant on this table omits write actions.
+  initiatives: () => process.env.INITIATIVES_TABLE,
 };
 
 // Fast path for auth middleware: GetItem (read) on every request, write only on first login.

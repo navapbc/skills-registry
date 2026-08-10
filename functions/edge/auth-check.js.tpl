@@ -31,6 +31,7 @@ function rewriteUri(uri) {
   if (uri.indexOf('/admin') === 0) return '/admin/index.html';
   if (uri.indexOf('/submit') === 0) return '/submit/index.html';
   if (uri.indexOf('/contracts') === 0) return '/contracts/index.html';
+  if (uri.indexOf('/initiatives') === 0) return '/initiatives/index.html';
 
   return uri + '/index.html';
 }

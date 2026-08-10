@@ -33,7 +33,7 @@ All AWS resources are Terraform-managed. Two independent state files, one per en
 | `cloudfront.tf` | CloudFront distribution, cache behaviors, CloudFront Function, response headers policy |
 | `lambda.tf` | Auth Lambda + API Lambda (placeholder zip; code deployed by CI) |
 | `api_gateway.tf` | HTTP API v2, default stage, Lambda integration, catch-all route |
-| `dynamodb.tf` | Five DynamoDB tables (skills, plugins, users, audit-log, analytics-events) |
+| `dynamodb.tf` | Nine DynamoDB tables (skills, plugins, users, audit-log, analytics-events, project-reference, projects, contracts, initiatives) |
 | `iam.tf` | GitHub Actions OIDC provider, deploy role, Lambda execution roles |
 | `ssm.tf` | SSM parameters for Google OAuth secrets and JWT secret |
 | `outputs.tf` | All values needed for CI secrets and Google Cloud Console |
@@ -150,7 +150,15 @@ Three roles: `user` (default), `maintain`, `admin`.
 
 ## DynamoDB
 
-Five tables per environment. All use on-demand billing and point-in-time recovery.
+Nine tables per environment. All use on-demand billing and point-in-time recovery.
+
+The four project-data tables — `project-reference`, `projects`, `contracts`, and
+`initiatives` — each carry an **admission rule** as a comment on the resource in
+`terraform/dynamodb.tf`, stating which record types may live there and why. They are
+separate tables rather than partitions of one another because their audiences and
+their write surfaces differ, and the rules are what keep that from eroding. Read them
+before adding a record type to any of the four. Only `initiatives` is described below;
+the other three are covered by [api.md](api.md).
 
 ### `skills-registry-skills-{env}`
 
@@ -192,6 +200,18 @@ Events: `page_view`, `skill_view`, `search_query`, `filter_applied`. Captured cl
 
 Raw rows expire ~200 days after write via DynamoDB TTL (attribute `ttl`, Unix-epoch seconds), bounding table size while covering the dashboard window. The admin dashboard reads aggregated content metrics (top skills, top searches, filter usage) over a rolling 28-day window via `GET /api/admin/analytics`.
 
+### `skills-registry-initiatives-{env}`
+
+AI initiatives mirrored from the first tab of the AI-initiatives workbook, plus one metadata record describing the last sync run. Primary key: `record_type` + `initiative_id`. The metadata record lives in its own partition so it can never be returned among the initiatives, and each read is a single Query on one partition — no GSI.
+
+Key fields: `initiative_id`, `title`, `desc`, `use_case_label`, `use_case_theme`, `exposure`, `people`, `status`, `tags`, `links`, `project_name`, `first_seen_at`, `last_synced_at`.
+
+**Admission rule:** only records wholly derived from the initiatives workbook and re-creatable by re-running the sync. The GitHub deploy role holds `DeleteItem` here — the same rule and the same reason as `projects`. This is deliberately unlike `contracts`, which CI cannot touch at all because that data is operator-populated; do not extend the CI grant to it on a similarity argument.
+
+**The range key is a slug of `title`, and that has a cost worth knowing.** The workbook supplied an `id` column and a `programId` column when this was designed and both were removed, leaving `title` as the only column both populated on every row and unique across them. So **retitling an initiative re-keys the record**: the sync sees a delete plus a create, `first_seen_at` does not survive, and the detail URL changes. A single rename is intended behaviour; a bulk rename trips the sync's delete ceiling and is refused rather than applied. If shared links to initiatives become common, that is the trigger to ask the sheet's owners for a stable id column.
+
+Read-only from the API — the sheet is the write surface, and the Lambda's IAM grant omits write actions. Unlike its neighbours the read is **not** capability-gated: any signed-in user can browse the Initiatives Hub.
+
 ---
 
 ## Sync Workflows
@@ -227,6 +247,8 @@ Build artifacts go to `dist/` and are synced to S3 on deploy. Hashed `_astro/` c
 | `deploy.yml` | Push to `main` or `release` | Runs tests → builds Astro → syncs to S3 → invalidates CloudFront → deploys auth Lambda → deploys API Lambda |
 | `sync.yml` | Cron every 4h + `workflow_dispatch` | Syncs GitHub org skills to DynamoDB |
 | `sync-anthropic.yml` | Cron Mondays 9am + `workflow_dispatch` | Syncs Anthropic built-in skills to DynamoDB |
+| `sync-projects.yml` | Cron Mondays 8am UTC + `workflow_dispatch` | Mirrors the projects sheet, then fails on unresolved archetype values |
+| `sync-initiatives.yml` | `workflow_dispatch` only | Mirrors the initiatives sheet to staging then prod, then fails on a stated `projectName` matching no project. No cron until the workbook's shape proves stable |
 
 All workflows use GitHub OIDC to assume AWS roles — no long-lived credentials stored in secrets.
 

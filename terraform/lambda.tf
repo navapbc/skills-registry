@@ -177,6 +177,20 @@ data "aws_iam_policy_document" "lambda_api_policy" {
     actions   = ["dynamodb:GetItem", "dynamodb:Query"]
     resources = [aws_dynamodb_table.contracts.arn]
   }
+
+  # Initiatives are READ-ONLY to the API, for the same reason as the two above and
+  # enforced the same way — a separate statement, because the general DynamoDB
+  # statement grants writes to every table it names.
+  #
+  # The sync workflow is the only write surface. Write actions are omitted here on
+  # purpose: /api/initiatives has no create, update, or delete route, and this is
+  # what makes a future one fail against IAM rather than quietly succeeding.
+  statement {
+    sid       = "DynamoDBInitiativesRead"
+    effect    = "Allow"
+    actions   = ["dynamodb:GetItem", "dynamodb:Query"]
+    resources = [aws_dynamodb_table.initiatives.arn]
+  }
 }
 
 resource "aws_iam_role" "lambda_api" {
@@ -215,6 +229,7 @@ resource "aws_lambda_function" "api" {
       PROJECT_REFERENCE_TABLE = aws_dynamodb_table.project_reference.name
       PROJECTS_TABLE          = aws_dynamodb_table.projects.name
       CONTRACTS_TABLE         = aws_dynamodb_table.contracts.name
+      INITIATIVES_TABLE       = aws_dynamodb_table.initiatives.name
       ALLOWED_EMAIL_DOMAIN    = var.allowed_email_domain
     }
   }

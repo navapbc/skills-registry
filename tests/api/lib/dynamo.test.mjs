@@ -138,3 +138,29 @@ describe('tables.contracts', () => {
     }
   });
 });
+
+describe('tables.initiatives', () => {
+  it('returns the configured table name', () => {
+    const prev = process.env.INITIATIVES_TABLE;
+    process.env.INITIATIVES_TABLE = 'skills-hub-initiatives-staging';
+    try {
+      expect(tables.initiatives()).toBe('skills-hub-initiatives-staging');
+    } finally {
+      if (prev === undefined) delete process.env.INITIATIVES_TABLE;
+      else process.env.INITIATIVES_TABLE = prev;
+    }
+  });
+
+  it('returns undefined when the variable is unset, rather than throwing', () => {
+    // This is what the /api/initiatives 503 branch reads. Throwing here would
+    // turn a deliberate "not configured yet" into an opaque 500 in any
+    // environment deployed before its terraform apply.
+    const prev = process.env.INITIATIVES_TABLE;
+    delete process.env.INITIATIVES_TABLE;
+    try {
+      expect(tables.initiatives()).toBeUndefined();
+    } finally {
+      if (prev !== undefined) process.env.INITIATIVES_TABLE = prev;
+    }
+  });
+});
