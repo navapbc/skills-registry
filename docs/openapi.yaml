@@ -40,6 +40,8 @@ tags:
     description: Contract Explorer reference data — archetypes and policy postures
   - name: projects
     description: Projects mirrored from the Nava projects sheet (read-only)
+  - name: initiatives
+    description: AI initiatives mirrored from the initiatives sheet (read-only)
 
 components:
   securitySchemes:
@@ -443,6 +445,144 @@ components:
           type: string
           format: date-time
           readOnly: true
+
+    Initiative:
+      type: object
+      required: [initiative_id, title]
+      description: >
+        One AI initiative. The served property set is a fixed ALLOWLIST, unlike
+        /api/projects, whose properties follow the sheet. The sync carries new sheet
+        columns into the table automatically so none is silently dropped, so this
+        allowlist is the review step that keeps a new column from reaching every
+        signed-in user unannounced — a column added to the sheet is invisible here
+        until it is added to INITIATIVE_FIELDS.
+      properties:
+        initiative_id:
+          type: string
+          description: >
+            A slug of `title`, and also the detail-page URL segment. The workbook
+            supplies no id column, and `title` is the only column both populated on
+            every row and unique across them. Consequence: retitling an initiative
+            re-keys the record, so a rename is a delete plus a create, `first_seen_at`
+            does not survive, and this value changes.
+          example: benefits-navigator-prototype
+        title:
+          type: string
+          example: Benefits navigator prototype
+        desc:
+          type: string
+          example: Exploring a navigator for multiple benefit types.
+        use_case_label:
+          type: string
+          example: AI-powered benefits assistant
+        use_case_theme:
+          type: string
+        exposure:
+          type: string
+          description: >
+            Not an enum. Four values exist in the sheet today (client, internal,
+            infra, learning), but the sheet can gain a fifth without a deploy.
+          example: client
+        people:
+          type: string
+          description: Semicolon-separated staff names.
+          example: Ada Lovelace; Grace Hopper
+        status:
+          type: string
+          description: >
+            Free text, never a parsed date. Real values include "Apr 7–14, 2026" and
+            "Fall 2025 – present".
+          example: Apr 7–14, 2026
+        tags:
+          type: string
+          description: Semicolon-separated. Three values exist today.
+          example: internal
+        links:
+          type: string
+          description: 'Semicolon-separated, each part usually "Label" then a URL.'
+          example: "Demo: https://example.gov/demo"
+        project_name:
+          type: string
+          description: >
+            The sheet's own string, served even when it resolves so a client can name
+            the value that failed when it does not. Empty on 14 of 37 rows as of
+            2026-08-10, which is normal rather than a defect.
+          example: User-Facing AI
+        resolved_project:
+          description: >
+            The project whose project_name matches, case- and whitespace-insensitively,
+            or null. A nine-field projection rather than the whole record: initiatives
+            are readable by every signed-in user while the projects table is not, and
+            the full record carries period-of-performance dates and health links this
+            audience has no reason to receive. Resolved on read, so correcting a name in
+            the sheet fixes the response on the next request rather than the next sync.
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/InitiativeProject"
+        first_seen_at:
+          type: string
+          format: date-time
+        last_synced_at:
+          type: string
+          format: date-time
+
+    InitiativeProject:
+      type: object
+      description: The projected fields carried from a resolved project record.
+      properties:
+        project_code:
+          type: string
+          example: LB001
+        project_index_code:
+          type: string
+          description: >
+            The Confluence space key. Without it the detail page renders the project
+            name as plain text rather than linking to /wiki/spaces/ — a page that
+            exists and is wrong.
+          example: UFAI
+        project_name:
+          type: string
+          example: User-Facing AI
+        portfolio:
+          type: string
+        agency:
+          type: string
+        program_manager:
+          type: string
+          description: The project's own program manager.
+        nava_contract_pp:
+          type: string
+          description: >
+            The contracts-side program manager. Often a different person from
+            program_manager, which is why the page labels the two distinctly.
+        archetype_primary:
+          type: string
+        archetype_additional:
+          type: string
+
+    InitiativesPopulationState:
+      type: object
+      required: [state, captured_at, row_count]
+      properties:
+        state:
+          type: string
+          enum: [never_populated, in_progress, complete]
+          description: >
+            never_populated — no sync has run; not an error. in_progress — a run wrote
+            initiatives and then died, so the table is mid-flight and its contents
+            should not be trusted. complete — captured_at and row_count describe a
+            finished run.
+        captured_at:
+          description: When the last completed run finished, or null.
+          oneOf:
+            - type: "null"
+            - type: string
+              format: date-time
+        row_count:
+          description: Rows the last completed run wrote, or null.
+          oneOf:
+            - type: "null"
+            - type: integer
 
     Error:
       type: object
@@ -1587,6 +1727,65 @@ paths:
                 $ref: "#/components/schemas/Error"
         "403":
           description: Forbidden — lacks the project-reference capability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/initiatives:
+    get:
+      tags: [initiatives]
+      summary: List synced AI initiatives with their resolved projects
+      description: >
+        AI initiatives mirrored from the first tab of the AI-initiatives workbook.
+        Read-only — the sheet is the only write surface, and the API Lambda's IAM
+        grant on this table omits write actions.
+
+
+        Requires only a session. Deliberately NOT capability-gated, matching the
+        Contract Explorer and unlike /api/projects: the hub exists so any delivery
+        team member can see what AI work is running, and a capability role would be
+        assigned to nobody.
+
+
+        One endpoint rather than two, so the grid, the detail view, and the capture
+        date cannot disagree about how fresh the data is.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Initiatives with their resolved projects, and the population state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [initiatives, population]
+                properties:
+                  initiatives:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Initiative"
+                  population:
+                    $ref: "#/components/schemas/InitiativesPopulationState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: >
+            The initiatives table or the projects table is not configured for this
+            environment. Distinct from 500 on purpose — it means terraform apply has
+            not run here yet, not that the read failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: >
+            The read failed. Returns an error rather than an empty list, because the
+            page IS the initiatives and an empty success would be a lie.
           content:
             application/json:
               schema:
