@@ -1,7 +1,7 @@
 ---
 title: "feat: Initiatives table, sync-initiatives action, and Initiatives Hub"
 type: feat
-status: active
+status: completed
 date: 2026-08-10
 ---
 
