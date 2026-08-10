@@ -189,6 +189,63 @@ resource "aws_dynamodb_table" "contracts" {
   }
 }
 
+# Initiatives mirrored from the only tab of the AI-initiatives workbook, plus one
+# metadata record describing the last population run. An initiative is a piece of
+# AI work being done — on a project, or internally — and it carries its own use
+# case, exposure, and tags.
+#
+# Partitioned by record_type so the metadata record can never be returned among
+# the initiatives, and so each read is a single Query on one partition — no GSI.
+#
+# Range key is a slug of the source's `title` column. That is not a free choice:
+# the workbook supplied an `id` column and a `programId` column when this was
+# planned, and both were removed before implementation, leaving `title` as the
+# only column populated on every one of the 37 rows AND unique across them. Every
+# alternative was measured — `programId` was blank on 14 rows, and combined with
+# `useCaseLabel` produced only 29 distinct keys for 37 rows.
+#
+# The cost of a prose key, stated so nobody has to rediscover it: retitling an
+# initiative in the sheet re-keys the row, so the reconcile sees a delete plus a
+# create. first_seen_at does not survive a rename and neither does the URL. The
+# delete ceiling in scripts/lib/sync-initiatives.mjs is what stops a BULK retitle
+# from applying; a single one is allowed through as intended behaviour.
+#
+# ADMISSION RULE: only records wholly derived from the initiatives workbook and
+# re-creatable by re-running the sync may live here, because the GitHub deploy
+# role holds DeleteItem on this table — the same rule the projects table carries,
+# and for the same reason. It is not a partition of `contracts` (that table is
+# operator-populated, with no CI access at all) and not a partition of `projects`
+# (different key, different workbook). Do not move records between the three.
+#
+# Deletion protection in prod, matching contracts: the data is re-derivable by
+# re-running the sync, but only while the workbook stays shared with the service
+# account, and nothing exercises that share on a schedule — the workflow is
+# manual-dispatch only.
+#
+# 37 rows as of 2026-08-10. The gate constants in the sync library are calibrated
+# to that scale; they are not arbitrary.
+resource "aws_dynamodb_table" "initiatives" {
+  name         = "${var.project_name}-initiatives-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "record_type"
+  range_key    = "initiative_id"
+
+  deletion_protection_enabled = var.environment == "prod"
+
+  attribute {
+    name = "record_type"
+    type = "S"
+  }
+  attribute {
+    name = "initiative_id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
 resource "aws_dynamodb_table" "users" {
   name         = "${var.project_name}-users-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"

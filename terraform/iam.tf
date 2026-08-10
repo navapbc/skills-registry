@@ -169,6 +169,31 @@ data "aws_iam_policy_document" "github_deploy_projects" {
     actions   = ["dynamodb:Query"]
     resources = [aws_dynamodb_table.project_reference.arn]
   }
+
+  # The initiatives sync, which runs in CI on manual dispatch. Full read/write on
+  # its own table, matching DynamoDBProjectsSync above and admitted on the same
+  # basis: every record is wholly derived from the workbook and re-creatable by
+  # re-running the sync, so CI holding DeleteItem loses nothing unrecoverable.
+  #
+  # Note this is the deliberate opposite of the CONTRACTS table, which CI cannot
+  # touch at all — that data is operator-populated. Do not add the contracts ARN
+  # here on the reasoning that the two are similar. They are not.
+  statement {
+    sid    = "DynamoDBInitiativesSync"
+    effect = "Allow"
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:GetItem",
+      "dynamodb:Query",
+      "dynamodb:DeleteItem",
+    ]
+    resources = [aws_dynamodb_table.initiatives.arn]
+  }
+
+  # No statement is needed for the initiatives sync's post-apply resolution check,
+  # which reads the projects table to decide whether each `projectName` names a
+  # real project: DynamoDBProjectsSync above already grants dynamodb:Query on that
+  # ARN. Do not add a redundant one.
 }
 
 resource "aws_iam_role_policy" "github_deploy_projects" {
