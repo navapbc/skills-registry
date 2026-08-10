@@ -314,6 +314,61 @@ describe('populateInitiatives — dry run', () => {
   });
 });
 
+describe('populateInitiatives — new columns', () => {
+  const metaWith = (columnNames) => ({
+    record_type: RECORD_SEED_META, initiative_id: SEED_META_KEY,
+    status: SEED_COMPLETE, row_count: 37, column_names: columnNames,
+  });
+
+  it('reports nothing new on a first run, rather than all ten columns', () => {
+    // Reporting every column with a check-these-for-renames warning on a first run is
+    // noise that trains the reader to ignore the one signal that matters.
+    return run(fakeDdb(), gridOf(...manyRows(37))).then((report) => {
+      expect(report.newColumns).toEqual([]);
+    });
+  });
+
+  it('reports a column that appeared since the last completed run', async () => {
+    const headers = [...HEADERS, 'owner'];
+    const grid = [headers, ...manyRows(37).map((r) => [...r, 'Ada'])];
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: metaWith(HEADERS) });
+
+    const report = await run(ddb, grid);
+    expect(report.newColumns).toEqual(['owner']);
+  });
+
+  it('reports nothing when the header set is unchanged', async () => {
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: metaWith(HEADERS) });
+    const report = await run(ddb, gridOf(...manyRows(37)));
+    expect(report.newColumns).toEqual([]);
+  });
+
+  it('persists the header set on the completed marker for the next run to diff', async () => {
+    const ddb = fakeDdb();
+    await run(ddb, gridOf(...manyRows(37)));
+    const complete = ddb.metaWrites()[1].params.Item;
+    expect(complete.column_names).toEqual(HEADERS);
+    expect(complete.new_columns).toEqual([]);
+  });
+
+  it('carries the previous header set onto the in-progress marker', async () => {
+    // Same reasoning as row_count: the set must keep describing the last COMPLETED
+    // run, or a death mid-apply makes the next run diff against an unfinished set.
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: metaWith(['title', 'desc']) });
+    await run(ddb, gridOf(...manyRows(37)));
+    expect(ddb.metaWrites()[0].params.Item.column_names).toEqual(['title', 'desc']);
+  });
+
+  it('treats a renamed column as a new one, since nothing can tell them apart', async () => {
+    const headers = HEADERS.map((h) => (h === 'desc' ? 'description' : h));
+    const grid = [headers, ...manyRows(37)];
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: metaWith(HEADERS) });
+
+    const report = await run(ddb, grid);
+    expect(report.newColumns).toEqual(['description']);
+  });
+});
+
 describe('populateInitiatives — paging', () => {
   it('follows LastEvaluatedKey so a paged read is not seen as a smaller sheet', async () => {
     const ddb = fakeDdb({ initiatives: manyStored(37), pageAt: 20 });

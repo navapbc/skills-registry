@@ -249,6 +249,15 @@ async function main() {
     console.log(`\n  deleting: ${report.deletedIds.join(', ')}`);
   }
 
+  if (report.newColumns.length > 0) {
+    console.log(
+      `\n  NEW COLUMNS since the last run: ${report.newColumns.join(', ')}\n` +
+        '  A renamed column is indistinguishable from a new one. Note that a new column\n' +
+        '  reaches the TABLE automatically but NOT the page — it has to be added to\n' +
+        '  INITIATIVE_FIELDS in functions/api/routes/initiatives.mjs first.',
+    );
+  }
+
   // Ids come from the title, so this combination is almost always a retitle. Saying
   // so costs one line and saves an investigation into a data loss that never
   // happened.

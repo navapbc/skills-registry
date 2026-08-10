@@ -72,11 +72,12 @@ export async function readSeedMeta({ ddb, table, GetCommand }) {
     }),
   );
 
-  if (!result.Item) return { state: SEED_NEVER, baseline: null };
+  if (!result.Item) return { state: SEED_NEVER, baseline: null, columnNames: [] };
 
   return {
     state: result.Item.status === SEED_IN_PROGRESS ? SEED_IN_PROGRESS : SEED_COMPLETE,
     baseline: typeof result.Item.row_count === 'number' ? result.Item.row_count : null,
+    columnNames: result.Item.column_names ?? [],
     item: result.Item,
   };
 }
@@ -132,6 +133,20 @@ export async function populateInitiatives({
     override,
   });
 
+  // The sheet's machine headers this run saw. Compared against the previous run's
+  // set to surface a column that appeared since — worth surfacing here more than on
+  // the sibling syncs, because this workbook demonstrably churns: it lost an `id`
+  // column and a `programId` column during this feature's implementation alone.
+  const columnNames = Object.values(shaped.columnHeaders);
+
+  // Only meaningful against a previous header set. On a first run every column is
+  // trivially "new", and reporting all ten with a check-these-for-renames warning is
+  // noise that trains the reader to ignore the one signal that matters. Mirrors the
+  // gate's no-baseline case.
+  const newColumns = meta.columnNames.length
+    ? columnNames.filter((name) => !meta.columnNames.includes(name))
+    : [];
+
   const report = {
     // Returned so the caller's resolution check reuses this shaping rather than
     // repeating it — two shapings of the same grid could diverge.
@@ -143,8 +158,8 @@ export async function populateInitiatives({
     updated: diff.updates.length,
     deleted: diff.deletes.length,
     deletedIds: diff.deletes,
-    createdIds: diff.creates.map((r) => r.initiative_id),
     skippedBlankRows: shaped.skippedBlankRows,
+    newColumns,
     previousState: meta.state,
     refusal,
     applied: false,
@@ -167,6 +182,10 @@ export async function populateInitiatives({
         // the next run measuring against a table that was never fully written.
         incoming_row_count: incomingCount,
         ...(meta.item?.row_count !== undefined && { row_count: meta.item.row_count }),
+        // Carried forward for the same reason as row_count: the header set must keep
+        // describing the last COMPLETED run, or a death mid-apply would make the next
+        // run report every column as unchanged against a set that was never finished.
+        ...(meta.item?.column_names !== undefined && { column_names: meta.item.column_names }),
       },
     }),
   );
@@ -206,6 +225,10 @@ export async function populateInitiatives({
         created: diff.creates.length,
         updated: diff.updates.length,
         deleted: diff.deletes.length,
+        column_names: columnNames,
+        // Stored rather than derived at read time: only this run sees both the
+        // previous and the current header set, so nothing downstream can recompute it.
+        new_columns: newColumns,
       },
     }),
   );

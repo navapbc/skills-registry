@@ -12,11 +12,14 @@
  * Nothing in this file performs I/O.
  */
 
-// Imported rather than redeclared so the stored record types and attribute names
-// cannot drift from what the API reads. The dependency direction is forced: the
-// API Lambda zip is built from functions/api/ alone, so nothing there may import
-// from scripts/.
-import { RECORD_INITIATIVE } from '../../functions/api/lib/initiatives.mjs';
+// This module is deliberately free of imports: it is the pure layer, and the record
+// types and attribute names it would otherwise borrow live in
+// functions/api/lib/initiatives.mjs, which the apply layer imports directly. The
+// dependency direction is one-way and forced — the API Lambda zip is built from
+// functions/api/ alone, so nothing there may import from scripts/, while scripts/
+// importing from there is fine. tests/sync-initiatives-lib.test.mjs asserts that
+// slugAttribute reproduces that module's attribute-name constants, which is what
+// keeps the two in agreement without a runtime coupling.
 
 export class SyncInitiativesError extends Error {
   constructor(message) {
@@ -398,7 +401,3 @@ export function safetyVerdict({ incoming, storedCount, deletes, baseline, overri
 
   return null;
 }
-
-// Re-exported so scripts/lib/sync-initiatives-apply.mjs has one import site for
-// everything the sync needs, matching how the contracts sync is arranged.
-export { RECORD_INITIATIVE };
