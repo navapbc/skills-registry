@@ -34,6 +34,7 @@ import {
   exposuresOf,
   tagsOf,
   describePopulationNotice,
+  initiativesApiPath,
   renderInitiativeGrid,
   renderInitiativeDetail,
 } from '../../lib/initiatives-render.mjs';
@@ -75,13 +76,9 @@ function notFoundHtml() {
 // API skips reading the contracts table entirely without the parameter. An id
 // matching nothing is not an error — the response is the plain list and the
 // not-found branch below renders.
-const apiPath = initiativeId
-  ? `/initiatives?id=${encodeURIComponent(initiativeId)}`
-  : '/initiatives';
-
 let data: any = null;
 try {
-  data = await fetchApi(apiPath);
+  data = await fetchApi(initiativesApiPath(initiativeId));
 } catch (err: any) {
   // fetchApi has already started a redirect to /login for an expired session;
   // rendering an error here flashes a broken screen before the browser navigates.

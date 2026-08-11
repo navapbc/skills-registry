@@ -6,6 +6,7 @@ import {
   exposuresOf,
   tagsOf,
   formatCapturedAt,
+  initiativesApiPath,
   describePopulationNotice,
   renderExposureBadge,
   renderLinks,
@@ -365,6 +366,31 @@ describe('renderProjectSection', () => {
   });
 });
 
+describe('initiativesApiPath', () => {
+  it('asks for no join on the grid view', () => {
+    // R6: the grid must never make the API read the contracts partition.
+    expect(initiativesApiPath('')).toBe('/initiatives');
+    expect(initiativesApiPath(null)).toBe('/initiatives');
+    expect(initiativesApiPath(undefined)).toBe('/initiatives');
+    expect(initiativesApiPath('   ')).toBe('/initiatives');
+  });
+
+  it('asks for the join on a detail view', () => {
+    expect(initiativesApiPath('benefits-navigator-prototype'))
+      .toBe('/initiatives?id=benefits-navigator-prototype');
+  });
+
+  it('encodes an id carrying characters that would otherwise alter the query', () => {
+    expect(initiativesApiPath('a&b=c')).toBe('/initiatives?id=a%26b%3Dc');
+    expect(initiativesApiPath('a#b')).toBe('/initiatives?id=a%23b');
+    expect(initiativesApiPath('a b')).toBe('/initiatives?id=a%20b');
+  });
+
+  it('never produces a path fetchApi would double-prefix', () => {
+    expect(initiativesApiPath('x').startsWith('/api')).toBe(false);
+  });
+});
+
 describe('renderRelatedContractsSection', () => {
   const contract = (over = {}) => ({
     contract_id: 'user-facing-ai',
@@ -429,11 +455,24 @@ describe('renderRelatedContractsSection', () => {
     expect(html).toContain('47QRAA21D0064 · Nava Labs');
   });
 
-  it('escapes markup in a contract name', () => {
+  it('escapes markup in a contract name and in its secondary line', () => {
+    // Asserts the escaped entity is PRESENT, not merely that the raw tag is absent —
+    // a half-escaping bug passes the negative assertion alone.
     const html = renderRelatedContractsSection(initiative({
-      related_contracts: [contract({ project: '<script>a</script>' })],
+      related_contracts: [contract({ project: '<script>a</script>', vehicle: '<img src=x>' })],
     }));
     expect(html).not.toContain('<script>');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).toContain('&lt;img');
+  });
+
+  it('escapes a contract id carrying a quote so it cannot break out of the href', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ contract_id: 'a"onmouseover="alert(1)' })],
+    }));
+    expect(html).not.toContain('onmouseover="');
+    expect(html).toContain('href="/contracts/a%22onmouseover%3D%22alert(1)"');
   });
 });
 

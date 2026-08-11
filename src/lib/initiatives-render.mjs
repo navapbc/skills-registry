@@ -87,6 +87,20 @@ export const useCaseLabelsOf = (initiatives) => facetOf(initiatives, 'use_case_l
 export const exposuresOf = (initiatives) => facetOf(initiatives, 'exposure');
 export const tagsOf = (initiatives) => facetOf(initiatives, 'tags');
 
+/**
+ * The API path the page should fetch, given the id in the URL (empty for the grid).
+ *
+ * A function rather than a ternary inlined in the page because the branch is
+ * load-bearing and the page has no test seam: `?id=` is what makes the API read the
+ * contracts partition, and a regression that appends it unconditionally would make
+ * every hub landing view pay for a read it never uses — silently, since the grid
+ * renders identically either way.
+ */
+export function initiativesApiPath(initiativeId) {
+  const id = String(initiativeId ?? '').trim();
+  return id ? `/initiatives?id=${encodeURIComponent(id)}` : '/initiatives';
+}
+
 export function formatCapturedAt(iso) {
   if (!iso) return 'unknown';
   const date = new Date(iso);

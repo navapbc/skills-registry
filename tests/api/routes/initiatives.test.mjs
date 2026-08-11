@@ -444,6 +444,31 @@ describe('initiatives related contracts', () => {
     expect(related).not.toHaveProperty('record_type');
   });
 
+  it('treats an empty id as a list request', async () => {
+    const headers = as('user');
+    queueReads();
+    const res = await app.request('/api/initiatives?id=', { headers });
+    const [got] = (await res.json()).initiatives;
+
+    expect(queriedPartitions()).not.toContain(RECORD_CONTRACT);
+    expect(got).not.toHaveProperty('related_contracts');
+  });
+
+  it('reads the contracts partition from the contracts table, not another one', async () => {
+    // The mock queue is order-based, so a swapped table argument would otherwise
+    // still pass every assertion above.
+    const headers = as('user');
+    queueReads({ contracts: [contract()] });
+    await app.request(`/api/initiatives?id=${ID}`, { headers });
+
+    const contractQuery = mockSend.mock.calls
+      .map(([cmd]) => cmd)
+      .find((cmd) => cmd?.type === 'Query'
+        && cmd.params.ExpressionAttributeValues[':t'] === RECORD_CONTRACT);
+
+    expect(contractQuery.params.TableName).toBe(TABLE_VARS.CONTRACTS_TABLE);
+  });
+
   it('returns 503 when a detail request needs an unconfigured contracts table', async () => {
     const headers = as('user');
     delete process.env.CONTRACTS_TABLE;

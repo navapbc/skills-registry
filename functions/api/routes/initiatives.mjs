@@ -90,7 +90,7 @@ const PROJECT_FIELDS = [
  * Fields carried from a contract that shares this initiative's project.
  *
  * An allowlist for the same reason PROJECT_FIELDS is one, and narrower than
- * CONTRACT_FIELDS in contracts.mjs on purpose: these entries are LINKS, not
+ * CONTRACT_FIELDS in routes/contracts.mjs on purpose: these entries are LINKS, not
  * records. Everything a reader needs here is enough to recognise which contract
  * they are about to open — the Contract Explorer answers the rest, including the
  * posture, which is why `ai_posture` is absent. Resolving a posture id to its
@@ -100,7 +100,7 @@ const PROJECT_FIELDS = [
  * No audience is widened: /api/contracts is already open to every signed-in user
  * on the same basis as this route.
  */
-const CONTRACT_FIELDS = [
+const RELATED_CONTRACT_FIELDS = [
   // Required, not cosmetic: the href of every link this section renders.
   'contract_id',
   // The survey's own project string, which is the contract's display name on the
@@ -116,7 +116,7 @@ const project_summary = (project) =>
   Object.fromEntries(PROJECT_FIELDS.map((f) => [f, project[f] ?? '']));
 
 const contract_summary = (contract) =>
-  Object.fromEntries(CONTRACT_FIELDS.map((f) => [f, contract[f] ?? '']));
+  Object.fromEntries(RELATED_CONTRACT_FIELDS.map((f) => [f, contract[f] ?? '']));
 
 const initiative_payload = (initiative) =>
   Object.fromEntries(
@@ -231,7 +231,7 @@ async function serveInitiatives(c) {
       return c.json({ error: 'Contracts are not configured' }, 503);
     }
     const contracts = await queryPartition(contractsTable, 'record_type', RECORD_CONTRACT);
-    relatedContracts = contractsForProject(targetProject, contracts, projects).map(contract_summary);
+    relatedContracts = contractsForProject(targetProject, contracts).map(contract_summary);
   }
 
   const resolved = initiatives.map((initiative) => {

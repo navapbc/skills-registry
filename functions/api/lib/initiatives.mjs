@@ -88,16 +88,25 @@ export function resolveProject(initiative, projectRecords) {
  * only across the pair. Running the initiatives rule here instead would silently
  * drop every contract that resolves via `contract_name`.
  *
- * Membership is tested by IDENTITY against the project record, not by comparing
- * `project_code`. Both resolvers are handed the same `projectRecords` array in the
- * same request, so identity is exact — and it cannot mis-group the projects whose
- * `project_code` is absent, where `undefined === undefined` would match every one
- * of them to every other.
+ * The rule is applied against a list holding ONLY this project, which is what makes
+ * the question "does this contract name this project?" rather than "which project
+ * does this contract resolve to first?". The difference is not academic: the
+ * contracts rule returns the first record matching on EITHER field, so if some other
+ * project's `contract_name` normalizes to this project's `project_name`, a
+ * whole-table resolve hands back that other record. Membership tested by identity or
+ * by `project_code` against that answer then yields nothing, and the page states "No
+ * contracts on file" — a confident wrong answer rather than an absent one. Asking
+ * the one-project question cannot go wrong that way, and it drops the join from
+ * O(contracts × projects) to O(contracts) besides.
+ *
+ * A consequence worth naming: with colliding names a contract can belong to two
+ * projects and appear on both. That is the honest rendering of ambiguous data —
+ * better than vanishing from one of them.
  */
-export function contractsForProject(project, contracts, projectRecords) {
+export function contractsForProject(project, contracts) {
   if (!project) return [];
   return (contracts ?? []).filter(
-    (contract) => resolveContractProject(contract, projectRecords) === project,
+    (contract) => resolveContractProject(contract, [project]) !== null,
   );
 }
 

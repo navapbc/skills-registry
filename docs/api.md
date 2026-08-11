@@ -309,7 +309,7 @@ Attribute names are slugs derived from the sheet headers. Unlike Projects, the s
 
 Three things about this are load-bearing:
 
-- **It is detail-only.** The grid renders no contracts, so computing the join for all 37 records would read the whole contracts partition on every hub load for data one record uses. The client knows the id before it fetches, so it asks. A list request never touches the contracts table — including when `CONTRACTS_TABLE` is unconfigured, which 503s an `id` request and leaves the grid working.
+- **It is detail-only.** The grid renders no contracts, so computing the join for all 37 records would read the whole contracts partition on every hub load for data one record uses. The client knows the id before it fetches, so it asks. A list request never touches the contracts table — including when `CONTRACTS_TABLE` is unconfigured, which leaves the grid working and 503s only an `id` request whose initiative actually resolves to a project. An `id` matching nothing, or naming an initiative with no project, still returns 200 because the join never starts.
 - **Absent and `[]` mean different things.** Absent is "the join was not requested" — every record of a list request, and any initiative whose `resolved_project` is `null`. `[]` is "requested, and this project owns no contracts on file". A client that conflates them will either claim a project has no contracts when it was never asked, or render nothing when the honest answer is "none".
 - **The join runs the contracts-side resolution rule**, which matches a project's `project_name` **or** its `contract_name`. The initiatives rule above matches `project_name` alone; using it here would silently drop every contract named the other way, which is a substantial share of the survey.
 
