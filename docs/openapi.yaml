@@ -40,6 +40,8 @@ tags:
     description: Contract Explorer reference data — archetypes and policy postures
   - name: projects
     description: Projects mirrored from the Nava projects sheet (read-only)
+  - name: contracts
+    description: Contracts mirrored from the AI survey (read-only, operator-populated)
   - name: initiatives
     description: AI initiatives mirrored from the initiatives sheet (read-only)
 
@@ -1786,6 +1788,140 @@ paths:
                 $ref: "#/components/schemas/Error"
         "403":
           description: Forbidden — lacks the project-reference capability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/contracts:
+    get:
+      tags: [contracts]
+      summary: List populated contracts with their resolved postures and projects
+      description: >
+        Contract records mirrored from the "AI Survey (Contracts and Delivery
+        Completes)" tab. Read-only — the survey is the only write surface, and the
+        API Lambda's IAM grant on this table omits write actions.
+
+
+        Population is OPERATOR-RUN, not scheduled: there is no workflow, and the
+        GitHub deploy role has no access to the table. A refresh is
+        `node scripts/sync-contracts.mjs --env <staging|prod>`, run per environment.
+
+
+        Requires only a session. Deliberately NOT capability-gated, on the same
+        reasoning as /api/initiatives: the explorer exists so any delivery team member
+        can answer "may I use AI on my contract?", and a capability role would be
+        assigned to nobody.
+
+
+        One endpoint rather than three, so the grid, the detail view, the posture
+        guidance, and the capture date cannot disagree about freshness.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Contracts with resolved postures and projects, and the population state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [contracts, postures, population]
+                properties:
+                  contracts:
+                    type: array
+                    items:
+                      type: object
+                      description: >
+                        A fixed allowlist of survey columns (CONTRACT_FIELDS in
+                        functions/api/routes/contracts.mjs), plus the two resolved
+                        fields below. The population uses a denylist so new survey
+                        columns reach the table automatically; this allowlist is the
+                        review step that keeps one from reaching every signed-in user.
+                      properties:
+                        contract_id:
+                          type: string
+                          description: The detail route's lookup key and every card's href.
+                        portfolio: { type: string }
+                        project:
+                          type: string
+                          description: The survey's engagement name, used as the display title.
+                        contract_num: { type: string }
+                        vehicle: { type: string }
+                        customer: { type: string }
+                        agreement_type: { type: string }
+                        vehicle_fullname: { type: string }
+                        task_order: { type: string }
+                        nava_project_mgr: { type: string }
+                        nava_program_mgr: { type: string }
+                        subcontractors: { type: string }
+                        ai_use_terms: { type: string }
+                        ai_use_terms_language: { type: string }
+                        terms_detail: { type: string }
+                        nava_policy: { type: string }
+                        tools: { type: string }
+                        client_policy: { type: string }
+                        client_policy_summary: { type: string }
+                        client_policy_link: { type: string }
+                        ai_used: { type: string }
+                        usage: { type: string }
+                        review_process: { type: string }
+                        notes: { type: string }
+                        first_seen_at:
+                          type: string
+                          format: date-time
+                        last_synced_at:
+                          type: string
+                          format: date-time
+                        ai_posture:
+                          type: string
+                          description: The survey's raw posture value. Empty on 82 of 119 rows.
+                        posture_id:
+                          description: >
+                            The resolved posture record's id, or null. Null rather than
+                            omitted because the page distinguishes "no posture recorded"
+                            from "posture names no record" from a resolved one.
+                          oneOf:
+                            - type: "null"
+                            - type: string
+                        project_name:
+                          type: string
+                          description: The survey's own join string, served even when it resolves.
+                        resolved_project:
+                          description: >
+                            The project whose project_name OR contract_name matches, or
+                            null. Two fields because the survey's naming follows neither
+                            consistently. Same nine-field projection /api/initiatives
+                            uses, and for the same reason.
+                          oneOf:
+                            - type: "null"
+                            - $ref: "#/components/schemas/InitiativeProject"
+                  postures:
+                    type: array
+                    description: >
+                      Policy postures in authored display order, so adding or
+                      reordering one on the Policy Guidance tab needs no deploy.
+                    items:
+                      type: object
+                  population:
+                    $ref: "#/components/schemas/InitiativesPopulationState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: >
+            The contracts, project-reference, or projects table is not configured for
+            this environment. Distinct from 500 — terraform apply has not run here.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: >
+            The read failed. Returns an error rather than an empty list, because the
+            page IS the contracts and an empty success would be a lie.
           content:
             application/json:
               schema:

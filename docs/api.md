@@ -231,6 +231,56 @@ Attribute names are slugs derived from the sheet headers; `column_headers` maps 
 
 ---
 
+## Contracts
+
+Contract records mirrored from the "AI Survey (Contracts and Delivery Completes)" tab by `scripts/sync-contracts.mjs`. The survey is authoritative and is the only write surface.
+
+Population is **operator-run, not scheduled** — unlike Projects and Initiatives there is no workflow, and the GitHub deploy role has no access to the table. A refresh is `node scripts/sync-contracts.mjs --env <staging|prod>`, run per environment.
+
+Requires only a session — **not** capability-gated, on the same reasoning as Initiatives: the Contract Explorer exists so any delivery team member can answer "may I use AI on my contract?", and a capability role would be assigned to nobody.
+
+**Read-only.** No create, update, or delete endpoint, and the API Lambda's IAM grant on this table omits write actions.
+
+### `GET /api/contracts`
+
+Everything the Contract Explorer needs in one response — the grid, the detail view, the posture guidance, and the capture date, so none of them can disagree about freshness.
+
+```json
+{
+  "contracts": [
+    {
+      "contract_id": "user-facing-ai",
+      "portfolio": "LABS",
+      "project": "User-Facing AI",
+      "contract_num": "47QRAA21D0064",
+      "vehicle": "GSA MAS",
+      "customer": "Nava Labs",
+      "agreement_type": "Task order",
+      "ai_posture": "allowed",
+      "posture_id": "allowed",
+      "project_name": "User-Facing AI",
+      "resolved_project": { "project_code": "LB001", "…": "…" }
+    }
+  ],
+  "postures": [ { "id": "allowed", "label": "…", "position": 1 } ],
+  "population": { "state": "complete", "captured_at": "…", "row_count": 119 }
+}
+```
+
+The served fields are a fixed **allowlist** (`CONTRACT_FIELDS` in `functions/api/routes/contracts.mjs`), for the same reason as Initiatives: the population uses a denylist so new survey columns reach the table automatically, and the allowlist is the review step that keeps one from reaching every signed-in user unannounced.
+
+`posture_id` is `null` rather than omitted when unresolved, because the page distinguishes "no posture recorded" from "posture names no record" from a resolved one. 82 of 119 rows carry no posture, which is the survey's state rather than an error.
+
+`resolved_project` is the project a contract's `project_name` matches on either the project's `project_name` **or** its `contract_name` — two fields because the survey's naming follows neither consistently. It is the same nine-field projection Initiatives uses, and for the same reason: contracts are readable by every signed-in user while the projects table is not.
+
+`postures` is served in authored display order, so adding or reordering a posture on the Policy Guidance tab needs no deploy.
+
+`population.state` carries the same three values as Initiatives below.
+
+Returns 503 when the contracts, project-reference, or projects table is unconfigured, and 500 when the read fails — an error rather than an empty list, since the page *is* the contracts.
+
+---
+
 ## Initiatives
 
 AI initiatives mirrored from the first tab of the AI-initiatives workbook by `scripts/sync-initiatives.mjs`, run from the `sync-initiatives` workflow on manual dispatch. The sheet is authoritative and is the only write surface.
