@@ -237,7 +237,7 @@ async function serveInitiatives(c) {
       // because their records are already consumed in full by the allowlists.
       //
       // The projection is part of the cache key, so this read and the unprojected
-      // one /api/contracts makes of the same partition hold separate entries. They
+      // read /api/contracts makes of the same partition hold separate entries. They
       // must: this one carries six columns and that one carries all of them.
       contracts = await cachedQueryPartition(
         contractsTable, 'record_type', RECORD_CONTRACT,
