@@ -526,7 +526,12 @@ components:
             named by the `id` query parameter. Absent and empty mean different things:
             absent is "the join was not requested" — every record of a list request,
             and any initiative with no resolved project — while [] is "requested, and
-            this project owns no contracts on file".
+            no contract on file names this project".
+
+
+            [] is NOT evidence that the project has no contract. Only 43 of 119
+            contracts record a project name at all, and the two sheets sometimes
+            spell the same project differently. Present it as "no link recorded".
 
 
             Membership uses the CONTRACTS-side resolution rule, which matches a

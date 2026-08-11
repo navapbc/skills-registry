@@ -1,6 +1,6 @@
 import { ddb, tables, GetCommand, QueryCommand } from '../lib/dynamo.mjs';
 import { RECORD_PROJECT } from '../lib/projects.mjs';
-import { RECORD_CONTRACT } from '../lib/contracts.mjs';
+import { RECORD_CONTRACT, PROJECT_NAME_ATTR } from '../lib/contracts.mjs';
 import {
   RECORD_INITIATIVE,
   RECORD_SEED_META,
@@ -123,8 +123,16 @@ const initiative_payload = (initiative) =>
     INITIATIVE_FIELDS.filter((f) => initiative[f] !== undefined).map((f) => [f, initiative[f]]),
   );
 
-/** Read one partition in full, paging until exhausted. */
-async function queryPartition(table, keyName, keyValue) {
+/**
+ * Read one partition in full, paging until exhausted.
+ *
+ * `fields` narrows the read to those attributes. Used for the contracts partition,
+ * where the whole record is 30-odd survey columns and this page renders six of them
+ * — measured at ~144KB and 18 RCU per detail load unprojected. Omitted for the
+ * initiative and project partitions, whose records are already read in full by the
+ * allowlists downstream.
+ */
+async function queryPartition(table, keyName, keyValue, fields = null) {
   const items = [];
   let lastKey;
   do {
@@ -133,6 +141,14 @@ async function queryPartition(table, keyName, keyValue) {
         TableName: table,
         KeyConditionExpression: `${keyName} = :t`,
         ExpressionAttributeValues: { ':t': keyValue },
+        ...(fields && {
+          // Every name is aliased, not just the reserved ones (`project`, `vehicle`,
+          // and `customer` are reserved today). Aliasing selectively means a field
+          // added to the list later fails at runtime the first time someone picks a
+          // word DynamoDB happens to reserve, which is not a list anyone remembers.
+          ProjectionExpression: fields.map((_, i) => `#f${i}`).join(', '),
+          ExpressionAttributeNames: Object.fromEntries(fields.map((f, i) => [`#f${i}`, f])),
+        }),
         ...(lastKey && { ExclusiveStartKey: lastKey }),
       }),
     );
@@ -230,7 +246,12 @@ async function serveInitiatives(c) {
     if (!contractsTable) {
       return c.json({ error: 'Contracts are not configured' }, 503);
     }
-    const contracts = await queryPartition(contractsTable, 'record_type', RECORD_CONTRACT);
+    // PROJECT_NAME_ATTR is read but never served: it is the join key, and leaving it
+    // out of the projection makes every contract resolve to nothing.
+    const contracts = await queryPartition(
+      contractsTable, 'record_type', RECORD_CONTRACT,
+      [...RELATED_CONTRACT_FIELDS, PROJECT_NAME_ATTR],
+    );
     relatedContracts = contractsForProject(targetProject, contracts).map(contract_summary);
   }
 

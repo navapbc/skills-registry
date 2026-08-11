@@ -469,6 +469,45 @@ describe('initiatives related contracts', () => {
     expect(contractQuery.params.TableName).toBe(TABLE_VARS.CONTRACTS_TABLE);
   });
 
+  it('projects the contracts read down to the fields it serves plus the join key', async () => {
+    // Unprojected this is ~144KB and 18 RCU per detail load to render six-field
+    // links. The join key must survive the projection or every contract resolves to
+    // nothing — an empty section that looks like a real answer.
+    const headers = as('user');
+    queueReads({ contracts: [contract()] });
+    await app.request(`/api/initiatives?id=${ID}`, { headers });
+
+    const contractQuery = mockSend.mock.calls
+      .map(([cmd]) => cmd)
+      .find((cmd) => cmd?.type === 'Query'
+        && cmd.params.ExpressionAttributeValues[':t'] === RECORD_CONTRACT);
+
+    expect(Object.values(contractQuery.params.ExpressionAttributeNames).sort()).toEqual([
+      'agreement_type', 'contract_id', 'contract_num', 'customer', 'project',
+      'project_name', 'vehicle',
+    ]);
+    // Reserved words must be aliased, never spelled inline, or the query throws.
+    expect(contractQuery.params.ProjectionExpression).not.toMatch(/\bproject\b/);
+    expect(contractQuery.params.ProjectionExpression).not.toMatch(/\bvehicle\b/);
+    expect(contractQuery.params.ProjectionExpression).not.toMatch(/\bcustomer\b/);
+  });
+
+  it('leaves the initiative and project reads unprojected', async () => {
+    const headers = as('user');
+    queueReads({ contracts: [contract()] });
+    await app.request(`/api/initiatives?id=${ID}`, { headers });
+
+    const others = mockSend.mock.calls
+      .map(([cmd]) => cmd)
+      .filter((cmd) => cmd?.type === 'Query'
+        && cmd.params.ExpressionAttributeValues[':t'] !== RECORD_CONTRACT);
+
+    expect(others).toHaveLength(2);
+    for (const query of others) {
+      expect(query.params).not.toHaveProperty('ProjectionExpression');
+    }
+  });
+
   it('returns 503 when a detail request needs an unconfigured contracts table', async () => {
     const headers = as('user');
     delete process.env.CONTRACTS_TABLE;

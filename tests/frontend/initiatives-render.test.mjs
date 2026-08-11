@@ -427,10 +427,13 @@ describe('renderRelatedContractsSection', () => {
     expect(renderRelatedContractsSection(initiative({ related_contracts: undefined }))).toBe('');
   });
 
-  it('says so when the project owns no contracts', () => {
+  it('reports what the join established, not an absence it cannot see', () => {
+    // Only 43 of 119 contracts carry a project name, so "this project has no
+    // contracts" would be false on most empty results. The copy must stay hedged.
     const html = renderRelatedContractsSection(initiative({ related_contracts: [] }));
     expect(html).toContain('aria-label="Contracts"');
-    expect(html).toContain('No contracts on file');
+    expect(html).toContain('No contract on file names this project');
+    expect(html).toMatch(/record no project name/);
   });
 
   it('percent-encodes an id carrying a space or a slash', () => {

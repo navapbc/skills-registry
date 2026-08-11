@@ -445,10 +445,18 @@ function renderRelatedContract(contract) {
  *     join, and neither does a detail request for an initiative with no resolved
  *     project. Renders nothing; a "no contracts" panel here would answer a question
  *     nobody asked and imply the project has none.
- *   - `related_contracts` EMPTY — asked, and the project owns none on file. Says so,
+ *   - `related_contracts` EMPTY — asked, and no contract NAMES this project. Says so,
  *     because a silently missing section is indistinguishable from a page that does
  *     not show contracts at all.
  *   - non-empty — the list.
+ *
+ * The empty-state wording is deliberate and was measured. Only 43 of 119 contracts
+ * carry a project name at all, so "this project has no contracts" would be a false
+ * claim on most empty results — the common cause is a survey row that never recorded
+ * one, or a name written differently on each side (staging has `Emmy (formerly IvaaS
+ * and FFS)` on the project against `EMMY (IVaaS)` on its contract, which matches
+ * nothing). The copy therefore reports what the join actually established, and names
+ * the fix, rather than vouching for an absence it cannot see.
  */
 export function renderRelatedContractsSection(initiative) {
   const contracts = initiative?.related_contracts;
@@ -456,7 +464,9 @@ export function renderRelatedContractsSection(initiative) {
 
   const body = contracts.length === 0
     ? `<p class="text-sm text-gray-400 italic mt-1 m-0">
-        No contracts on file for this project.
+        No contract on file names this project. Most contracts record no project name
+        at all, so this may mean the link has not been made yet rather than that the
+        project has no contract.
       </p>`
     : `<ul class="list-none p-0 m-0 space-y-2">
         ${contracts.map(renderRelatedContract).join('')}
