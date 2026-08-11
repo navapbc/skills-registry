@@ -429,11 +429,35 @@ describe('renderRelatedContractsSection', () => {
 
   it('reports what the join established, not an absence it cannot see', () => {
     // Only 43 of 119 contracts carry a project name, so "this project has no
-    // contracts" would be false on most empty results. The copy must stay hedged.
+    // contracts" would be false on most empty results. The copy claims only that no
+    // contract NAMES the project.
     const html = renderRelatedContractsSection(initiative({ related_contracts: [] }));
     expect(html).toContain('aria-label="Contracts"');
-    expect(html).toContain('No contract on file names this project');
-    expect(html).toMatch(/record no project name/);
+    expect(html).toContain('No contract on file names this project.');
+    expect(html).not.toMatch(/no contracts (associated|on file for)/i);
+  });
+
+  it('says the read failed rather than claiming there are none', () => {
+    // null is the failure state. Rendering the empty-state copy here would assert an
+    // absence the failed read never established — during an incident, when someone is
+    // most likely to act on it.
+    const html = renderRelatedContractsSection(initiative({ related_contracts: null }));
+    expect(html).toContain('aria-label="Contracts"');
+    expect(html).toContain('Contracts could not be loaded.');
+    expect(html).not.toContain('No contract on file names');
+  });
+
+  it('distinguishes all four states from one another', () => {
+    const of = (v) => renderRelatedContractsSection(
+      v === 'absent' ? initiative() : initiative({ related_contracts: v }),
+    );
+    const absent = of('absent');
+    const failed = of(null);
+    const none = of([]);
+    const listed = of([contract()]);
+
+    expect(absent).toBe('');
+    expect(new Set([failed, none, listed]).size).toBe(3);
   });
 
   it('percent-encodes an id carrying a space or a slash', () => {

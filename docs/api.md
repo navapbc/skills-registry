@@ -309,11 +309,22 @@ Attribute names are slugs derived from the sheet headers. Unlike Projects, the s
 
 Three things about this are load-bearing:
 
-- **It is detail-only.** The grid renders no contracts, so computing the join for all 37 records would read the whole contracts partition on every hub load for data one record uses. The client knows the id before it fetches, so it asks. A list request never touches the contracts table — including when `CONTRACTS_TABLE` is unconfigured, which leaves the grid working and 503s only an `id` request whose initiative actually resolves to a project. An `id` matching nothing, or naming an initiative with no project, still returns 200 because the join never starts.
-- **Absent and `[]` mean different things.** Absent is "the join was not requested" — every record of a list request, and any initiative whose `resolved_project` is `null`. `[]` is "requested, and no contract on file names this project". A client that conflates them will either claim a project has no contracts when it was never asked, or render nothing when the honest answer is "none found".
+- **It is detail-only.** The grid renders no contracts, so computing the join for all 37 records would read the whole contracts partition on every hub load for data one record uses. The client knows the id before it fetches, so it asks. A list request never touches the contracts table at all.
+- **The field has four states, and none of them collapses into another.**
+
+  | Value | Meaning |
+  |---|---|
+  | absent | The join was not requested — every record of a list request, and any initiative whose `resolved_project` is `null`. |
+  | `null` | Requested, and the read failed. |
+  | `[]` | Requested, and no contract on file names this project. |
+  | `[…]` | The contracts. |
+
+  A client that conflates `null` with `[]` will report an absence during an outage that nobody established. One that conflates absent with `[]` will claim a project has no contracts when the join was never run.
+
+  Note that a failed contracts read **degrades rather than failing the request**: the response is still 200 and still carries the full initiative, because the contracts are one section of a page whose answer is the initiative. This includes the case where `CONTRACTS_TABLE` is unconfigured, which yields `null` rather than the 503 that a missing initiatives or projects table produces.
 
   `[]` is **not** evidence that the project has no contract. Only 43 of 119 contracts record a project name at all, so for the other 76 the join has nothing to work with. The two sheets can also spell the same project differently, in which case a contract that exists resolves to nothing — as of 2026-08-11 one contract still does, `HOR AARS`, matching no project record. Five of the 37 initiatives return `[]` today, and all five look genuine. Present the empty result as "no link recorded", not as "no contract exists".
-- **The join runs the contracts-side resolution rule**, which matches a project's `project_name` **or** its `contract_name`. The initiatives rule above matches `project_name` alone; using it here would silently drop every contract named the other way, which is a substantial share of the survey.
+- **The join runs the contracts-side resolution rule**, which matches a project's `project_name` **or** its `contract_name`. The initiatives rule above matches `project_name` alone; using it here would silently drop every contract named the other way, which is a substantial share of the survey. The rule is applied against a list holding only the target project, which asks "does this contract name this project?" rather than "which project does this contract resolve to first?" — the latter mis-assigns contracts whenever one project's `contract_name` collides with another's `project_name`.
 
 The projection is narrower than `/api/contracts` on purpose — these entries are links, not records, and the contract's own page answers the rest. `ai_posture` is deliberately excluded: resolving a posture id to its display label needs the project-reference partition, which this route does not read, and a bare id badge would be worse than none.
 

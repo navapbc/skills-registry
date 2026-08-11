@@ -231,10 +231,14 @@ async function serveInitiatives(c) {
   // read a whole extra partition on every hub load for data 36 of 37 records never
   // use. The client knows the id before it fetches, so it can ask.
   //
-  // `related_contracts` is therefore absent on a list request and present — possibly
-  // as `[]` — on the named record of a detail request. The distinction is the
-  // renderer's cue: absent means "not asked for", empty means "asked, and this
-  // project owns none".
+  // `related_contracts` therefore carries FOUR states, and the renderer keys off all
+  // four because collapsing any pair makes the page state something it did not learn:
+  //
+  //   absent  — never asked. Every record of a list request, and any initiative with
+  //             no resolved project.
+  //   null    — asked, and the read failed. NOT the same as none found.
+  //   []      — asked, and no contract on file names this project.
+  //   [...]   — the contracts.
   const requestedId = c.req.query('id');
   const target = requestedId
     ? initiatives.find((i) => i.initiative_id === requestedId)
@@ -243,30 +247,47 @@ async function serveInitiatives(c) {
   // entirely: there is no join key, and the page renders no section either way.
   const targetProject = target ? resolveProject(target, projects) : null;
 
-  let relatedContracts = null;
+  // `undefined` means the join was never attempted, and is what keeps the key off
+  // the payload entirely. Reassigned below to an array on success or to `null` on
+  // failure — see the four-state note above the attachment.
+  let relatedContracts;
   if (targetProject) {
-    const contractsTable = tables.contracts();
-    // Checked only on this path. A missing CONTRACTS_TABLE must not 503 the grid
-    // view, which never needed it — but on a detail request it is the same
-    // partial-rollout case the guard above exists for, and an unconfigured table
-    // would otherwise become an opaque SDK 500.
-    if (!contractsTable) {
-      return c.json({ error: 'Contracts are not configured' }, 503);
+    try {
+      const contractsTable = tables.contracts();
+      // An unconfigured table is treated as a failed read rather than a 503, unlike
+      // the guard above. The two initiative tables ARE this response; the contracts
+      // are one decorative section, and taking the whole record away because a third
+      // table is missing costs the reader everything to report a partial outage.
+      if (!contractsTable) throw new Error('CONTRACTS_TABLE is not configured');
+
+      // PROJECT_NAME_ATTR is read but never served: it is the join key, and leaving
+      // it out of the projection makes every contract resolve to nothing.
+      const contracts = await queryPartition(
+        contractsTable, 'record_type', RECORD_CONTRACT,
+        [...RELATED_CONTRACT_FIELDS, PROJECT_NAME_ATTR],
+      );
+      relatedContracts = contractsForProject(targetProject, contracts).map(contract_summary);
+    } catch (err) {
+      // Deliberately NOT rethrown into the route's 500. This read decorates a page
+      // that already has its answer, so a contracts-table incident should cost the
+      // section and not the initiative.
+      //
+      // `null` rather than `[]`, and that distinction is the point: `[]` states that
+      // no contract names this project, which a failed read did not establish. The
+      // renderer says the contracts could not be loaded instead of inventing an
+      // absence.
+      console.error('related contracts read failed', err);
+      relatedContracts = null;
     }
-    // PROJECT_NAME_ATTR is read but never served: it is the join key, and leaving it
-    // out of the projection makes every contract resolve to nothing.
-    const contracts = await queryPartition(
-      contractsTable, 'record_type', RECORD_CONTRACT,
-      [...RELATED_CONTRACT_FIELDS, PROJECT_NAME_ATTR],
-    );
-    relatedContracts = contractsForProject(targetProject, contracts).map(contract_summary);
   }
 
   const resolved = initiatives.map((initiative) => {
     const project = resolveProject(initiative, projects);
     return {
       ...initiative_payload(initiative),
-      ...(relatedContracts && initiative === target
+      // `!== undefined`, not truthiness: `null` and `[]` are both real answers here
+      // and a truthy test would drop the failure state and the empty one alike.
+      ...(relatedContracts !== undefined && initiative === target
         ? { related_contracts: relatedContracts }
         : {}),
       // NOT `project`: the sheet could gain a column of that name, and spreading a

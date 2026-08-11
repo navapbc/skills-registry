@@ -508,12 +508,18 @@ describe('initiatives related contracts', () => {
     }
   });
 
-  it('returns 503 when a detail request needs an unconfigured contracts table', async () => {
+  it('degrades to the failure state when the contracts table is unconfigured', async () => {
+    // Deliberately NOT a 503. The two initiative tables ARE this response; contracts
+    // are one decorative section, and taking the whole record away to report a third
+    // table's absence costs the reader everything.
     const headers = as('user');
     delete process.env.CONTRACTS_TABLE;
     queueReads();
     const res = await app.request(`/api/initiatives?id=${ID}`, { headers });
-    expect(res.status).toBe(503);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.initiatives[0].related_contracts).toBeNull();
   });
 
   it('still serves a list request when the contracts table is unconfigured', async () => {
@@ -526,11 +532,30 @@ describe('initiatives related contracts', () => {
     expect(res.status).toBe(200);
   });
 
-  it('returns 500 rather than an empty list when the contracts read fails', async () => {
+  it('serves the initiative with a null join when the contracts read fails', async () => {
+    // The whole record must survive a contracts-table incident: the reader came for
+    // the initiative, and the contracts are one section of it.
     const headers = as('user');
     mockSend.mockResolvedValueOnce({ Item: META });
     mockSend.mockResolvedValueOnce({ Items: [initiative()] });
     mockSend.mockResolvedValueOnce({ Items: [PROJECT] });
+    mockSend.mockRejectedValueOnce(new Error('dynamo exploded'));
+
+    const res = await app.request(`/api/initiatives?id=${ID}`, { headers });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.initiatives[0].title).toBe('Benefits navigator prototype');
+    expect(body.initiatives[0].resolved_project).not.toBeNull();
+    // null, never [] — an empty array would state that no contract names this
+    // project, which the failed read did not establish.
+    expect(body.initiatives[0].related_contracts).toBeNull();
+  });
+
+  it('still 500s when the initiatives read itself fails', async () => {
+    // The degradation above must not have widened into swallowing a real failure.
+    const headers = as('user');
+    mockSend.mockResolvedValueOnce({ Item: META });
     mockSend.mockRejectedValueOnce(new Error('dynamo exploded'));
 
     const res = await app.request(`/api/initiatives?id=${ID}`, { headers });

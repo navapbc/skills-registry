@@ -441,13 +441,17 @@ function renderRelatedContract(contract) {
  * Three states, and the difference between the first two is the whole reason the
  * API distinguishes an absent field from an empty array:
  *
- *   - `related_contracts` ABSENT — not asked for. The grid view never requests the
- *     join, and neither does a detail request for an initiative with no resolved
- *     project. Renders nothing; a "no contracts" panel here would answer a question
- *     nobody asked and imply the project has none.
- *   - `related_contracts` EMPTY — asked, and no contract NAMES this project. Says so,
- *     because a silently missing section is indistinguishable from a page that does
- *     not show contracts at all.
+ *   - ABSENT — not asked for. The grid view never requests the join, and neither does
+ *     a detail request for an initiative with no resolved project. Renders nothing; a
+ *     "no contracts" panel here would answer a question nobody asked and imply the
+ *     project has none.
+ *   - NULL — asked, and the read failed. Says exactly that. Rendering the empty-state
+ *     copy here would report an absence the failed read never established, which is
+ *     the same overclaim in a costlier place: during an incident, when someone is
+ *     most likely to act on it.
+ *   - EMPTY — asked, and no contract on file names this project. Says so, because a
+ *     silently missing section is indistinguishable from a page that does not show
+ *     contracts at all.
  *   - non-empty — the list.
  *
  * The empty-state wording is deliberate and was measured. Only 43 of 119 contracts
@@ -455,23 +459,29 @@ function renderRelatedContract(contract) {
  * claim on most empty results — the common cause is a survey row that never recorded
  * one, or a name written differently on each side. Both have happened: the Emmy
  * contract read `EMMY (IVaaS)` against a project record spelling it three other ways
- * and resolved to nothing until the sheet was corrected on 2026-08-11. The copy
- * therefore reports what the join actually established rather than vouching for an
- * absence it cannot see.
+ * and resolved to nothing until the sheet was corrected on 2026-08-11. The copy says
+ * no contract NAMES the project, which is what the join established.
  */
 export function renderRelatedContractsSection(initiative) {
   const contracts = initiative?.related_contracts;
-  if (!Array.isArray(contracts)) return '';
+  if (contracts === undefined) return '';
 
-  const body = contracts.length === 0
-    ? `<p class="text-sm text-gray-400 italic mt-1 m-0">
-        No contract on file names this project. Most contracts record no project name
-        at all, so this may mean the link has not been made yet rather than that the
-        project has no contract.
-      </p>`
-    : `<ul class="list-none p-0 m-0 space-y-2">
+  const note = (text) => `<p class="text-sm text-gray-400 italic mt-1 m-0">${text}</p>`;
+
+  let body;
+  if (contracts === null) {
+    body = note('Contracts could not be loaded.');
+  } else if (!Array.isArray(contracts)) {
+    // Defensive: a shape the API does not produce. Treated as "nothing to say"
+    // rather than rendered, so a malformed payload cannot assert an absence.
+    return '';
+  } else if (contracts.length === 0) {
+    body = note('No contract on file names this project.');
+  } else {
+    body = `<ul class="list-none p-0 m-0 space-y-2">
         ${contracts.map(renderRelatedContract).join('')}
       </ul>`;
+  }
 
   return `<section aria-label="Contracts" class="rounded-lg p-4 border border-gray-200 bg-white">
     <h2 class="text-sm font-semibold text-gray-900 m-0 mb-2">Contracts on this project</h2>

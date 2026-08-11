@@ -520,13 +520,20 @@ components:
             - type: "null"
             - $ref: "#/components/schemas/InitiativeProject"
         related_contracts:
-          type: array
           description: >
             The contracts belonging to resolved_project, present ONLY on the record
-            named by the `id` query parameter. Absent and empty mean different things:
-            absent is "the join was not requested" — every record of a list request,
-            and any initiative with no resolved project — while [] is "requested, and
-            no contract on file names this project".
+            named by the `id` query parameter. FOUR states, none of which collapses
+            into another: absent means the join was not requested (every record of a
+            list request, and any initiative with no resolved project); null means it
+            was requested and the read FAILED; [] means it was requested and no
+            contract on file names this project; a non-empty array is the contracts.
+
+
+            A failed contracts read degrades rather than failing the request — the
+            response is still 200 and still carries the full initiative, because the
+            contracts are one section of a page whose answer is the initiative. An
+            unconfigured CONTRACTS_TABLE yields null for the same reason, rather than
+            the 503 a missing initiatives or projects table produces.
 
 
             [] is NOT evidence that the project has no contract. Only 43 of 119
@@ -535,11 +542,14 @@ components:
 
 
             Membership uses the CONTRACTS-side resolution rule, which matches a
-            project's project_name or its contract_name. The initiatives rule matches
-            project_name alone and would silently drop every contract named the other
-            way.
-          items:
-            $ref: "#/components/schemas/InitiativeContract"
+            project's project_name or its contract_name, applied against a list
+            holding only the target project. The initiatives rule matches project_name
+            alone and would silently drop every contract named the other way.
+          oneOf:
+            - type: "null"
+            - type: array
+              items:
+                $ref: "#/components/schemas/InitiativeContract"
         first_seen_at:
           type: string
           format: date-time
@@ -1838,18 +1848,20 @@ paths:
         "503":
           description: >
             The initiatives table or the projects table is not configured for this
-            environment — or, on an `id` request that resolves to a project, the
-            contracts table. Distinct from 500 on purpose — it means terraform apply
-            has not run here yet, not that the read failed. A list request never
-            consults the contracts table, so it is unaffected by that one's absence.
+            environment. Distinct from 500 on purpose — it means terraform apply has
+            not run here yet, not that the read failed. An unconfigured contracts
+            table does NOT 503: it degrades to related_contracts: null, because the
+            contracts decorate a response the two initiative tables constitute.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "500":
           description: >
-            The read failed. Returns an error rather than an empty list, because the
-            page IS the initiatives and an empty success would be a lie.
+            The initiatives or projects read failed. Returns an error rather than an
+            empty list, because the page IS the initiatives and an empty success would
+            be a lie. A failed CONTRACTS read is not covered by this — it degrades to
+            related_contracts: null and the request still succeeds.
           content:
             application/json:
               schema:
