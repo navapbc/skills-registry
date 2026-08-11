@@ -29,6 +29,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
 }));
 
 import { app } from '../../../functions/api/index.mjs';
+import { __resetPartitionCache } from '../../../functions/api/lib/partition-cache.mjs';
 import { RECORD_PROJECT } from '../../../functions/api/lib/projects.mjs';
 import { RECORD_CONTRACT } from '../../../functions/api/lib/contracts.mjs';
 import {
@@ -166,6 +167,10 @@ const TABLE_VARS = {
 let previousVars;
 beforeEach(() => {
   mockSend.mockReset();
+  // The route's partition reads are cached for a minute in module scope. Without
+  // this, the second case in this file would answer from the first case's fixtures
+  // and every queued read after it would land one step out of sequence.
+  __resetPartitionCache();
   previousVars = Object.fromEntries(Object.keys(TABLE_VARS).map((k) => [k, process.env[k]]));
   Object.assign(process.env, TABLE_VARS);
 });
@@ -627,5 +632,143 @@ describe('initiatives is read-only', () => {
       body: JSON.stringify({ title: 'Injected' }),
     });
     expect([404, 405]).toContain(res.status);
+  });
+});
+
+// ── Partition caching ─────────────────────────────────────────────────────
+// This route is the reason the cache sits on partition reads instead of whole
+// responses: `?id=` makes the response per-initiative while the reads underneath
+// it are shared. These pin that the sharing never bleeds one id's join into
+// another's response, and that the four `related_contracts` states all survive.
+describe('initiatives partition cache', () => {
+  const ID = 'benefits-navigator-prototype';
+  const OTHER_ID = 'claims-triage-pilot';
+
+  /** Two initiatives on different projects, each with a contract of its own. */
+  const twoInitiatives = () => [
+    initiative(),
+    initiative({ initiative_id: OTHER_ID, title: 'Claims triage pilot', project_name: 'MD PBIF' }),
+  ];
+  const twoProjects = () => [PROJECT, { ...PROJECT, project_name: 'MD PBIF', project_code: 'MD01' }];
+  const twoContracts = () => [
+    contract({ contract_id: 'ufai-1' }),
+    contract({ contract_id: 'pbif-1', project_name: 'MD PBIF', project: 'MD PBIF' }),
+  ];
+
+  /** The one read a cached request still makes: the uncached seed-meta GetItem. */
+  const queueMetaOnly = (meta = META) => mockSend.mockResolvedValueOnce({ Item: meta });
+
+  it('serves a repeat list request without re-reading the partitions', async () => {
+    const first_headers = as('user');
+    queueReads();
+    const first = await (await app.request('/api/initiatives', { headers: first_headers })).json();
+
+    const callsAfterFirst = mockSend.mock.calls.length;
+    const second_headers = as('user');
+    queueMetaOnly();
+    const second = await (await app.request('/api/initiatives', { headers: second_headers })).json();
+
+    expect(second).toEqual(first);
+    expect(mockSend.mock.calls.length).toBe(callsAfterFirst + 2);
+    expect(mockSend.mock.calls.slice(callsAfterFirst).map(([c]) => c.type)).toEqual(['Get', 'Get']);
+  });
+
+  it('answers a second id with its own contracts, not the first id’s', async () => {
+    // The whole reason responses are not cached. Both requests read the same three
+    // cached partitions; only the join differs, and it is computed per request.
+    const first_headers = as('user');
+    queueReads({
+      initiatives: twoInitiatives(),
+      projects: twoProjects(),
+      contracts: twoContracts(),
+    });
+    const first = await (await app.request(`/api/initiatives?id=${ID}`, { headers: first_headers })).json();
+    const firstTarget = first.initiatives.find((i) => i.initiative_id === ID);
+    expect(firstTarget.related_contracts.map((c) => c.contract_id)).toEqual(['ufai-1']);
+
+    const second_headers = as('user');
+    queueMetaOnly();
+    const second = await (await app.request(`/api/initiatives?id=${OTHER_ID}`, { headers: second_headers })).json();
+
+    const secondTarget = second.initiatives.find((i) => i.initiative_id === OTHER_ID);
+    expect(secondTarget.related_contracts.map((c) => c.contract_id)).toEqual(['pbif-1']);
+    // And the first initiative carries no join on this response at all.
+    expect(second.initiatives.find((i) => i.initiative_id === ID)).not.toHaveProperty(
+      'related_contracts',
+    );
+    // No partition was re-read to answer it.
+    expect(mockSend.mock.calls.filter(([c]) => c?.type === 'Query')).toHaveLength(3);
+  });
+
+  it('attaches no contracts to a list request that follows a detail request', async () => {
+    const first_headers = as('user');
+    queueReads({ contracts: [contract({ contract_id: 'ufai-1' })] });
+    await app.request(`/api/initiatives?id=${ID}`, { headers: first_headers });
+
+    const second_headers = as('user');
+    queueMetaOnly();
+    const body = await (await app.request('/api/initiatives', { headers: second_headers })).json();
+
+    for (const record of body.initiatives) {
+      expect(record).not.toHaveProperty('related_contracts');
+    }
+  });
+
+  it('holds the projected contracts read separately from an unprojected one', async () => {
+    // /api/contracts reads this same partition in full. Sharing one entry would
+    // hand whichever route asked second a record shaped for the other.
+    const first_headers = as('user');
+    queueReads({ contracts: [contract({ contract_id: 'ufai-1' })] });
+    const body = await (await app.request(`/api/initiatives?id=${ID}`, { headers: first_headers })).json();
+    const [related] = body.initiatives.find((i) => i.initiative_id === ID).related_contracts;
+
+    // The projection held: the join arrived, the withheld columns did not.
+    expect(related.contract_id).toBe('ufai-1');
+    expect(related).not.toHaveProperty('notes');
+    expect(related).not.toHaveProperty('project_name');
+
+    const contractsQuery = mockSend.mock.calls
+      .map(([c]) => c)
+      .filter((c) => c?.type === 'Query')
+      .at(-1);
+    expect(contractsQuery.params.ProjectionExpression).toBeDefined();
+  });
+
+  it('retries a failed contracts read rather than pinning related_contracts to null', async () => {
+    // A cached rejection would hold the section at "could not be loaded" for the
+    // full minute, long after the fault cleared.
+    const failing_headers = as('user');
+    queueReads();
+    mockSend.mockRejectedValueOnce(new Error('throttled'));
+    const failed = await (await app.request(`/api/initiatives?id=${ID}`, { headers: failing_headers })).json();
+    expect(failed.initiatives.find((i) => i.initiative_id === ID).related_contracts).toBeNull();
+
+    const recovered_headers = as('user');
+    queueMetaOnly();
+    mockSend.mockResolvedValueOnce({ Items: [contract({ contract_id: 'ufai-1' })] });
+    const recovered = await (await app.request(`/api/initiatives?id=${ID}`, { headers: recovered_headers })).json();
+
+    expect(
+      recovered.initiatives.find((i) => i.initiative_id === ID).related_contracts.map((c) => c.contract_id),
+    ).toEqual(['ufai-1']);
+  });
+
+  it('re-reads the initiatives partition once the entry expires', async () => {
+    vi.useFakeTimers();
+    try {
+      const first_headers = as('user');
+      queueReads();
+      const before = await (await app.request('/api/initiatives', { headers: first_headers })).json();
+      expect(before.initiatives).toHaveLength(1);
+
+      vi.advanceTimersByTime(61_000);
+
+      const fresh_headers = as('user');
+      queueReads({ initiatives: twoInitiatives(), projects: twoProjects() });
+      const after = await (await app.request('/api/initiatives', { headers: fresh_headers })).json();
+      expect(after.initiatives).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

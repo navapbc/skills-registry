@@ -229,6 +229,8 @@ Attribute names are slugs derived from the sheet headers; `column_headers` maps 
 
 `drift.unresolved` and `drift.missing` are deliberately distinct. Unresolved means a value is present and matches no archetype label — a typo or a rename, and what fails the scheduled sync. Missing means the primary archetype is empty, which is an unassigned new project rather than an error, and carries no `raw_value` because there is nothing to reproduce. Deactivated archetype records count as resolved. Values are compared case- and whitespace-insensitively, but `raw_value` is always the sheet's exact string.
 
+**Cached for 60s.** The project, archetype, contract, and posture records behind this response are held in the API Lambda for up to a minute, so an archetype added or renamed in the admin tab can take that long to clear its drift finding. `sync` is read live on every request. See [Caching](#caching).
+
 ---
 
 ## Contracts
@@ -278,6 +280,8 @@ The served fields are a fixed **allowlist** (`CONTRACT_FIELDS` in `functions/api
 `population.state` carries the same three values as Initiatives below.
 
 Returns 503 when the contracts, project-reference, or projects table is unconfigured, and 500 when the read fails — an error rather than an empty list, since the page *is* the contracts.
+
+**Cached for 60s.** The contract, posture, and project records behind this response are held in the API Lambda for up to a minute, so a posture edited on the Policy Guidance tab can take that long to appear. `population` is read live on every request. See [Caching](#caching).
 
 ---
 
@@ -383,6 +387,28 @@ The projection is narrower than `/api/contracts` on purpose — these entries ar
 - `never_populated` — no sync has run. Not an error.
 - `in_progress` — a run wrote initiatives and then died, so the table is mid-flight and its contents should not be trusted.
 - `complete` — `captured_at` and `row_count` describe a finished run.
+
+**Cached for 60s.** The initiative, project, and contract records behind this response are held in the API Lambda for up to a minute. The `?id=` join itself is **not** cached — it is computed per request over those held records, so two ids asked in the same minute each get their own contracts. `population` is read live on every request. See [Caching](#caching).
+
+---
+
+## Caching
+
+Two layers, and which one an endpoint gets is a security decision rather than a performance one.
+
+**CloudFront (edge).** `/api/skills`, `/api/skills/*`, `/api/plugins`, and `/api/plugins/*` are cached at the edge for 300s. Every other `/api/*` path falls through to a `CachingDisabled` behavior. A CloudFront cache **hit is served without invoking the API Lambda**, which means the auth middleware never runs on a hit.
+
+**API Lambda (in-process).** `GET /api/projects`, `GET /api/contracts`, and `GET /api/initiatives` cache their underlying DynamoDB partition reads for 60s in `functions/api/lib/partition-cache.mjs`. The cache is per warm Lambda container, so each holds its own copy with its own expiry.
+
+These three are cached in the Lambda and **not** at the edge, deliberately:
+
+- The cache sits behind the auth middleware and behind each route's own gate, so nothing becomes readable without a session and no response is shared between users.
+- `/api/projects` answers 403 or 200 depending on the reader's capability. An edge cache is keyed on the request, not the reader, so it would store whichever response arrived first and serve it to everyone who asked next — leaking project data to an ungated reader, or blocking an authorized one behind a cached 403.
+- `/api/contracts` and `/api/initiatives` return the same body to every signed-in user, so they could in principle be shared — but only behind an edge auth check, which the current cached behaviors do not have.
+
+What the cache holds is the *records*; the joins each route performs over them still run per request. Resolve-on-read behavior is therefore preserved, one minute behind. Sync-metadata reads (`sync`, `population`) are deliberately uncached so freshness reporting stays live.
+
+There is no invalidation. A sheet sync or an admin edit to reference data becomes visible when the entry expires.
 
 ---
 

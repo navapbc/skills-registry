@@ -1,4 +1,5 @@
-import { ddb, tables, GetCommand, QueryCommand } from '../lib/dynamo.mjs';
+import { ddb, tables, GetCommand } from '../lib/dynamo.mjs';
+import { cachedQueryPartition } from '../lib/partition-cache.mjs';
 import { RECORD_PROJECT } from '../lib/projects.mjs';
 import { RECORD_CONTRACT, PROJECT_NAME_ATTR } from '../lib/contracts.mjs';
 import {
@@ -124,48 +125,6 @@ const initiative_payload = (initiative) =>
   );
 
 /**
- * Read one partition in full, paging until exhausted.
- *
- * `fields` narrows the read to those attributes. Used for the contracts partition,
- * where the whole record is 30-odd survey columns and this page renders six of them
- * — ~144KB across 119 items unprojected.
- *
- * What this buys is payload, Lambda memory, and deserialization time. It does NOT
- * buy read capacity: DynamoDB charges a Query on the size of the items it reads,
- * before the projection is applied, so the ~18 RCU is unchanged. Only a secondary
- * index keyed on the join value would cut that, which is not worth an index on a
- * 119-item table.
- *
- * Omitted for the initiative and project partitions, whose records are already read
- * in full by the allowlists downstream.
- */
-async function queryPartition(table, keyName, keyValue, fields = null) {
-  const items = [];
-  let lastKey;
-  do {
-    const page = await ddb.send(
-      new QueryCommand({
-        TableName: table,
-        KeyConditionExpression: `${keyName} = :t`,
-        ExpressionAttributeValues: { ':t': keyValue },
-        ...(fields && {
-          // Every name is aliased, not just the reserved ones (`project`, `vehicle`,
-          // and `customer` are reserved today). Aliasing selectively means a field
-          // added to the list later fails at runtime the first time someone picks a
-          // word DynamoDB happens to reserve, which is not a list anyone remembers.
-          ProjectionExpression: fields.map((_, i) => `#f${i}`).join(', '),
-          ExpressionAttributeNames: Object.fromEntries(fields.map((f, i) => [`#f${i}`, f])),
-        }),
-        ...(lastKey && { ExclusiveStartKey: lastKey }),
-      }),
-    );
-    items.push(...(page.Items ?? []));
-    lastKey = page.LastEvaluatedKey;
-  } while (lastKey);
-  return items;
-}
-
-/**
  * Describe the last sync run.
  *
  * Three states, mirroring describePopulation in contracts.mjs. Absent metadata
@@ -220,11 +179,12 @@ async function serveInitiatives(c) {
     }),
   );
 
-  const initiatives = await queryPartition(table, 'record_type', RECORD_INITIATIVE);
+  const initiatives = await cachedQueryPartition(table, 'record_type', RECORD_INITIATIVE);
 
   // Resolved on read, not stored: fixing a project name in the sheet changes the
-  // page on the next load rather than waiting for the next sync run.
-  const projects = await queryPartition(projectsTable, 'record_type', RECORD_PROJECT);
+  // page on the next load rather than waiting for the next sync run. "Next load"
+  // now means the next load after the partition cache expires — up to a minute.
+  const projects = await cachedQueryPartition(projectsTable, 'record_type', RECORD_PROJECT);
 
   // The project→contracts join, computed ONLY when the request names one
   // initiative. The grid renders no contracts, so doing this unconditionally would
@@ -267,7 +227,19 @@ async function serveInitiatives(c) {
 
       // PROJECT_NAME_ATTR is read but never served: it is the join key, and leaving
       // it out of the projection makes every contract resolve to nothing.
-      contracts = await queryPartition(
+      //
+      // The projection narrows this to six of 30-odd survey columns — ~144KB across
+      // 119 items unprojected — buying payload, Lambda memory, and deserialization
+      // time. It does NOT buy read capacity: DynamoDB charges a Query on the size of
+      // the items it reads, before the projection is applied. Only a secondary index
+      // keyed on the join value would cut that, which is not worth an index on a
+      // 119-item table. The initiative and project partitions are read unprojected
+      // because their records are already consumed in full by the allowlists.
+      //
+      // The projection is part of the cache key, so this read and the unprojected
+      // read /api/contracts makes of the same partition hold separate entries. They
+      // must: this one carries six columns and that one carries all of them.
+      contracts = await cachedQueryPartition(
         contractsTable, 'record_type', RECORD_CONTRACT,
         [...RELATED_CONTRACT_FIELDS, PROJECT_NAME_ATTR],
       );

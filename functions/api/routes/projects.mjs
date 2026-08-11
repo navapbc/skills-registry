@@ -1,4 +1,5 @@
-import { ddb, tables, GetCommand, QueryCommand } from '../lib/dynamo.mjs';
+import { ddb, tables, GetCommand } from '../lib/dynamo.mjs';
+import { cachedQueryPartition } from '../lib/partition-cache.mjs';
 import { can } from '../lib/permissions.mjs';
 import { ENTITY_ARCHETYPE, ENTITY_POSTURE } from '../lib/project-reference.mjs';
 import { RECORD_CONTRACT, collectContractIssues } from '../lib/contracts.mjs';
@@ -33,23 +34,11 @@ const forbidden = (c) => c.json({ error: 'Forbidden' }, 403);
 // write actions too, so a future write route fails against infrastructure rather
 // than succeeding quietly (see terraform/lambda.tf, DynamoDBProjectsRead).
 
-async function queryPartition(table, keyName, keyValue) {
-  const items = [];
-  let lastKey;
-  do {
-    const page = await ddb.send(
-      new QueryCommand({
-        TableName: table,
-        KeyConditionExpression: `${keyName} = :t`,
-        ExpressionAttributeValues: { ':t': keyValue },
-        ...(lastKey && { ExclusiveStartKey: lastKey }),
-      }),
-    );
-    items.push(...(page.Items ?? []));
-    lastKey = page.LastEvaluatedKey;
-  } while (lastKey);
-  return items;
-}
+// The partition reads below are cached for a minute (see lib/partition-cache.mjs).
+// That cache is INSIDE the Lambda, behind both the auth middleware and the
+// capability gate, and this route is the reason it could not be at CloudFront: an
+// edge cache is keyed on the request, not the reader, so it would serve whichever
+// of the 403 or the 200 landed first to everyone who asked next.
 
 /**
  * Describe the last sync run.
@@ -119,8 +108,8 @@ async function readContractDrift(projects) {
   if (!table) return unavailable('not_configured');
 
   try {
-    const contracts = await queryPartition(table, 'record_type', RECORD_CONTRACT);
-    const postures = await queryPartition(
+    const contracts = await cachedQueryPartition(table, 'record_type', RECORD_CONTRACT);
+    const postures = await cachedQueryPartition(
       tables.projectReference(),
       'entity_type',
       ENTITY_POSTURE,
@@ -166,12 +155,13 @@ export function projectsRoutes(app) {
     );
     const metaItem = metaResult.Item;
 
-    const projects = await queryPartition(table, 'record_type', RECORD_PROJECT);
+    const projects = await cachedQueryPartition(table, 'record_type', RECORD_PROJECT);
 
     // Resolved on read, not stored at sync time: adding a missing archetype
     // record clears its findings on the next page load rather than waiting for
-    // the next scheduled run.
-    const archetypes = await queryPartition(
+    // the next scheduled run. "Next page load" now means the next one after the
+    // partition cache expires — up to a minute.
+    const archetypes = await cachedQueryPartition(
       tables.projectReference(),
       'entity_type',
       ENTITY_ARCHETYPE,

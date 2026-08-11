@@ -80,6 +80,8 @@ CloudFront is the sole public entry point — S3 and API Gateway are never expos
 
 Runs on every viewer request for S3-backed behaviors. Validates the `__session` JWT (HS256, same secret as Lambda) without calling any backend. Redirects to `/login` if the token is missing or expired. Lives in `functions/edge/auth-check.js.tpl` — rendered by Terraform with the JWT secret baked in.
 
+Note that it is **not** associated with any `/api/*` behavior. API requests are authenticated by the Lambda's own middleware instead — which a CloudFront cache hit skips, since a hit is served without invoking the Lambda at all. That is the constraint behind the caching split described below.
+
 ### Security headers
 
 A CloudFront Response Headers Policy applies to all S3 behaviors:
@@ -116,6 +118,23 @@ Node.js Lambda (Hono router) behind API Gateway HTTP v2. All requests require a 
 ### Auth middleware
 
 On every request: reads `__session` cookie → verifies HS256 JWT → calls `getOrCreateUser()` (DynamoDB GetItem; writes only on first login) → sets `ctx.user`.
+
+### Read caching, and why it is split across two layers
+
+Two caches, and which one an endpoint uses is a security decision rather than a performance one.
+
+| Endpoint | Cached where | TTL |
+|---|---|---|
+| `GET /api/skills`, `GET /api/plugins` (and `/*` detail routes) | CloudFront | 300s |
+| `GET /api/projects`, `GET /api/contracts`, `GET /api/initiatives` | API Lambda (`lib/partition-cache.mjs`) | 60s |
+| everything else | not cached | — |
+
+The project-data reads are the heaviest in the API — four to five DynamoDB operations each, joining whole partitions per request — and they are the ones **not** at the edge. The reason is that a CloudFront hit never invokes the Lambda, so no auth middleware and no route gate runs:
+
+- `GET /api/projects` answers 403 or 200 depending on `manage:project-reference`. An edge cache is keyed on the request, not the reader, so it would store whichever response arrived first and serve it to everyone next — leaking project data to an ungated reader, or holding an authorized one behind a cached 403.
+- `GET /api/contracts` and `GET /api/initiatives` return the same body to every signed-in user and so are shareable in principle, but only behind an edge auth check. Attaching `auth_check` to an `/api/*` behavior would first need an `/api/` passthrough in its `rewriteUri`, which currently appends `/index.html` to any extension-less path.
+
+Caching in the Lambda instead keeps every request behind the middleware and the gate. What is held is the **partition reads**, not the responses: the joins each route performs still run per request, which preserves resolve-on-read behavior (one minute behind) and keeps `/api/initiatives?id=` correct per id while sharing the records underneath. Sync-metadata reads stay uncached so freshness reporting is live. The cache is per warm container, holds the in-flight promise so concurrent misses issue one query, and evicts on rejection so a transient fault is not pinned for a minute. There is no invalidation.
 
 ### Routes
 
