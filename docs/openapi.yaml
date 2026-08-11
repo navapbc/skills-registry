@@ -519,6 +519,22 @@ components:
           oneOf:
             - type: "null"
             - $ref: "#/components/schemas/InitiativeProject"
+        related_contracts:
+          type: array
+          description: >
+            The contracts belonging to resolved_project, present ONLY on the record
+            named by the `id` query parameter. Absent and empty mean different things:
+            absent is "the join was not requested" — every record of a list request,
+            and any initiative with no resolved project — while [] is "requested, and
+            this project owns no contracts on file".
+
+
+            Membership uses the CONTRACTS-side resolution rule, which matches a
+            project's project_name or its contract_name. The initiatives rule matches
+            project_name alone and would silently drop every contract named the other
+            way.
+          items:
+            $ref: "#/components/schemas/InitiativeContract"
         first_seen_at:
           type: string
           format: date-time
@@ -558,6 +574,34 @@ components:
         archetype_primary:
           type: string
         archetype_additional:
+          type: string
+
+    InitiativeContract:
+      type: object
+      description: >
+        A contract on the initiative's project, projected down to what identifies it.
+        Narrower than the Contract schema on purpose: these are LINKS, not records,
+        and /contracts/{contract_id} answers the rest. ai_posture is deliberately
+        absent — resolving a posture id to its label needs the project-reference
+        partition, which this route does not read.
+      properties:
+        contract_id:
+          type: string
+          description: The href of the link this entry renders.
+          example: user-facing-ai
+        project:
+          type: string
+          description: >
+            The survey's own project string, which is also the contract's display name
+            on the Contract Explorer's cards.
+          example: User-Facing AI
+        contract_num:
+          type: string
+        vehicle:
+          type: string
+        customer:
+          type: string
+        agreement_type:
           type: string
 
     InitiativesPopulationState:
@@ -1752,6 +1796,19 @@ paths:
         date cannot disagree about how fresh the data is.
       security:
         - sessionCookie: []
+      parameters:
+        - name: id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >
+            An initiative_id. The response is unchanged except that the named record
+            additionally carries related_contracts. Detail-only because the grid
+            renders no contracts, and computing the join for every record would read
+            the contracts partition on every hub load. An id matching nothing is not
+            an error — the plain list is returned and the page renders not-found.
+          example: benefits-navigator-prototype
       responses:
         "200":
           description: Initiatives with their resolved projects, and the population state
@@ -1776,8 +1833,10 @@ paths:
         "503":
           description: >
             The initiatives table or the projects table is not configured for this
-            environment. Distinct from 500 on purpose — it means terraform apply has
-            not run here yet, not that the read failed.
+            environment — or, on an `id` request that resolves to a project, the
+            contracts table. Distinct from 500 on purpose — it means terraform apply
+            has not run here yet, not that the read failed. A list request never
+            consults the contracts table, so it is unaffected by that one's absence.
           content:
             application/json:
               schema:

@@ -292,6 +292,29 @@ Attribute names are slugs derived from the sheet headers. Unlike Projects, the s
 - `project_name` empty — the initiative names no project. Normal, not a defect; 14 of 37 rows as of 2026-08-10, and plenty of initiatives are internal.
 - `project_name` set but matching nothing — real drift. This is what fails a sync run, and it should be rare; it is reachable between a sheet edit and the next sync.
 
+**`?id=<initiative_id>`** — optional. The response is unchanged except that the named record additionally carries `related_contracts`: the contracts belonging to its `resolved_project`, each with enough to identify it and a `contract_id` that addresses `/contracts/<contract_id>`.
+
+```json
+"related_contracts": [
+  {
+    "contract_id": "user-facing-ai",
+    "project": "User-Facing AI",
+    "contract_num": "47QRAA21D0064",
+    "vehicle": "GSA MAS",
+    "customer": "Nava Labs",
+    "agreement_type": "Task order"
+  }
+]
+```
+
+Three things about this are load-bearing:
+
+- **It is detail-only.** The grid renders no contracts, so computing the join for all 37 records would read the whole contracts partition on every hub load for data one record uses. The client knows the id before it fetches, so it asks. A list request never touches the contracts table — including when `CONTRACTS_TABLE` is unconfigured, which 503s an `id` request and leaves the grid working.
+- **Absent and `[]` mean different things.** Absent is "the join was not requested" — every record of a list request, and any initiative whose `resolved_project` is `null`. `[]` is "requested, and this project owns no contracts on file". A client that conflates them will either claim a project has no contracts when it was never asked, or render nothing when the honest answer is "none".
+- **The join runs the contracts-side resolution rule**, which matches a project's `project_name` **or** its `contract_name`. The initiatives rule above matches `project_name` alone; using it here would silently drop every contract named the other way, which is a substantial share of the survey.
+
+The projection is narrower than `/api/contracts` on purpose — these entries are links, not records, and the contract's own page answers the rest. `ai_posture` is deliberately excluded: resolving a posture id to its display label needs the project-reference partition, which this route does not read, and a bare id badge would be worse than none.
+
 `population.state` is one of:
 
 - `never_populated` — no sync has run. Not an error.
