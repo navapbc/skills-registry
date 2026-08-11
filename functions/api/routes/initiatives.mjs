@@ -128,9 +128,16 @@ const initiative_payload = (initiative) =>
  *
  * `fields` narrows the read to those attributes. Used for the contracts partition,
  * where the whole record is 30-odd survey columns and this page renders six of them
- * — measured at ~144KB and 18 RCU per detail load unprojected. Omitted for the
- * initiative and project partitions, whose records are already read in full by the
- * allowlists downstream.
+ * — ~144KB across 119 items unprojected.
+ *
+ * What this buys is payload, Lambda memory, and deserialization time. It does NOT
+ * buy read capacity: DynamoDB charges a Query on the size of the items it reads,
+ * before the projection is applied, so the ~18 RCU is unchanged. Only a secondary
+ * index keyed on the join value would cut that, which is not worth an index on a
+ * 119-item table.
+ *
+ * Omitted for the initiative and project partitions, whose records are already read
+ * in full by the allowlists downstream.
  */
 async function queryPartition(table, keyName, keyValue, fields = null) {
   const items = [];
