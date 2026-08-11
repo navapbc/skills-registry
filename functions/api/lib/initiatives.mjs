@@ -16,6 +16,7 @@
 // scripts/ importing from here is fine and is what the sync already does.
 
 import { normalizeLabel } from './projects.mjs';
+import { resolveProject as resolveContractProject } from './contracts.mjs';
 
 // Partition-key values. The metadata record lives in its own partition so it can
 // never be returned among the initiatives.
@@ -75,6 +76,29 @@ export function resolveProject(initiative, projectRecords) {
   const value = normalizeLabel(initiative?.[PROJECT_NAME_ATTR]);
   if (value === '') return null;
   return projectRecords.find((p) => normalizeLabel(p.project_name) === value) ?? null;
+}
+
+/**
+ * The contracts that belong to a project, for the initiative detail page.
+ *
+ * The join deliberately runs the CONTRACTS-side resolution rule
+ * (`resolveProject` from ./contracts.mjs), not the one above. The two differ:
+ * contracts match a project's `project_name` OR its `contract_name`, because the
+ * survey's naming follows neither consistently — measured at 23 of 37 resolving
+ * only across the pair. Running the initiatives rule here instead would silently
+ * drop every contract that resolves via `contract_name`.
+ *
+ * Membership is tested by IDENTITY against the project record, not by comparing
+ * `project_code`. Both resolvers are handed the same `projectRecords` array in the
+ * same request, so identity is exact — and it cannot mis-group the projects whose
+ * `project_code` is absent, where `undefined === undefined` would match every one
+ * of them to every other.
+ */
+export function contractsForProject(project, contracts, projectRecords) {
+  if (!project) return [];
+  return (contracts ?? []).filter(
+    (contract) => resolveContractProject(contract, projectRecords) === project,
+  );
 }
 
 /**
