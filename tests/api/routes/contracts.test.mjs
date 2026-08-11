@@ -29,6 +29,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
 }));
 
 import { app } from '../../../functions/api/index.mjs';
+import { __resetPartitionCache } from '../../../functions/api/lib/partition-cache.mjs';
 import { RECORD_PROJECT } from '../../../functions/api/lib/projects.mjs';
 import {
   RECORD_CONTRACT,
@@ -127,6 +128,10 @@ const TABLE_VARS = {
 let previousVars;
 beforeEach(() => {
   mockSend.mockReset();
+  // The route's partition reads are cached for a minute in module scope. Without
+  // this, the second case in this file would answer from the first case's fixtures
+  // and every queued read after it would land one step out of sequence.
+  __resetPartitionCache();
   previousVars = Object.fromEntries(Object.keys(TABLE_VARS).map((k) => [k, process.env[k]]));
   Object.assign(process.env, TABLE_VARS);
 });
@@ -347,5 +352,92 @@ describe('project resolution', () => {
     }
     // The projection itself still arrived.
     expect(text).toContain('FC026');
+  });
+});
+
+// ── Partition caching ─────────────────────────────────────────────────────
+// The reads underneath this route are held for a minute in module scope. These
+// assert both halves of that bargain: the reads really are skipped, and the
+// staleness it buys is bounded and does not leak across users or survive a fault.
+describe('contracts partition cache', () => {
+  /** The one read a cached request still makes: the uncached seed-meta GetItem. */
+  const queueMetaOnly = (meta = META) => mockSend.mockResolvedValueOnce({ Item: meta });
+
+  it('serves a repeat request without re-reading the partitions', async () => {
+    const first_headers = as('user');
+    queueReads();
+    const first = await (await app.request('/api/contracts', { headers: first_headers })).json();
+
+    const callsAfterFirst = mockSend.mock.calls.length;
+    const second_headers = as('user');
+    queueMetaOnly();
+    const second = await (await app.request('/api/contracts', { headers: second_headers })).json();
+
+    expect(second).toEqual(first);
+    // Two further calls only — the auth user lookup and the seed-meta GetItem. The
+    // latter is deliberately uncached so the freshness banner keeps reporting the
+    // live sync state. All three partition Queries were skipped.
+    expect(mockSend.mock.calls.length).toBe(callsAfterFirst + 2);
+    const commands = mockSend.mock.calls.slice(callsAfterFirst).map(([c]) => c.type);
+    expect(commands).toEqual(['Get', 'Get']);
+  });
+
+  it('holds a posture edit until the entry expires', async () => {
+    // The route documents its posture join as resolve-on-read. That is still true
+    // per request; what the cache changes is how fresh the records being resolved
+    // are. Asserted rather than left implicit, because it is the cost of the trade.
+    vi.useFakeTimers();
+    try {
+      const before_headers = as('user');
+      queueReads();
+      const before = await (await app.request('/api/contracts', { headers: before_headers })).json();
+      expect(before.postures.find((p) => p.id === 'silent').label).toBe('AI SILENT — how to proceed');
+
+      const renamed = POSTURES.map((p) =>
+        p.id === 'silent' ? { ...p, label: 'AI SILENT — renamed' } : p,
+      );
+
+      const stale_headers = as('user');
+      queueMetaOnly();
+      const stale = await (await app.request('/api/contracts', { headers: stale_headers })).json();
+      expect(stale.postures.find((p) => p.id === 'silent').label).toBe('AI SILENT — how to proceed');
+
+      vi.advanceTimersByTime(61_000);
+      const fresh_headers = as('user');
+      queueReads({ postures: renamed });
+      const fresh = await (await app.request('/api/contracts', { headers: fresh_headers })).json();
+      expect(fresh.postures.find((p) => p.id === 'silent').label).toBe('AI SILENT — renamed');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('caches nothing when a table is unconfigured', async () => {
+    // The 503 guard returns before any read. If it somehow seeded an entry, the
+    // recovered request below would answer from it instead of the fixtures.
+    const refused_headers = as('user');
+    delete process.env.CONTRACTS_TABLE;
+    expect((await app.request('/api/contracts', { headers: refused_headers })).status).toBe(503);
+
+    process.env.CONTRACTS_TABLE = TABLE_VARS.CONTRACTS_TABLE;
+    const recovered_headers = as('user');
+    queueReads();
+    const res = await app.request('/api/contracts', { headers: recovered_headers });
+    expect(res.status).toBe(200);
+    expect((await res.json()).contracts).toHaveLength(1);
+  });
+
+  it('retries a failed read on the next request rather than replaying the 500', async () => {
+    // A cached rejection would hold this route at 500 for the full minute.
+    const failing_headers = as('user');
+    mockSend.mockResolvedValueOnce({ Item: META });
+    mockSend.mockRejectedValueOnce(new Error('throttled'));
+    expect((await app.request('/api/contracts', { headers: failing_headers })).status).toBe(500);
+
+    const recovered_headers = as('user');
+    queueReads();
+    const res = await app.request('/api/contracts', { headers: recovered_headers });
+    expect(res.status).toBe(200);
+    expect((await res.json()).contracts).toHaveLength(1);
   });
 });

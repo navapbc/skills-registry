@@ -1,4 +1,5 @@
-import { ddb, tables, GetCommand, QueryCommand } from '../lib/dynamo.mjs';
+import { ddb, tables, GetCommand } from '../lib/dynamo.mjs';
+import { cachedQueryPartition } from '../lib/partition-cache.mjs';
 import { ENTITY_POSTURE } from '../lib/project-reference.mjs';
 import { RECORD_PROJECT } from '../lib/projects.mjs';
 import {
@@ -118,25 +119,6 @@ const contract_payload = (contract) =>
     CONTRACT_FIELDS.filter((f) => contract[f] !== undefined).map((f) => [f, contract[f]]),
   );
 
-/** Read one partition in full, paging until exhausted. */
-async function queryPartition(table, keyName, keyValue) {
-  const items = [];
-  let lastKey;
-  do {
-    const page = await ddb.send(
-      new QueryCommand({
-        TableName: table,
-        KeyConditionExpression: `${keyName} = :t`,
-        ExpressionAttributeValues: { ':t': keyValue },
-        ...(lastKey && { ExclusiveStartKey: lastKey }),
-      }),
-    );
-    items.push(...(page.Items ?? []));
-    lastKey = page.LastEvaluatedKey;
-  } while (lastKey);
-  return items;
-}
-
 /**
  * Describe the last population run.
  *
@@ -195,13 +177,17 @@ async function serveContracts(c) {
       }),
     );
 
-    const contracts = await queryPartition(table, 'record_type', RECORD_CONTRACT);
+    const contracts = await cachedQueryPartition(table, 'record_type', RECORD_CONTRACT);
 
     // Resolved on read, not stored: editing a posture's guidance or fixing a
     // project name in the survey changes the page on the next load rather than
     // waiting for the next population run.
-    const postures = await queryPartition(referenceTable, 'entity_type', ENTITY_POSTURE);
-    const projects = await queryPartition(projectsTable, 'record_type', RECORD_PROJECT);
+    //
+    // "Next load" now means the next load after the partition cache expires — up to
+    // a minute. The resolution still happens per request; it is the records being
+    // resolved that are held. See lib/partition-cache.mjs.
+    const postures = await cachedQueryPartition(referenceTable, 'entity_type', ENTITY_POSTURE);
+    const projects = await cachedQueryPartition(projectsTable, 'record_type', RECORD_PROJECT);
 
     const resolved = contracts.map((contract) => {
       const posture = resolvePosture(contract, postures);
