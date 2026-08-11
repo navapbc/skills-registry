@@ -453,10 +453,11 @@ function renderRelatedContract(contract) {
  * The empty-state wording is deliberate and was measured. Only 43 of 119 contracts
  * carry a project name at all, so "this project has no contracts" would be a false
  * claim on most empty results — the common cause is a survey row that never recorded
- * one, or a name written differently on each side (staging has `Emmy (formerly IvaaS
- * and FFS)` on the project against `EMMY (IVaaS)` on its contract, which matches
- * nothing). The copy therefore reports what the join actually established, and names
- * the fix, rather than vouching for an absence it cannot see.
+ * one, or a name written differently on each side. Both have happened: the Emmy
+ * contract read `EMMY (IVaaS)` against a project record spelling it three other ways
+ * and resolved to nothing until the sheet was corrected on 2026-08-11. The copy
+ * therefore reports what the join actually established rather than vouching for an
+ * absence it cannot see.
  */
 export function renderRelatedContractsSection(initiative) {
   const contracts = initiative?.related_contracts;
