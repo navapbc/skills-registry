@@ -29,6 +29,7 @@ vi.mock('@aws-sdk/lib-dynamodb', () => ({
 }));
 
 import { app } from '../../../functions/api/index.mjs';
+import { __resetPartitionCache } from '../../../functions/api/lib/partition-cache.mjs';
 import {
   RECORD_PROJECT,
   RECORD_SYNC_META,
@@ -111,7 +112,13 @@ function queueReads({ projects = [project()], meta = COMPLETE_META, archetypes =
   mockSend.mockResolvedValueOnce({ Items: archetypes });
 }
 
-beforeEach(() => mockSend.mockReset());
+beforeEach(() => {
+  mockSend.mockReset();
+  // The route's partition reads are cached for a minute in module scope. Without
+  // this, the second case in this file would answer from the first case's fixtures
+  // and every queued read after it would land one step out of sequence.
+  __resetPartitionCache();
+});
 
 // ── Authorization ─────────────────────────────────────────────────────────
 // The module this mirrors (plugins.mjs) leaves its GETs open to any signed-in
@@ -598,5 +605,90 @@ describe('projects contract drift', () => {
     const body = await res.json();
 
     expect(body.contract_drift.reason).toBe('read_failed');
+  });
+});
+
+// ── Partition caching ─────────────────────────────────────────────────────
+// This route is the reason the cache is in the Lambda rather than at CloudFront:
+// it answers 403 or 200 depending on the reader, and an edge cache keyed on the
+// request cannot express that. These assert the gate is still consulted on every
+// request, in both orderings, once a cache entry exists.
+describe('projects partition cache', () => {
+  /** The one read a cached authorized request still makes: the sync-meta GetItem. */
+  const queueMetaOnly = (meta = COMPLETE_META) => mockSend.mockResolvedValueOnce({ Item: meta });
+
+  it('serves a repeat request without re-reading the partitions', async () => {
+    const first_headers = as('projects-admin');
+    queueReads();
+    const first = await (await app.request('/api/projects', { headers: first_headers })).json();
+
+    const callsAfterFirst = mockSend.mock.calls.length;
+    const second_headers = as('projects-admin');
+    queueMetaOnly();
+    const second = await (await app.request('/api/projects', { headers: second_headers })).json();
+
+    expect(second).toEqual(first);
+    // Auth user lookup and sync-meta GetItem only. Both partition Queries skipped.
+    expect(mockSend.mock.calls.length).toBe(callsAfterFirst + 2);
+    expect(mockSend.mock.calls.slice(callsAfterFirst).map(([c]) => c.type)).toEqual(['Get', 'Get']);
+  });
+
+  it('refuses an ungated reader even when the data is already cached', async () => {
+    // The exact leak an edge cache would produce: an admin's request populates the
+    // cache and the next reader is served from it without a gate check.
+    const admin_headers = as('projects-admin');
+    queueReads();
+    const allowed = await app.request('/api/projects', { headers: admin_headers });
+    expect(allowed.status).toBe(200);
+    expect((await allowed.json()).projects).toHaveLength(1);
+
+    const callsBefore = mockSend.mock.calls.length;
+    const user_headers = as('user');
+    const refused = await app.request('/api/projects', { headers: user_headers });
+
+    expect(refused.status).toBe(403);
+    const text = await refused.text();
+    expect(text).not.toContain('FC026');
+    // Only the auth user lookup ran — the gate returned before touching any read.
+    expect(mockSend.mock.calls.length).toBe(callsBefore + 1);
+  });
+
+  it('serves an authorized reader in full after a refusal', async () => {
+    // The mirror image: a 403 must not poison what the next authorized reader sees.
+    const user_headers = as('user');
+    expect((await app.request('/api/projects', { headers: user_headers })).status).toBe(403);
+
+    const admin_headers = as('projects-admin');
+    queueReads();
+    const res = await app.request('/api/projects', { headers: admin_headers });
+
+    expect(res.status).toBe(200);
+    expect((await res.json()).projects).toHaveLength(1);
+  });
+
+  it('reads nothing at all on the refused request', async () => {
+    const user_headers = as('user');
+    await app.request('/api/projects', { headers: user_headers });
+    // The auth lookup, and nothing else — no Query reached DynamoDB, cached or not.
+    expect(mockSend.mock.calls.filter(([c]) => c?.type === 'Query')).toHaveLength(0);
+  });
+
+  it('re-reads the projects partition once the entry expires', async () => {
+    vi.useFakeTimers();
+    try {
+      const first_headers = as('projects-admin');
+      queueReads();
+      const before = await (await app.request('/api/projects', { headers: first_headers })).json();
+      expect(before.projects).toHaveLength(1);
+
+      vi.advanceTimersByTime(61_000);
+
+      const fresh_headers = as('projects-admin');
+      queueReads({ projects: [project(), project({ project_code: 'FC027' })] });
+      const after = await (await app.request('/api/projects', { headers: fresh_headers })).json();
+      expect(after.projects).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
