@@ -27,7 +27,7 @@ The two datasets already share a join key: both `resolveProject` implementations
 - R2. Each listed contract links to its own detail page at `/contracts/<contract_id>`.
 - R3. The section appears after the Project section in the detail layout.
 - R4. An initiative with no resolved project shows no contracts section (there is nothing to join on).
-- R5. An initiative whose project resolves but owns zero contracts says so, rather than rendering an empty or absent block.
+- R5. An initiative whose project resolves but which no contract names says so, rather than rendering an empty or absent block. The claim is that no contract *names* the project — not that the project has no contract, which the join cannot establish.
 - R6. The grid view (`/initiatives` with no id) does not pay for the contracts read.
 
 ---
@@ -66,9 +66,11 @@ The two datasets already share a join key: both `resolveProject` implementations
 ## Key Technical Decisions
 
 - **Join server-side, gated on `?id=<initiative_id>`** (user decision): the route keeps returning the full initiative list so the page's existing `find()` still works, but performs the contracts query and attaches `related_contracts` only to the named initiative. Rationale: the grid view never renders contracts, so making all 37 records carry them would read a whole extra partition on every hub load for data one record uses. The client already knows the id before it fetches.
-- **Join on the resolved project record, not on name strings.** For the named initiative, resolve its project (initiatives rule), then keep contracts whose `resolveProject` (contracts rule) returns the same project record. Comparing `project_code` is the concrete test. Matching the two sheets' project-name strings directly would silently drop every contract that resolves via `contract_name` — which is a substantial share of the survey.
+- **Ask the contracts rule a one-project question.** For the named initiative, resolve its project (initiatives rule), then apply the contracts-side `resolveProject` against a list holding only that project, keeping the contracts it answers for. Matching the two sheets' project-name strings directly would silently drop every contract that resolves via `contract_name`, which is a substantial share of the survey — so the contracts rule has to be the one used.
+
+  *Amended during implementation.* The plan originally said to resolve each contract across the whole projects table and test the answer for identity with the target project. Review found that wrong: the contracts rule returns the first record matching on `project_name` **or** `contract_name`, so when one project's `contract_name` collides with another's `project_name` the contract is handed to the wrong record and the membership test finds nothing — rendering "no contracts" for a project that has one. Three live project records share `contract_name: "dmod 2.0"`. Comparing `project_code` instead of identity fails the same way. Asking the one-project question cannot, and is O(contracts) rather than O(contracts × projects).
 - **`related_contracts` is a narrow projection, an allowlist.** Same discipline as `PROJECT_FIELDS`: `contract_id`, `project`, `contract_num`, `vehicle`, `customer`, `agreement_type`. Both datasets are already readable by every signed-in user, so this widens no audience, but spreading whole contract records would ship survey columns to this page with no review step.
-- **Absent field vs. empty array carries meaning.** `related_contracts` is absent on every record in a grid-view response (not computed) and is an array — possibly empty — on the named record in a detail-view response. The renderer distinguishes them: absent means "not asked for", `[]` means "asked, and this project owns none".
+- **Absent field vs. empty array carries meaning.** `related_contracts` is absent on every record in a grid-view response (not computed) and is an array — possibly empty — on the named record in a detail-view response. The renderer distinguishes them: absent means "not asked for", `[]` means "asked, and no contract on file names this project". `[]` is *not* evidence the project has no contract: only 43 of 119 contracts record a project name at all, so the empty result usually means the link has not been made.
 - **No posture badge.** Rendering `ai_posture` would either show a raw id (`allowed`) with no label, or require the route to read the project-reference partition purely for display. The link to `/contracts/<id>` is where posture is answered properly.
 - **Contract display name mirrors `renderContractCard`**: `contract.project || contract.contract_id`, so the same contract reads the same way on both pages.
 
@@ -122,7 +124,7 @@ The two datasets already share a join key: both `resolveProject` implementations
 - Happy path: a contract that resolves to the project via `contract_name` rather than `project_name` is included.
 - Edge case: request with no `id` → no contracts-partition read is issued (assert on the mocked DynamoDB client), and no record carries `related_contracts`.
 - Edge case: `?id=` names an initiative with no resolved project → no contracts read, and `related_contracts` is absent from the record.
-- Edge case: `?id=` names an initiative whose project owns zero contracts → `related_contracts` is `[]`, not absent.
+- Edge case: `?id=` names an initiative whose project no contract names → `related_contracts` is `[]`, not absent.
 - Edge case: `?id=` names an initiative that does not exist → response is the unchanged full list, no contracts read, HTTP 200 (the page renders its own not-found).
 - Edge case: a contract with an empty `project_name` never joins to anything.
 - Error path: the contracts partition query throws → the route's existing catch returns 500 with the generic message, rather than degrading to a silent empty list.
@@ -148,7 +150,7 @@ The two datasets already share a join key: both `resolveProject` implementations
 
 **Approach:**
 - Export `renderRelatedContractsSection(initiative)` and call it from `renderInitiativeDetail` immediately after `renderProjectSection(initiative)`.
-- Three states: field absent → render nothing (the grid view and the no-project case both land here); empty array → a section saying the project has no contracts on file; non-empty → a list.
+- Three states: field absent → render nothing (the grid view and the no-project case both land here); empty array → a section saying no contract on file names this project, hedged because most contracts record no project name at all; non-empty → a list.
 - Each entry: display name (`contract.project || contract.contract_id`) as the link text, with contract number, vehicle, and customer as secondary text where present. Escape everything; build the href with `encodeURIComponent` on `contract_id`.
 - These are internal links, so no `target="_blank"` / `rel="noopener"` — unlike `renderOneLink`, which handles sheet-authored external URLs.
 - Reuse the section shell markup (`rounded-lg p-4 border border-gray-200 bg-white`, `text-sm font-semibold` heading) and the `text-plum-700 underline` link treatment already used in this file. All Tailwind classes are written as complete literals.
@@ -162,7 +164,7 @@ The two datasets already share a join key: both `resolveProject` implementations
 - Happy path: two contracts → two anchors with `href="/contracts/<id>"` and the expected display names.
 - Happy path: a contract with no `project` value falls back to showing its `contract_id`.
 - Edge case: `related_contracts` absent → the function returns an empty string and `renderInitiativeDetail` emits no section.
-- Edge case: `related_contracts` is `[]` → the section renders with the "no contracts on file" message.
+- Edge case: `related_contracts` is `[]` → the section renders with the hedged "no contract on file names this project" message.
 - Edge case: a contract id containing a space or slash is percent-encoded in the href.
 - Edge case: a contract whose optional secondary fields are all empty renders the name alone without stray separators.
 - Security: a contract whose `project` contains `<script>` is escaped in the output.
