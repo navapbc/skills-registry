@@ -71,9 +71,17 @@ function notFoundHtml() {
   </div>`;
 }
 
+// The detail view asks for the project→contracts join; the grid does not, and the
+// API skips reading the contracts table entirely without the parameter. An id
+// matching nothing is not an error — the response is the plain list and the
+// not-found branch below renders.
+const apiPath = initiativeId
+  ? `/initiatives?id=${encodeURIComponent(initiativeId)}`
+  : '/initiatives';
+
 let data: any = null;
 try {
-  data = await fetchApi('/initiatives');
+  data = await fetchApi(apiPath);
 } catch (err: any) {
   // fetchApi has already started a redirect to /login for an expired session;
   // rendering an error here flashes a broken screen before the browser navigates.
