@@ -252,6 +252,11 @@ async function serveInitiatives(c) {
   // failure — see the four-state note above the attachment.
   let relatedContracts;
   if (targetProject) {
+    // Only the READ is caught. The join below is pure computation over records
+    // already in memory, so if it throws that is a bug in this repo, not an
+    // infrastructure event — and reporting a bug as "contracts could not be loaded"
+    // would hide it behind a message that reads like someone else's outage.
+    let contracts;
     try {
       const contractsTable = tables.contracts();
       // An unconfigured table is treated as a failed read rather than a 503, unlike
@@ -262,11 +267,10 @@ async function serveInitiatives(c) {
 
       // PROJECT_NAME_ATTR is read but never served: it is the join key, and leaving
       // it out of the projection makes every contract resolve to nothing.
-      const contracts = await queryPartition(
+      contracts = await queryPartition(
         contractsTable, 'record_type', RECORD_CONTRACT,
         [...RELATED_CONTRACT_FIELDS, PROJECT_NAME_ATTR],
       );
-      relatedContracts = contractsForProject(targetProject, contracts).map(contract_summary);
     } catch (err) {
       // Deliberately NOT rethrown into the route's 500. This read decorates a page
       // that already has its answer, so a contracts-table incident should cost the
@@ -278,6 +282,12 @@ async function serveInitiatives(c) {
       // absence.
       console.error('related contracts read failed', err);
       relatedContracts = null;
+    }
+
+    // Outside the catch on purpose: a throw here is a defect and should reach the
+    // route's 500 rather than be dressed up as a load failure.
+    if (contracts) {
+      relatedContracts = contractsForProject(targetProject, contracts).map(contract_summary);
     }
   }
 
