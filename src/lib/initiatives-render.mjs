@@ -87,6 +87,20 @@ export const useCaseLabelsOf = (initiatives) => facetOf(initiatives, 'use_case_l
 export const exposuresOf = (initiatives) => facetOf(initiatives, 'exposure');
 export const tagsOf = (initiatives) => facetOf(initiatives, 'tags');
 
+/**
+ * The API path the page should fetch, given the id in the URL (empty for the grid).
+ *
+ * A function rather than a ternary inlined in the page because the branch is
+ * load-bearing and the page has no test seam: `?id=` is what makes the API read the
+ * contracts partition, and a regression that appends it unconditionally would make
+ * every hub landing view pay for a read it never uses — silently, since the grid
+ * renders identically either way.
+ */
+export function initiativesApiPath(initiativeId) {
+  const id = String(initiativeId ?? '').trim();
+  return id ? `/initiatives?id=${encodeURIComponent(id)}` : '/initiatives';
+}
+
 export function formatCapturedAt(iso) {
   if (!iso) return 'unknown';
   const date = new Date(iso);
@@ -387,6 +401,95 @@ export function renderProjectSection(initiative) {
 }
 
 /**
+ * The secondary line under a contract's name: the facts that tell two contracts on
+ * the same project apart.
+ *
+ * Empty values are dropped rather than rendered as "None listed". This is a link
+ * list, not the details grid — the same-shape-every-record argument that makes the
+ * grid render its blanks does not apply, and a row of bare separators would be
+ * noise between a reader and the link they came for.
+ */
+function contractMeta(contract) {
+  return [contract.contract_num, contract.vehicle, contract.customer]
+    .map((v) => String(v ?? '').trim())
+    .filter((v) => v !== '')
+    .join(' · ');
+}
+
+/**
+ * One contract as a link to its Contract Explorer page.
+ *
+ * The display name is `project || contract_id`, the same expression
+ * renderContractCard uses, so a contract reads the same way on both pages.
+ *
+ * No `target="_blank"` here, unlike renderOneLink: these are our own pages, and the
+ * external-link treatment exists for sheet-authored URLs we do not control.
+ */
+function renderRelatedContract(contract) {
+  const href = `/contracts/${encodeURIComponent(contract.contract_id)}`;
+  const name = contract.project || contract.contract_id;
+  const meta = contractMeta(contract);
+  return `<li>
+    <a href="${escapeHtml(href)}" class="text-plum-700 underline break-words">${escapeHtml(name)}</a>
+    ${meta ? `<span class="block text-xs text-gray-500">${escapeHtml(meta)}</span>` : ''}
+  </li>`;
+}
+
+/**
+ * The contracts on this initiative's project, when the API was asked for them.
+ *
+ * Three states, and the difference between the first two is the whole reason the
+ * API distinguishes an absent field from an empty array:
+ *
+ *   - ABSENT — not asked for. The grid view never requests the join, and neither does
+ *     a detail request for an initiative with no resolved project. Renders nothing; a
+ *     "no contracts" panel here would answer a question nobody asked and imply the
+ *     project has none.
+ *   - NULL — asked, and the read failed. Says exactly that. Rendering the empty-state
+ *     copy here would report an absence the failed read never established, which is
+ *     the same overclaim in a costlier place: during an incident, when someone is
+ *     most likely to act on it.
+ *   - EMPTY — asked, and no contract on file names this project. Says so, because a
+ *     silently missing section is indistinguishable from a page that does not show
+ *     contracts at all.
+ *   - non-empty — the list.
+ *
+ * The empty-state wording is deliberate and was measured. Only 43 of 119 contracts
+ * carry a project name at all, so "this project has no contracts" would be a false
+ * claim on most empty results — the common cause is a survey row that never recorded
+ * one, or a name written differently on each side. Both have happened: the Emmy
+ * contract read `EMMY (IVaaS)` against a project record spelling it three other ways
+ * and resolved to nothing until the sheet was corrected on 2026-08-11. The copy says
+ * no contract NAMES the project, which is what the join established.
+ */
+export function renderRelatedContractsSection(initiative) {
+  const contracts = initiative?.related_contracts;
+  if (contracts === undefined) return '';
+
+  const note = (text) => `<p class="text-sm text-gray-400 italic mt-1 m-0">${text}</p>`;
+
+  let body;
+  if (contracts === null) {
+    body = note('Contracts could not be loaded.');
+  } else if (!Array.isArray(contracts)) {
+    // Defensive: a shape the API does not produce. Treated as "nothing to say"
+    // rather than rendered, so a malformed payload cannot assert an absence.
+    return '';
+  } else if (contracts.length === 0) {
+    body = note('No contract on file names this project.');
+  } else {
+    body = `<ul class="list-none p-0 m-0 space-y-2">
+        ${contracts.map(renderRelatedContract).join('')}
+      </ul>`;
+  }
+
+  return `<section aria-label="Contracts" class="rounded-lg p-4 border border-gray-200 bg-white">
+    <h2 class="text-sm font-semibold text-gray-900 m-0 mb-2">Contracts on this project</h2>
+    ${body}
+  </section>`;
+}
+
+/**
  * Fields shown on the detail page, in reading order.
  *
  * An explicit list rather than iterating the record: the sheet gains columns, and a
@@ -445,6 +548,11 @@ export function renderInitiativeDetail(initiative, capturedAt) {
       </section>
 
       ${renderProjectSection(initiative)}
+
+      <!-- Follows the Project section deliberately: it answers the question the
+           Project section raises, and it renders nothing at all unless that section
+           resolved a project to join on. -->
+      ${renderRelatedContractsSection(initiative)}
     </div>
 
     <p class="text-xs text-gray-400 mt-6 m-0">

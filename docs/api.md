@@ -231,6 +231,56 @@ Attribute names are slugs derived from the sheet headers; `column_headers` maps 
 
 ---
 
+## Contracts
+
+Contract records mirrored from the "AI Survey (Contracts and Delivery Completes)" tab by `scripts/sync-contracts.mjs`. The survey is authoritative and is the only write surface.
+
+Population is **operator-run, not scheduled** — unlike Projects and Initiatives there is no workflow, and the GitHub deploy role has no access to the table. A refresh is `node scripts/sync-contracts.mjs --env <staging|prod>`, run per environment.
+
+Requires only a session — **not** capability-gated, on the same reasoning as Initiatives: the Contract Explorer exists so any delivery team member can answer "may I use AI on my contract?", and a capability role would be assigned to nobody.
+
+**Read-only.** No create, update, or delete endpoint, and the API Lambda's IAM grant on this table omits write actions.
+
+### `GET /api/contracts`
+
+Everything the Contract Explorer needs in one response — the grid, the detail view, the posture guidance, and the capture date, so none of them can disagree about freshness.
+
+```json
+{
+  "contracts": [
+    {
+      "contract_id": "user-facing-ai",
+      "portfolio": "LABS",
+      "project": "User-Facing AI",
+      "contract_num": "47QRAA21D0064",
+      "vehicle": "GSA MAS",
+      "customer": "Nava Labs",
+      "agreement_type": "Task order",
+      "ai_posture": "allowed",
+      "posture_id": "allowed",
+      "project_name": "User-Facing AI",
+      "resolved_project": { "project_code": "LB001", "…": "…" }
+    }
+  ],
+  "postures": [ { "id": "allowed", "label": "…", "position": 1 } ],
+  "population": { "state": "complete", "captured_at": "…", "row_count": 119 }
+}
+```
+
+The served fields are a fixed **allowlist** (`CONTRACT_FIELDS` in `functions/api/routes/contracts.mjs`), for the same reason as Initiatives: the population uses a denylist so new survey columns reach the table automatically, and the allowlist is the review step that keeps one from reaching every signed-in user unannounced.
+
+`posture_id` is `null` rather than omitted when unresolved, because the page distinguishes "no posture recorded" from "posture names no record" from a resolved one. 82 of 119 rows carry no posture, which is the survey's state rather than an error.
+
+`resolved_project` is the project a contract's `project_name` matches on either the project's `project_name` **or** its `contract_name` — two fields because the survey's naming follows neither consistently. It is the same nine-field projection Initiatives uses, and for the same reason: contracts are readable by every signed-in user while the projects table is not.
+
+`postures` is served in authored display order, so adding or reordering a posture on the Policy Guidance tab needs no deploy.
+
+`population.state` carries the same three values as Initiatives below.
+
+Returns 503 when the contracts, project-reference, or projects table is unconfigured, and 500 when the read fails — an error rather than an empty list, since the page *is* the contracts.
+
+---
+
 ## Initiatives
 
 AI initiatives mirrored from the first tab of the AI-initiatives workbook by `scripts/sync-initiatives.mjs`, run from the `sync-initiatives` workflow on manual dispatch. The sheet is authoritative and is the only write surface.
@@ -291,6 +341,42 @@ Attribute names are slugs derived from the sheet headers. Unlike Projects, the s
 
 - `project_name` empty — the initiative names no project. Normal, not a defect; 14 of 37 rows as of 2026-08-10, and plenty of initiatives are internal.
 - `project_name` set but matching nothing — real drift. This is what fails a sync run, and it should be rare; it is reachable between a sheet edit and the next sync.
+
+**`?id=<initiative_id>`** — optional. The response is unchanged except that the named record additionally carries `related_contracts`: the contracts belonging to its `resolved_project`, each with enough to identify it and a `contract_id` that addresses `/contracts/<contract_id>`.
+
+```json
+"related_contracts": [
+  {
+    "contract_id": "user-facing-ai",
+    "project": "User-Facing AI",
+    "contract_num": "47QRAA21D0064",
+    "vehicle": "GSA MAS",
+    "customer": "Nava Labs",
+    "agreement_type": "Task order"
+  }
+]
+```
+
+Three things about this are load-bearing:
+
+- **It is detail-only.** The grid renders no contracts, so computing the join for all 37 records would read the whole contracts partition on every hub load for data one record uses. The client knows the id before it fetches, so it asks. A list request never touches the contracts table at all.
+- **The field has four states, and none of them collapses into another.**
+
+  | Value | Meaning |
+  |---|---|
+  | absent | The join was not requested — every record of a list request, and any initiative whose `resolved_project` is `null`. |
+  | `null` | Requested, and the read failed. |
+  | `[]` | Requested, and no contract on file names this project. |
+  | `[…]` | The contracts. |
+
+  A client that conflates `null` with `[]` will report an absence during an outage that nobody established. One that conflates absent with `[]` will claim a project has no contracts when the join was never run.
+
+  Note that a failed contracts read **degrades rather than failing the request**: the response is still 200 and still carries the full initiative, because the contracts are one section of a page whose answer is the initiative. This includes the case where `CONTRACTS_TABLE` is unconfigured, which yields `null` rather than the 503 that a missing initiatives or projects table produces.
+
+  `[]` is **not** evidence that the project has no contract. Only 43 of 119 contracts record a project name at all, so for the other 76 the join has nothing to work with. The two sheets can also spell the same project differently, in which case a contract that exists resolves to nothing — as of 2026-08-11 one contract still does, `HOR AARS`, matching no project record. Five of the 37 initiatives return `[]` today, and all five look genuine. Present the empty result as "no link recorded", not as "no contract exists".
+- **The join runs the contracts-side resolution rule**, which matches a project's `project_name` **or** its `contract_name`. The initiatives rule above matches `project_name` alone; using it here would silently drop every contract named the other way, which is a substantial share of the survey. The rule is applied against a list holding only the target project, which asks "does this contract name this project?" rather than "which project does this contract resolve to first?" — the latter mis-assigns contracts whenever one project's `contract_name` collides with another's `project_name`.
+
+The projection is narrower than `/api/contracts` on purpose — these entries are links, not records, and the contract's own page answers the rest. `ai_posture` is deliberately excluded: resolving a posture id to its display label needs the project-reference partition, which this route does not read, and a bare id badge would be worse than none.
 
 `population.state` is one of:
 

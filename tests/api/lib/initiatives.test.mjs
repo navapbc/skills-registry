@@ -9,6 +9,7 @@ import {
   EXPOSURE_ATTR,
   TAGS_ATTR,
   resolveProject,
+  contractsForProject,
   collectInitiativeIssues,
 } from '../../../functions/api/lib/initiatives.mjs';
 
@@ -94,6 +95,81 @@ describe('resolveProject', () => {
     // matches both fields. Measured to rescue zero rows here, so widening this
     // should be a visible test change rather than a silent consistency edit.
     expect(resolveProject(initiative({ project_name: 'MD ADEPT WO-04' }), PROJECTS)).toBeNull();
+  });
+});
+
+describe('contractsForProject', () => {
+  const contract = (over = {}) => ({
+    contract_id: 'c-default',
+    project_name: '',
+    ...over,
+  });
+
+  const UFAI = PROJECTS.find((p) => p.project_code === 'LB001');
+  const ADEPT = PROJECTS.find((p) => p.project_code === 'ST029');
+
+  it('keeps the contracts resolving to the project and drops the rest', () => {
+    const mine = contract({ contract_id: 'c-1', project_name: 'User-Facing AI' });
+    const theirs = contract({ contract_id: 'c-2', project_name: 'MD PBIF' });
+
+    const found = contractsForProject(UFAI, [mine, theirs]);
+    expect(found.map((c) => c.contract_id)).toEqual(['c-1']);
+  });
+
+  it('keeps a contract that resolves through contract_name, not project_name', () => {
+    // The whole reason this runs the contracts-side rule. The initiatives rule
+    // matches project_name alone and would drop this row silently.
+    const byContractName = contract({ contract_id: 'c-3', project_name: 'MD ADEPT WO-04' });
+
+    const found = contractsForProject(ADEPT, [byContractName]);
+    expect(found.map((c) => c.contract_id)).toEqual(['c-3']);
+  });
+
+  it('resolves through case and collapsed whitespace', () => {
+    const messy = contract({ contract_id: 'c-4', project_name: '  user-facing   ai ' });
+    expect(contractsForProject(UFAI, [messy])).toHaveLength(1);
+  });
+
+  it('never matches a contract stating no project', () => {
+    expect(contractsForProject(UFAI, [contract({ project_name: '' })])).toEqual([]);
+  });
+
+  it('returns nothing for a project that owns no contracts', () => {
+    const theirs = contract({ contract_id: 'c-5', project_name: 'MD PBIF' });
+    expect(contractsForProject(UFAI, [theirs])).toEqual([]);
+  });
+
+  it('returns nothing when there is no project to join on', () => {
+    expect(contractsForProject(null, [contract({ project_name: 'User-Facing AI' })])).toEqual([]);
+  });
+
+  it('finds a project’s contracts even when another project’s contract_name collides', () => {
+    // The regression case. Resolving across the WHOLE table hands this contract to
+    // `decoy` — the first record matching on either field — so a membership test
+    // against that answer returns nothing, and the page reports "No contracts on
+    // file": a confident wrong answer. Asking the one-project question cannot.
+    const decoy = { project_code: 'D', project_name: 'Something Else', contract_name: 'User-Facing AI' };
+    const onUfai = contract({ contract_id: 'c-6', project_name: 'User-Facing AI' });
+
+    expect(contractsForProject(UFAI, [onUfai]).map((c) => c.contract_id)).toEqual(['c-6']);
+    // And the decoy legitimately claims it too — ambiguous data rendered honestly
+    // on both pages rather than vanishing from one.
+    expect(contractsForProject(decoy, [onUfai]).map((c) => c.contract_id)).toEqual(['c-6']);
+  });
+
+  it('does not group two code-less projects together', () => {
+    // Membership is a name question, not a project_code one. Comparing codes would
+    // match every code-less project to every other via `undefined === undefined`.
+    const a = { project_name: 'Alpha', contract_name: '' };
+    const b = { project_name: 'Beta', contract_name: '' };
+    const onB = contract({ contract_id: 'c-7', project_name: 'Beta' });
+
+    expect(contractsForProject(a, [onB])).toEqual([]);
+    expect(contractsForProject(b, [onB]).map((c) => c.contract_id)).toEqual(['c-7']);
+  });
+
+  it('tolerates an absent contract list rather than throwing', () => {
+    expect(contractsForProject(UFAI, undefined)).toEqual([]);
   });
 });
 

@@ -6,12 +6,14 @@ import {
   exposuresOf,
   tagsOf,
   formatCapturedAt,
+  initiativesApiPath,
   describePopulationNotice,
   renderExposureBadge,
   renderLinks,
   renderInitiativeCard,
   renderInitiativeGrid,
   renderProjectSection,
+  renderRelatedContractsSection,
   renderInitiativeDetail,
 } from '../../src/lib/initiatives-render.mjs';
 
@@ -364,6 +366,143 @@ describe('renderProjectSection', () => {
   });
 });
 
+describe('initiativesApiPath', () => {
+  it('asks for no join on the grid view', () => {
+    // R6: the grid must never make the API read the contracts partition.
+    expect(initiativesApiPath('')).toBe('/initiatives');
+    expect(initiativesApiPath(null)).toBe('/initiatives');
+    expect(initiativesApiPath(undefined)).toBe('/initiatives');
+    expect(initiativesApiPath('   ')).toBe('/initiatives');
+  });
+
+  it('asks for the join on a detail view', () => {
+    expect(initiativesApiPath('benefits-navigator-prototype'))
+      .toBe('/initiatives?id=benefits-navigator-prototype');
+  });
+
+  it('encodes an id carrying characters that would otherwise alter the query', () => {
+    expect(initiativesApiPath('a&b=c')).toBe('/initiatives?id=a%26b%3Dc');
+    expect(initiativesApiPath('a#b')).toBe('/initiatives?id=a%23b');
+    expect(initiativesApiPath('a b')).toBe('/initiatives?id=a%20b');
+  });
+
+  it('never produces a path fetchApi would double-prefix', () => {
+    expect(initiativesApiPath('x').startsWith('/api')).toBe(false);
+  });
+});
+
+describe('renderRelatedContractsSection', () => {
+  const contract = (over = {}) => ({
+    contract_id: 'user-facing-ai',
+    project: 'User-Facing AI',
+    contract_num: '47QRAA21D0064',
+    vehicle: 'GSA MAS',
+    customer: 'Nava Labs',
+    agreement_type: 'Task order',
+    ...over,
+  });
+
+  it('links each contract to its detail page', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract(), contract({ contract_id: 'md-pbif', project: 'MD PBIF' })],
+    }));
+
+    expect(html).toContain('href="/contracts/user-facing-ai"');
+    expect(html).toContain('href="/contracts/md-pbif"');
+    expect(html).toContain('>User-Facing AI<');
+    expect(html).toContain('>MD PBIF<');
+  });
+
+  it('falls back to the contract id when the survey named no project', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ project: '' })],
+    }));
+    expect(html).toContain('>user-facing-ai<');
+  });
+
+  it('renders nothing when the field is absent', () => {
+    // The grid view and the no-project detail view both land here. A "no contracts"
+    // panel would answer a question that was never asked.
+    expect(renderRelatedContractsSection(initiative())).toBe('');
+    expect(renderRelatedContractsSection(initiative({ related_contracts: undefined }))).toBe('');
+  });
+
+  it('reports what the join established, not an absence it cannot see', () => {
+    // Only 43 of 119 contracts carry a project name, so "this project has no
+    // contracts" would be false on most empty results. The copy claims only that no
+    // contract NAMES the project.
+    const html = renderRelatedContractsSection(initiative({ related_contracts: [] }));
+    expect(html).toContain('aria-label="Contracts"');
+    expect(html).toContain('No contract on file names this project.');
+    expect(html).not.toMatch(/no contracts (associated|on file for)/i);
+  });
+
+  it('says the read failed rather than claiming there are none', () => {
+    // null is the failure state. Rendering the empty-state copy here would assert an
+    // absence the failed read never established — during an incident, when someone is
+    // most likely to act on it.
+    const html = renderRelatedContractsSection(initiative({ related_contracts: null }));
+    expect(html).toContain('aria-label="Contracts"');
+    expect(html).toContain('Contracts could not be loaded.');
+    expect(html).not.toContain('No contract on file names');
+  });
+
+  it('distinguishes all four states from one another', () => {
+    const of = (v) => renderRelatedContractsSection(
+      v === 'absent' ? initiative() : initiative({ related_contracts: v }),
+    );
+    const absent = of('absent');
+    const failed = of(null);
+    const none = of([]);
+    const listed = of([contract()]);
+
+    expect(absent).toBe('');
+    expect(new Set([failed, none, listed]).size).toBe(3);
+  });
+
+  it('percent-encodes an id carrying a space or a slash', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ contract_id: 'md adept/wo-04' })],
+    }));
+    expect(html).toContain('href="/contracts/md%20adept%2Fwo-04"');
+  });
+
+  it('renders the name alone when every secondary field is empty', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ contract_num: '', vehicle: '', customer: '' })],
+    }));
+    expect(html).toContain('>User-Facing AI<');
+    expect(html).not.toContain('·');
+  });
+
+  it('drops only the empty secondary fields, leaving no stray separators', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ vehicle: '' })],
+    }));
+    expect(html).toContain('47QRAA21D0064 · Nava Labs');
+  });
+
+  it('escapes markup in a contract name and in its secondary line', () => {
+    // Asserts the escaped entity is PRESENT, not merely that the raw tag is absent —
+    // a half-escaping bug passes the negative assertion alone.
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ project: '<script>a</script>', vehicle: '<img src=x>' })],
+    }));
+    expect(html).not.toContain('<script>');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).toContain('&lt;img');
+  });
+
+  it('escapes a contract id carrying a quote so it cannot break out of the href', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ contract_id: 'a"onmouseover="alert(1)' })],
+    }));
+    expect(html).not.toContain('onmouseover="');
+    expect(html).toContain('href="/contracts/a%22onmouseover%3D%22alert(1)"');
+  });
+});
+
 describe('renderInitiativeDetail', () => {
   it('renders every field label even when every value is blank', () => {
     // The same-shape-every-record assertion: a reader must be able to tell "the
@@ -396,6 +535,19 @@ describe('renderInitiativeDetail', () => {
 
   it('includes the Project section', () => {
     expect(renderInitiativeDetail(initiative(), null)).toContain('aria-label="Project"');
+  });
+
+  it('places the Contracts section after the Project section', () => {
+    const html = renderInitiativeDetail(initiative({
+      related_contracts: [{ contract_id: 'user-facing-ai', project: 'User-Facing AI' }],
+    }), null);
+
+    expect(html.indexOf('aria-label="Contracts"'))
+      .toBeGreaterThan(html.indexOf('aria-label="Project"'));
+  });
+
+  it('emits no Contracts section when the join was not requested', () => {
+    expect(renderInitiativeDetail(initiative(), null)).not.toContain('aria-label="Contracts"');
   });
 
   it('links back to the grid', () => {

@@ -16,6 +16,7 @@
 // scripts/ importing from here is fine and is what the sync already does.
 
 import { normalizeLabel } from './projects.mjs';
+import { resolveProject as resolveContractProject } from './contracts.mjs';
 
 // Partition-key values. The metadata record lives in its own partition so it can
 // never be returned among the initiatives.
@@ -75,6 +76,38 @@ export function resolveProject(initiative, projectRecords) {
   const value = normalizeLabel(initiative?.[PROJECT_NAME_ATTR]);
   if (value === '') return null;
   return projectRecords.find((p) => normalizeLabel(p.project_name) === value) ?? null;
+}
+
+/**
+ * The contracts that belong to a project, for the initiative detail page.
+ *
+ * The join deliberately runs the CONTRACTS-side resolution rule
+ * (`resolveProject` from ./contracts.mjs), not the one above. The two differ:
+ * contracts match a project's `project_name` OR its `contract_name`, because the
+ * survey's naming follows neither consistently — measured at 23 of 37 resolving
+ * only across the pair. Running the initiatives rule here instead would silently
+ * drop every contract that resolves via `contract_name`.
+ *
+ * The rule is applied against a list holding ONLY this project, which is what makes
+ * the question "does this contract name this project?" rather than "which project
+ * does this contract resolve to first?". The difference is not academic: the
+ * contracts rule returns the first record matching on EITHER field, so if some other
+ * project's `contract_name` normalizes to this project's `project_name`, a
+ * whole-table resolve hands back that other record. Membership tested by identity or
+ * by `project_code` against that answer then yields nothing, and the page states "No
+ * contracts on file" — a confident wrong answer rather than an absent one. Asking
+ * the one-project question cannot go wrong that way, and it drops the join from
+ * O(contracts × projects) to O(contracts) besides.
+ *
+ * A consequence worth naming: with colliding names a contract can belong to two
+ * projects and appear on both. That is the honest rendering of ambiguous data —
+ * better than vanishing from one of them.
+ */
+export function contractsForProject(project, contracts) {
+  if (!project) return [];
+  return (contracts ?? []).filter(
+    (contract) => resolveContractProject(contract, [project]) !== null,
+  );
 }
 
 /**

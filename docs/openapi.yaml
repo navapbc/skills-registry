@@ -40,6 +40,8 @@ tags:
     description: Contract Explorer reference data — archetypes and policy postures
   - name: projects
     description: Projects mirrored from the Nava projects sheet (read-only)
+  - name: contracts
+    description: Contracts mirrored from the AI survey (read-only, operator-populated)
   - name: initiatives
     description: AI initiatives mirrored from the initiatives sheet (read-only)
 
@@ -519,6 +521,37 @@ components:
           oneOf:
             - type: "null"
             - $ref: "#/components/schemas/InitiativeProject"
+        related_contracts:
+          description: >
+            The contracts belonging to resolved_project, present ONLY on the record
+            named by the `id` query parameter. FOUR states, none of which collapses
+            into another: absent means the join was not requested (every record of a
+            list request, and any initiative with no resolved project); null means it
+            was requested and the read FAILED; [] means it was requested and no
+            contract on file names this project; a non-empty array is the contracts.
+
+
+            A failed contracts read degrades rather than failing the request — the
+            response is still 200 and still carries the full initiative, because the
+            contracts are one section of a page whose answer is the initiative. An
+            unconfigured CONTRACTS_TABLE yields null for the same reason, rather than
+            the 503 a missing initiatives or projects table produces.
+
+
+            [] is NOT evidence that the project has no contract. Only 43 of 119
+            contracts record a project name at all, and the two sheets sometimes
+            spell the same project differently. Present it as "no link recorded".
+
+
+            Membership uses the CONTRACTS-side resolution rule, which matches a
+            project's project_name or its contract_name, applied against a list
+            holding only the target project. The initiatives rule matches project_name
+            alone and would silently drop every contract named the other way.
+          oneOf:
+            - type: "null"
+            - type: array
+              items:
+                $ref: "#/components/schemas/InitiativeContract"
         first_seen_at:
           type: string
           format: date-time
@@ -558,6 +591,34 @@ components:
         archetype_primary:
           type: string
         archetype_additional:
+          type: string
+
+    InitiativeContract:
+      type: object
+      description: >
+        A contract on the initiative's project, projected down to what identifies it.
+        Narrower than the Contract schema on purpose: these are LINKS, not records,
+        and /contracts/{contract_id} answers the rest. ai_posture is deliberately
+        absent — resolving a posture id to its label needs the project-reference
+        partition, which this route does not read.
+      properties:
+        contract_id:
+          type: string
+          description: The href of the link this entry renders.
+          example: user-facing-ai
+        project:
+          type: string
+          description: >
+            The survey's own project string, which is also the contract's display name
+            on the Contract Explorer's cards.
+          example: User-Facing AI
+        contract_num:
+          type: string
+        vehicle:
+          type: string
+        customer:
+          type: string
+        agreement_type:
           type: string
 
     InitiativesPopulationState:
@@ -1732,6 +1793,140 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /api/contracts:
+    get:
+      tags: [contracts]
+      summary: List populated contracts with their resolved postures and projects
+      description: >
+        Contract records mirrored from the "AI Survey (Contracts and Delivery
+        Completes)" tab. Read-only — the survey is the only write surface, and the
+        API Lambda's IAM grant on this table omits write actions.
+
+
+        Population is OPERATOR-RUN, not scheduled: there is no workflow, and the
+        GitHub deploy role has no access to the table. A refresh is
+        `node scripts/sync-contracts.mjs --env <staging|prod>`, run per environment.
+
+
+        Requires only a session. Deliberately NOT capability-gated, on the same
+        reasoning as /api/initiatives: the explorer exists so any delivery team member
+        can answer "may I use AI on my contract?", and a capability role would be
+        assigned to nobody.
+
+
+        One endpoint rather than three, so the grid, the detail view, the posture
+        guidance, and the capture date cannot disagree about freshness.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Contracts with resolved postures and projects, and the population state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [contracts, postures, population]
+                properties:
+                  contracts:
+                    type: array
+                    items:
+                      type: object
+                      description: >
+                        A fixed allowlist of survey columns (CONTRACT_FIELDS in
+                        functions/api/routes/contracts.mjs), plus the two resolved
+                        fields below. The population uses a denylist so new survey
+                        columns reach the table automatically; this allowlist is the
+                        review step that keeps one from reaching every signed-in user.
+                      properties:
+                        contract_id:
+                          type: string
+                          description: The detail route's lookup key and every card's href.
+                        portfolio: { type: string }
+                        project:
+                          type: string
+                          description: The survey's engagement name, used as the display title.
+                        contract_num: { type: string }
+                        vehicle: { type: string }
+                        customer: { type: string }
+                        agreement_type: { type: string }
+                        vehicle_fullname: { type: string }
+                        task_order: { type: string }
+                        nava_project_mgr: { type: string }
+                        nava_program_mgr: { type: string }
+                        subcontractors: { type: string }
+                        ai_use_terms: { type: string }
+                        ai_use_terms_language: { type: string }
+                        terms_detail: { type: string }
+                        nava_policy: { type: string }
+                        tools: { type: string }
+                        client_policy: { type: string }
+                        client_policy_summary: { type: string }
+                        client_policy_link: { type: string }
+                        ai_used: { type: string }
+                        usage: { type: string }
+                        review_process: { type: string }
+                        notes: { type: string }
+                        first_seen_at:
+                          type: string
+                          format: date-time
+                        last_synced_at:
+                          type: string
+                          format: date-time
+                        ai_posture:
+                          type: string
+                          description: The survey's raw posture value. Empty on 82 of 119 rows.
+                        posture_id:
+                          description: >
+                            The resolved posture record's id, or null. Null rather than
+                            omitted because the page distinguishes "no posture recorded"
+                            from "posture names no record" from a resolved one.
+                          oneOf:
+                            - type: "null"
+                            - type: string
+                        project_name:
+                          type: string
+                          description: The survey's own join string, served even when it resolves.
+                        resolved_project:
+                          description: >
+                            The project whose project_name OR contract_name matches, or
+                            null. Two fields because the survey's naming follows neither
+                            consistently. Same nine-field projection /api/initiatives
+                            uses, and for the same reason.
+                          oneOf:
+                            - type: "null"
+                            - $ref: "#/components/schemas/InitiativeProject"
+                  postures:
+                    type: array
+                    description: >
+                      Policy postures in authored display order, so adding or
+                      reordering one on the Policy Guidance tab needs no deploy.
+                    items:
+                      type: object
+                  population:
+                    $ref: "#/components/schemas/InitiativesPopulationState"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: >
+            The contracts, project-reference, or projects table is not configured for
+            this environment. Distinct from 500 — terraform apply has not run here.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: >
+            The read failed. Returns an error rather than an empty list, because the
+            page IS the contracts and an empty success would be a lie.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /api/initiatives:
     get:
       tags: [initiatives]
@@ -1752,6 +1947,19 @@ paths:
         date cannot disagree about how fresh the data is.
       security:
         - sessionCookie: []
+      parameters:
+        - name: id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >
+            An initiative_id. The response is unchanged except that the named record
+            additionally carries related_contracts. Detail-only because the grid
+            renders no contracts, and computing the join for every record would read
+            the contracts partition on every hub load. An id matching nothing is not
+            an error — the plain list is returned and the page renders not-found.
+          example: benefits-navigator-prototype
       responses:
         "200":
           description: Initiatives with their resolved projects, and the population state
@@ -1777,15 +1985,19 @@ paths:
           description: >
             The initiatives table or the projects table is not configured for this
             environment. Distinct from 500 on purpose — it means terraform apply has
-            not run here yet, not that the read failed.
+            not run here yet, not that the read failed. An unconfigured contracts
+            table does NOT 503: it degrades to related_contracts: null, because the
+            contracts decorate a response the two initiative tables constitute.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "500":
           description: >
-            The read failed. Returns an error rather than an empty list, because the
-            page IS the initiatives and an empty success would be a lie.
+            The initiatives or projects read failed. Returns an error rather than an
+            empty list, because the page IS the initiatives and an empty success would
+            be a lie. A failed CONTRACTS read is not covered by this — it degrades to
+            related_contracts: null and the request still succeeds.
           content:
             application/json:
               schema:
