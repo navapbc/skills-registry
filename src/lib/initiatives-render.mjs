@@ -387,6 +387,74 @@ export function renderProjectSection(initiative) {
 }
 
 /**
+ * The secondary line under a contract's name: the facts that tell two contracts on
+ * the same project apart.
+ *
+ * Empty values are dropped rather than rendered as "None listed". This is a link
+ * list, not the details grid — the same-shape-every-record argument that makes the
+ * grid render its blanks does not apply, and a row of bare separators would be
+ * noise between a reader and the link they came for.
+ */
+function contractMeta(contract) {
+  return [contract.contract_num, contract.vehicle, contract.customer]
+    .map((v) => String(v ?? '').trim())
+    .filter((v) => v !== '')
+    .join(' · ');
+}
+
+/**
+ * One contract as a link to its Contract Explorer page.
+ *
+ * The display name is `project || contract_id`, the same expression
+ * renderContractCard uses, so a contract reads the same way on both pages.
+ *
+ * No `target="_blank"` here, unlike renderOneLink: these are our own pages, and the
+ * external-link treatment exists for sheet-authored URLs we do not control.
+ */
+function renderRelatedContract(contract) {
+  const href = `/contracts/${encodeURIComponent(contract.contract_id)}`;
+  const name = contract.project || contract.contract_id;
+  const meta = contractMeta(contract);
+  return `<li>
+    <a href="${escapeHtml(href)}" class="text-plum-700 underline break-words">${escapeHtml(name)}</a>
+    ${meta ? `<span class="block text-xs text-gray-500">${escapeHtml(meta)}</span>` : ''}
+  </li>`;
+}
+
+/**
+ * The contracts on this initiative's project, when the API was asked for them.
+ *
+ * Three states, and the difference between the first two is the whole reason the
+ * API distinguishes an absent field from an empty array:
+ *
+ *   - `related_contracts` ABSENT — not asked for. The grid view never requests the
+ *     join, and neither does a detail request for an initiative with no resolved
+ *     project. Renders nothing; a "no contracts" panel here would answer a question
+ *     nobody asked and imply the project has none.
+ *   - `related_contracts` EMPTY — asked, and the project owns none on file. Says so,
+ *     because a silently missing section is indistinguishable from a page that does
+ *     not show contracts at all.
+ *   - non-empty — the list.
+ */
+export function renderRelatedContractsSection(initiative) {
+  const contracts = initiative?.related_contracts;
+  if (!Array.isArray(contracts)) return '';
+
+  const body = contracts.length === 0
+    ? `<p class="text-sm text-gray-400 italic mt-1 m-0">
+        No contracts on file for this project.
+      </p>`
+    : `<ul class="list-none p-0 m-0 space-y-2">
+        ${contracts.map(renderRelatedContract).join('')}
+      </ul>`;
+
+  return `<section aria-label="Contracts" class="rounded-lg p-4 border border-gray-200 bg-white">
+    <h2 class="text-sm font-semibold text-gray-900 m-0 mb-2">Contracts on this project</h2>
+    ${body}
+  </section>`;
+}
+
+/**
  * Fields shown on the detail page, in reading order.
  *
  * An explicit list rather than iterating the record: the sheet gains columns, and a
@@ -445,6 +513,11 @@ export function renderInitiativeDetail(initiative, capturedAt) {
       </section>
 
       ${renderProjectSection(initiative)}
+
+      <!-- Follows the Project section deliberately: it answers the question the
+           Project section raises, and it renders nothing at all unless that section
+           resolved a project to join on. -->
+      ${renderRelatedContractsSection(initiative)}
     </div>
 
     <p class="text-xs text-gray-400 mt-6 m-0">

@@ -12,6 +12,7 @@ import {
   renderInitiativeCard,
   renderInitiativeGrid,
   renderProjectSection,
+  renderRelatedContractsSection,
   renderInitiativeDetail,
 } from '../../src/lib/initiatives-render.mjs';
 
@@ -364,6 +365,78 @@ describe('renderProjectSection', () => {
   });
 });
 
+describe('renderRelatedContractsSection', () => {
+  const contract = (over = {}) => ({
+    contract_id: 'user-facing-ai',
+    project: 'User-Facing AI',
+    contract_num: '47QRAA21D0064',
+    vehicle: 'GSA MAS',
+    customer: 'Nava Labs',
+    agreement_type: 'Task order',
+    ...over,
+  });
+
+  it('links each contract to its detail page', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract(), contract({ contract_id: 'md-pbif', project: 'MD PBIF' })],
+    }));
+
+    expect(html).toContain('href="/contracts/user-facing-ai"');
+    expect(html).toContain('href="/contracts/md-pbif"');
+    expect(html).toContain('>User-Facing AI<');
+    expect(html).toContain('>MD PBIF<');
+  });
+
+  it('falls back to the contract id when the survey named no project', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ project: '' })],
+    }));
+    expect(html).toContain('>user-facing-ai<');
+  });
+
+  it('renders nothing when the field is absent', () => {
+    // The grid view and the no-project detail view both land here. A "no contracts"
+    // panel would answer a question that was never asked.
+    expect(renderRelatedContractsSection(initiative())).toBe('');
+    expect(renderRelatedContractsSection(initiative({ related_contracts: undefined }))).toBe('');
+  });
+
+  it('says so when the project owns no contracts', () => {
+    const html = renderRelatedContractsSection(initiative({ related_contracts: [] }));
+    expect(html).toContain('aria-label="Contracts"');
+    expect(html).toContain('No contracts on file');
+  });
+
+  it('percent-encodes an id carrying a space or a slash', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ contract_id: 'md adept/wo-04' })],
+    }));
+    expect(html).toContain('href="/contracts/md%20adept%2Fwo-04"');
+  });
+
+  it('renders the name alone when every secondary field is empty', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ contract_num: '', vehicle: '', customer: '' })],
+    }));
+    expect(html).toContain('>User-Facing AI<');
+    expect(html).not.toContain('·');
+  });
+
+  it('drops only the empty secondary fields, leaving no stray separators', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ vehicle: '' })],
+    }));
+    expect(html).toContain('47QRAA21D0064 · Nava Labs');
+  });
+
+  it('escapes markup in a contract name', () => {
+    const html = renderRelatedContractsSection(initiative({
+      related_contracts: [contract({ project: '<script>a</script>' })],
+    }));
+    expect(html).not.toContain('<script>');
+  });
+});
+
 describe('renderInitiativeDetail', () => {
   it('renders every field label even when every value is blank', () => {
     // The same-shape-every-record assertion: a reader must be able to tell "the
@@ -396,6 +469,19 @@ describe('renderInitiativeDetail', () => {
 
   it('includes the Project section', () => {
     expect(renderInitiativeDetail(initiative(), null)).toContain('aria-label="Project"');
+  });
+
+  it('places the Contracts section after the Project section', () => {
+    const html = renderInitiativeDetail(initiative({
+      related_contracts: [{ contract_id: 'user-facing-ai', project: 'User-Facing AI' }],
+    }), null);
+
+    expect(html.indexOf('aria-label="Contracts"'))
+      .toBeGreaterThan(html.indexOf('aria-label="Project"'));
+  });
+
+  it('emits no Contracts section when the join was not requested', () => {
+    expect(renderInitiativeDetail(initiative(), null)).not.toContain('aria-label="Contracts"');
   });
 
   it('links back to the grid', () => {
