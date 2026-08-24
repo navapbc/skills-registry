@@ -5,7 +5,7 @@
 // unit-testable without pulling the contracts renderers into every initiatives
 // test.
 
-import { escapeHtml } from './render.mjs';
+import { escapeHtml, truncate } from './render.mjs';
 
 // The sheet's multi-value separator is `;`. Measured: `contacts` and `link` both
 // use it, and no cell uses a comma as a separator. A comma is accepted anyway
@@ -335,6 +335,8 @@ function renderProjectNameLink(name, spaceKey) {
     class="text-plum-700 underline">${escapeHtml(name)}</a>`;
 }
 
+const BLURB_LIMIT = 180;
+
 /**
  * The card's blurb.
  *
@@ -344,7 +346,7 @@ function renderProjectNameLink(name, spaceKey) {
  * an empty blurb beside a populated detail page reads as a bug.
  */
 const cardBlurb = (initiative) =>
-  String(initiative.summary || initiative.description || '').slice(0, 180);
+  truncate(initiative.summary || initiative.description || '', BLURB_LIMIT);
 
 /**
  * One card per initiative.

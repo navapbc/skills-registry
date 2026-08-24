@@ -142,6 +142,17 @@ describe('renderContractCard', () => {
     const html = renderContractCard(contract({ project: '<img src=x onerror=1>' }), byId);
     expect(html).not.toContain('<img src=x');
   });
+
+  it('marks an over-long policy summary as elided rather than stopping mid-word', () => {
+    const html = renderContractCard(contract({ client_policy_summary: 'word '.repeat(60) }), byId);
+    expect(html).toContain('word...');
+  });
+
+  it('leaves a policy summary that fits without a trailing ellipsis', () => {
+    const html = renderContractCard(contract({ client_policy_summary: 'Short enough.' }), byId);
+    expect(html).toContain('Short enough.');
+    expect(html).not.toContain('Short enough....');
+  });
 });
 
 describe('renderContractGrid', () => {

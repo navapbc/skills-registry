@@ -13,6 +13,21 @@ export function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Cut `text` to `limit` characters, saying so when the cut fires.
+ *
+ * Lives here beside escapeHtml because the card renderers in contracts-render.mjs
+ * and initiatives-render.mjs both need it and share nothing else. Their character
+ * cut is a backstop behind a `line-clamp`, which handles the common case and
+ * supplies its own ellipsis; when the cut does fire it has to mark itself, or a
+ * blurb that stops mid-word reads as bad data rather than as elided text. Trailing
+ * whitespace goes first so the marker sits against the last word.
+ */
+export function truncate(text, limit) {
+  const str = String(text ?? '');
+  return str.length <= limit ? str : str.slice(0, limit).trimEnd() + '...';
+}
+
 function formatDate(iso) {
   if (!iso) return null;
   const d = new Date(iso);

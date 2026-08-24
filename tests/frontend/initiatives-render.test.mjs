@@ -327,6 +327,18 @@ describe('renderInitiativeCard', () => {
     expect(html).not.toContain('mt-1">');
   });
 
+  it('marks an over-long blurb as elided rather than stopping mid-word', () => {
+    const summary = 'word '.repeat(60);
+    const html = renderInitiativeCard(initiative({ summary }));
+    expect(html).toContain('word...');
+  });
+
+  it('leaves a blurb that fits without a trailing ellipsis', () => {
+    const html = renderInitiativeCard(initiative({ summary: 'Short enough.' }));
+    expect(html).toContain('Short enough.');
+    expect(html).not.toContain('Short enough....');
+  });
+
   it('escapes a title containing markup', () => {
     const html = renderInitiativeCard(initiative({ title: '<script>alert(1)</script>' }));
     expect(html).not.toContain('<script>');

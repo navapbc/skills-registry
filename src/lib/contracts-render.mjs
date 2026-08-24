@@ -4,7 +4,10 @@
 // share only escapeHtml. A separate module also keeps these functions unit-testable
 // without pulling the skills renderers into every contracts test.
 
-import { escapeHtml } from './render.mjs';
+import { escapeHtml, truncate } from './render.mjs';
+
+/** Matches the initiative card's blurb budget — the two cards sit in the same grid. */
+const BLURB_LIMIT = 180;
 
 /** A record here is one survey row: an engagement under a contract, not a contract. */
 // export const UNIT_LABEL = 'Engagement';
@@ -143,7 +146,7 @@ export function renderContractCard(contract, postureById) {
     </h3>
     ${parent}
     <p class="text-xs text-gray-500 mt-2 mb-0 line-clamp-3 flex-1">
-      ${escapeHtml((contract.client_policy_summary ?? '').slice(0, 180))}
+      ${escapeHtml(truncate(contract.client_policy_summary, BLURB_LIMIT))}
     </p>
   </a>`;
 }
