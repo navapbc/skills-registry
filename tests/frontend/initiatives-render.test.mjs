@@ -358,6 +358,13 @@ describe('list rendering inside a whitespace-pre-line cell', () => {
     expect(html).toContain('<li>Grace Hopper</li></ul>');
   });
 
+  it('bullets the links with a visible marker and room to hang it in', () => {
+    const html = renderLinks('Demo: https://example.gov/demo; Deck: https://example.gov/deck');
+    expect(html).toContain('list-disc');
+    expect(html).toContain('pl-5');
+    expect(html).not.toContain('list-none');
+  });
+
   it('emits the links list with no whitespace between its tags', () => {
     const html = renderLinks('Demo: https://example.gov/demo; https://example.gov/two');
     expect(html).toMatch(/^<ul[^>]*><li>/);

@@ -312,7 +312,11 @@ export function renderLinks(value) {
     const parsed = parseLinkPart(part);
     return `<li>${parsed ? renderOneLink(parsed) : escapeHtml(part)}</li>`;
   }).join('');
-  return `<ul class="list-none p-0 m-0 space-y-1">${items}</ul>`;
+  // Bulleted, and the marker is shown: a row carries up to five links, several of
+  // them long labels that wrap, and without a marker a wrapped label reads as two
+  // entries. `pl-5` is the indent the markers hang in — dropping it clips them.
+  // Marker colour matches the pre-use checklist on the contract page.
+  return `<ul class="list-disc pl-5 m-0 space-y-1 marker:text-gray-400">${items}</ul>`;
 }
 
 const CONFLUENCE_SPACES = 'https://navasage.atlassian.net/wiki/spaces/';
