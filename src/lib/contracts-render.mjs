@@ -500,10 +500,12 @@ export function renderContractDetail(contract, postureById, capturedAt) {
   const narrative = NARRATIVE_FIELDS
     .map(([label, key, render]) => stackedRow(label, contract[key], render)).join('');
 
-  // The clause text runs to multiple paragraphs. Behind a disclosure so it cannot
-  // push the posture answer off-screen, but present and expandable.
+  // The clause text runs to multiple paragraphs. Open by default because the exact
+  // contract language is the thing readers come here for, and a collapsed
+  // disclosure hides it behind a click. Still a <details> so it can be collapsed
+  // when it crowds out the posture answer below it.
   const clause = contract.ai_use_terms_language
-    ? `<details class="rounded-lg border border-gray-200 bg-white p-4">
+    ? `<details open class="rounded-lg border border-gray-200 bg-white p-4">
         <summary class="text-sm font-semibold text-gray-900 cursor-pointer">
           Contract AI-use clause language
         </summary>
