@@ -166,8 +166,8 @@ function resolutionSection(resolution) {
     );
   }
 
-  // Warned, never failed: 14 of 37 rows state no project, plenty of initiatives are
-  // genuinely internal, and failing on 38% of the sheet would train the operator to
+  // Warned, never failed: 23 of 46 rows state no project, plenty of initiatives are
+  // genuinely internal, and failing on half the sheet would train the operator to
   // ignore red runs.
   if (resolution.missingProject.length > 0) {
     lines.push(

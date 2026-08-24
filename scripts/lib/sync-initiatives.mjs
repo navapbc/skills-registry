@@ -48,9 +48,15 @@ export const HEADER_ROW = 0;
 
 // The column the initiative id is built from.
 //
-// The workbook now populates an `id` column — `init-2` through `init-47`, 46
-// values, all distinct, all already lowercase `[a-z0-9-]` so slugInitiativeId is
-// a no-op on them. That is the property a key needs and prose never had.
+// The workbook now populates an `id` column: 46 values, all distinct, all already
+// lowercase `[a-z0-9-]` so slugInitiativeId is a no-op on them. That is the
+// property a key needs and prose never had.
+//
+// The values are AUTHOR-PREFIXED and not uniform — `init-2` … `init-38` on the 37
+// rows carried over from the v1 tab, `ryan-39` … `ryan-47` on the 9 added since,
+// a continuous 2–47 sequence under two prefixes. Nothing here depends on the
+// prefix; it is noted because a reader who assumes one prefix will misread the
+// table, and because a third contributor will presumably add a third.
 //
 // This REPLACES a title-derived key, and the change retires a real cost rather
 // than trading one for another. Under the old rule, retitling an initiative
@@ -129,11 +135,11 @@ export const REQUIRED_HEADERS = [
 // delete-and-recreate at an unchanged row count.
 //
 // THE MASS RE-KEY THIS NOW GUARDS AGAINST is a renumbering or re-sort of the `id`
-// column. Ids read `init-2` through `init-47`: a positional-looking sequence, so
-// re-sorting the sheet and regenerating them would hand every row a different
-// key. That presents here as a near-total delete and is refused. (Under the
-// previous title-derived key the equivalent risk was a bulk retitle, which is no
-// longer a re-key at all.)
+// column. The ids are a continuous 2–47 sequence with no gaps, which is what a
+// column generated from row position looks like — so re-sorting the sheet and
+// regenerating them would hand every row a different key. That presents here as a
+// near-total delete and is refused. (Under the previous title-derived key the
+// equivalent risk was a bulk retitle, which is no longer a re-key at all.)
 //
 // SMALL-N ARITHMETIC, because it surprises people: at 46 rows this refuses at 5
 // deletes (10% of 46 is 4.6). A legitimate pruning of five initiatives therefore
@@ -181,9 +187,9 @@ export function slugAttribute(header) {
 /**
  * Build an initiative id from the sheet's id column.
  *
- * Doubles as the detail-page URL segment, so it must be slug-safe. The real
- * values already are — `init-2` through `init-47`, all lowercase `[a-z0-9-]` —
- * which makes this a no-op on every current row.
+ * Doubles as the detail-page URL segment, so it must be slug-safe. All 46 real
+ * values already are — lowercase `[a-z0-9-]` throughout — which makes this a no-op
+ * on every current row.
  *
  * It is applied anyway, rather than trusted. The sheet is hand-maintained and
  * nothing enforces the id format at write time, so a value with a space or a
