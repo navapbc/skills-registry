@@ -28,48 +28,62 @@ export class SyncInitiativesError extends Error {
   }
 }
 
-// The workbook has exactly one tab. The CLI still reads titles[0] and compares it
-// to this, so a reordered or renamed tab fails loudly rather than importing
-// whatever happens to sit at index 0.
-export const EXPECTED_TAB_TITLE = 'from initiatives.json';
+// The tab this sync reads. The workbook holds four; the CLI looks this title up
+// among them rather than reading an index, so a reordered workbook is a no-op and
+// a renamed tab fails loudly.
+//
+// Reading titles[0] was the previous rule and is not safe here. The workbook was
+// reorganized around v2 on 2026-08-24: this tab moved to index 0 and the former
+// source tab was renamed "OLD: v1 from initiatives.json". Index 0 happens to be
+// correct right now, which is exactly the kind of coincidence that turns into a
+// silent import of the wrong tab later.
+export const EXPECTED_TAB_TITLE = 'v2';
 
-// 0-based grid index, NOT a sheet row number. VERIFIED against the workbook on
-// 2026-08-10 rather than assumed: this tab genuinely starts with its machine
-// headers at the top, with no title banner and no spacer. Its two siblings do
-// not — the projects tab needs row 6 and the contracts tab row 2 — so the
-// absence of an offset here is a measurement, not an oversight.
+// 0-based grid index, NOT a sheet row number. VERIFIED against the v2 tab on
+// 2026-08-24 rather than assumed: it genuinely starts with its headers at the
+// top, with no title banner and no spacer. Its two siblings do not — the projects
+// tab needs row 6 and the contracts tab row 2 — so the absence of an offset here
+// is a measurement, not an oversight.
 export const HEADER_ROW = 0;
 
 // The column the initiative id is built from.
 //
-// This is not a free choice. The workbook carried an `id` column and a
-// `programId` column when this was planned and both were removed before
-// implementation, leaving `title` as the only column that is BOTH populated on
-// every row AND unique across them — the property that makes a key stable, since
-// an id drawn from a sparse column re-keys itself as the sheet is filled in and
-// the reconcile reads that as a delete plus a create.
+// The workbook now populates an `id` column — `init-2` through `init-47`, 46
+// values, all distinct, all already lowercase `[a-z0-9-]` so slugInitiativeId is
+// a no-op on them. That is the property a key needs and prose never had.
 //
-// The rejected alternatives, measured over the real 37 rows: `programId` was
-// blank on 14 rows, and `programId` + `useCaseLabel` produced only 29 distinct
-// keys. Adding `useCaseLabel` or `projectName` to `title` buys no uniqueness and
-// makes every URL 30-40 characters longer.
+// This REPLACES a title-derived key, and the change retires a real cost rather
+// than trading one for another. Under the old rule, retitling an initiative
+// re-keyed its record: the reconcile read it as a delete plus a create,
+// `first_seen_at` did not survive, and the detail URL changed. None of that is
+// true any more — a retitle is now an ordinary update.
 //
-// The cost of keying on prose: retitling an initiative re-keys the row, so a
-// rename is a delete plus a create. `first_seen_at` does not survive it and
-// neither does the URL. MAX_DELETE_FRACTION is what stops a BULK retitle from
-// applying; a single one is allowed through as intended behaviour.
+// What replaces it as the mass-re-key risk is the id sequence itself. `init-N`
+// looks positional, and renumbering or re-sorting the column would re-key every
+// row at an unchanged row count. MAX_DELETE_FRACTION is what catches that; see
+// its note below.
 //
 // A list rather than a bare string, matching sync-contracts.mjs, so adding a
 // second column later is a data change rather than a rewrite.
-export const ID_COLUMNS = ['title'];
+export const ID_COLUMNS = ['id'];
 
 // Headers deliberately NOT carried into storage.
 //
-// Empty today. Kept as an explicit denylist rather than an inclusion list,
-// matching both sibling syncs: the sheet gains columns, and a new one should
-// arrive automatically rather than being silently dropped until someone edits
-// code. The API's allowlist is what stops an unreviewed column reaching users.
-export const EXCLUDED_HEADERS = [];
+// `id` is here because it is the KEY SOURCE. Carrying it too would put
+// `initiative_id` and an identical `id` on all 46 records, leaving a reader two
+// candidate keys and no rule for choosing between them. ID_COLUMNS reads the raw
+// header row directly, so excluding it from the carry does not stop it keying.
+//
+// One consequence worth knowing: the blank-row test below asks whether any
+// CARRIED cell is populated, so a row holding only an id and nothing else counts
+// as blank and is skipped. That is the intended reading of such a row, and a test
+// pins it so it stays a choice rather than an accident.
+//
+// Kept as a denylist rather than an inclusion list, matching both sibling syncs:
+// the sheet gains columns, and a new one should arrive automatically rather than
+// being silently dropped until someone edits code. The API's allowlist is what
+// stops an unreviewed column reaching users.
+export const EXCLUDED_HEADERS = ['id'];
 
 // Attribute names the sync writes itself. A column that slugs to one of these
 // would reach the stored item through the record spread and overwrite it.
@@ -85,51 +99,65 @@ export const RESERVED_ATTRIBUTES = [
   'last_synced_at',
 ];
 
-// Machine names the shaping refuses to proceed without. Not the full column set —
-// new columns are carried automatically — but the ones whose absence means the
-// header row shifted or was reorganized, which otherwise yields a result that
-// looks valid and is not.
+// Headers the shaping refuses to proceed without. Not the full column set — new
+// columns are carried automatically — but the ones whose absence means the header
+// row shifted or was reorganized, which otherwise yields a result that looks
+// valid and is not.
 //
-//  - `title` sources the key. Without it every id is empty.
-//  - `projectName` is the join. Without it every row reads as unlinked, which is
-//    a plausible-looking result and a false all-clear on the resolution alarm.
+//  - `id` sources the key. Without it every id is empty.
+//  - `Project` is the join. Without it every row reads as unlinked, which is a
+//    plausible-looking result and a false all-clear on the resolution alarm.
+//  - `Title` is what every card and detail page renders.
 //  - the three facets drive the page's filters. A silently-empty facet control is
 //    worse than a failed run, because nobody can tell it is empty by mistake.
+//
+// COLUMN PRESENCE, not cell fill. As of 2026-08-24, 9 of the 46 rows leave
+// `Exposure`, `Use Case`, and `Description` blank — they are Substack and
+// marketing entries carrying a `Summary` instead. Requiring values here would
+// reject the sheet as it actually is.
 export const REQUIRED_HEADERS = [
-  'title',
-  'useCaseLabel',
-  'exposure',
+  'id',
+  'Title',
+  'Use Case',
+  'Exposure',
   'tags',
-  'projectName',
+  'Project',
 ];
 
 // Tolerated deletes as a fraction of what is stored. Bounds the case a row count
-// alone cannot see — a shifted header row, or a bulk retitle, can produce a full
+// alone cannot see — a shifted header row, or a mass re-key, can produce a full
 // delete-and-recreate at an unchanged row count.
 //
-// SMALL-N ARITHMETIC, because it surprises people: at 37 rows this refuses at 4
-// deletes (10% of 37 is 3.7). A legitimate pruning of five initiatives therefore
+// THE MASS RE-KEY THIS NOW GUARDS AGAINST is a renumbering or re-sort of the `id`
+// column. Ids read `init-2` through `init-47`: a positional-looking sequence, so
+// re-sorting the sheet and regenerating them would hand every row a different
+// key. That presents here as a near-total delete and is refused. (Under the
+// previous title-derived key the equivalent risk was a bulk retitle, which is no
+// longer a re-key at all.)
+//
+// SMALL-N ARITHMETIC, because it surprises people: at 46 rows this refuses at 5
+// deletes (10% of 46 is 4.6). A legitimate pruning of five initiatives therefore
 // needs --force. That is the right default for a dataset this small — the whole
-// table is one accidental sort away from destruction — and it is also the guard
-// that catches the mass re-key a title-derived key makes possible.
+// table is one accidental sort away from destruction.
 export const MAX_DELETE_FRACTION = 0.1;
 
 // Tolerated single-run shrinkage before the run refuses, measured against the last
-// COMPLETED run rather than against the current stored count. At 37 rows this
-// refuses below 34 incoming.
+// COMPLETED run rather than against the current stored count. At 46 rows this
+// refuses below 42 incoming.
 export const MAX_ROW_DROP_FRACTION = 0.1;
 
 // Hard minimum surviving initiative count.
 //
 // This exists because the delete ceiling is measured against a storedCount that
-// shrinks with the damage: 37 -> 34 -> 31 -> ... drains the table without any
+// shrinks with the damage: 46 -> 42 -> 38 -> ... drains the table without any
 // single run exceeding 10%. A per-run ceiling cannot see a compounding drain
 // across runs; only a floor terminates it.
 //
-// 37 initiatives as of 2026-08-10. 30 is low enough not to block a real
-// contraction and high enough to stop the decay early. Revisit if the sheet
-// changes materially — a hardcoded number goes stale silently.
-export const ABSOLUTE_FLOOR = 30;
+// 46 initiatives as of 2026-08-24. 38 is low enough not to block a real
+// contraction and high enough to stop the decay early, holding roughly the same
+// proportion the previous pair (30 of 37) did. Revisit if the sheet changes
+// materially — a hardcoded number goes stale silently.
+export const ABSOLUTE_FLOOR = 38;
 
 /**
  * Derive a stored attribute name from a machine header.
@@ -151,19 +179,20 @@ export function slugAttribute(header) {
 }
 
 /**
- * Build an initiative id from its title.
+ * Build an initiative id from the sheet's id column.
  *
- * Doubles as the detail-page URL segment, so it must be slug-safe. Case and
- * surrounding whitespace are normalized away — the sheet is hand-maintained.
+ * Doubles as the detail-page URL segment, so it must be slug-safe. The real
+ * values already are — `init-2` through `init-47`, all lowercase `[a-z0-9-]` —
+ * which makes this a no-op on every current row.
  *
- * Real titles carry em dashes, ampersands, apostrophes, and parentheses; runs of
- * those collapse to a single hyphen rather than leaving doubles.
+ * It is applied anyway, rather than trusted. The sheet is hand-maintained and
+ * nothing enforces the id format at write time, so a value with a space or a
+ * capital would otherwise reach a URL unescaped. Normalizing here means a
+ * malformed id becomes a valid address instead of a broken one, and the duplicate
+ * check downstream still catches two ids that normalize together.
  *
- * There is deliberately NO length cap. The longest real title slugs to 89
- * characters, far under DynamoDB's range-key limit, and truncating would
- * reintroduce exactly the collision class the duplicate check exists to catch —
- * the removed `id` column truncated at 60 and two similar titles would have
- * collided there silently.
+ * There is deliberately NO length cap: truncation would manufacture collisions,
+ * which is the one failure this function must not introduce.
  */
 export function slugInitiativeId(...parts) {
   return parts
@@ -256,8 +285,8 @@ export function shapeInitiatives(cells) {
     if (id === '') {
       throw new SyncInitiativesError(
         `Sheet row ${sheetRow} carries data but its ${ID_COLUMNS.join(' + ')} yields no id, ` +
-          'so it cannot be keyed and must not be silently dropped. A title of only ' +
-          'punctuation does this. Give the row a title, or clear the row.',
+          'so it cannot be keyed and must not be silently dropped. A blank id cell does this, ' +
+          'and so does one holding only punctuation. Give the row an id, or clear the row.',
       );
     }
 
@@ -265,8 +294,8 @@ export function shapeInitiatives(cells) {
       throw new SyncInitiativesError(
         `Initiative id "${id}" is produced by both sheet row ${seenAt.get(id)} and ` +
           `row ${sheetRow}. Ids come from ${ID_COLUMNS.join(' + ')}, so one row would ` +
-          'silently overwrite the other — two titles differing only in punctuation slug ' +
-          'the same. Distinguish the two in the sheet.',
+          'silently overwrite the other. A copied row is the usual cause. Give each row ' +
+          'its own id.',
       );
     }
     seenAt.set(id, sheetRow);
@@ -291,7 +320,7 @@ export function shapeInitiatives(cells) {
 // Attributes written at sync time rather than read from the sheet, so they must
 // not count toward whether a record changed. `record_type` is the partition key
 // and is present on every stored item but on no incoming record — leaving it in
-// makes every initiative compare as changed, which is the "37 updated on every
+// makes every initiative compare as changed, which is the "46 updated on every
 // run forever" failure.
 const NON_CARRIED_FIELDS = new Set(RESERVED_ATTRIBUTES);
 
@@ -314,10 +343,14 @@ function carriedFieldsDiffer(incoming, storedRecord) {
  * every run forever, making the run counts a constant rather than an answer to
  * "did anything change?".
  *
- * A retitled initiative appears here as one create plus one delete, never as an
- * update, because the title sources the key. That is the documented cost of a
- * prose key and is asserted by a test so it is discovered here rather than in
- * production.
+ * A retitled initiative appears here as a plain UPDATE, because the key comes
+ * from the sheet's id column rather than from the title. This is asserted by a
+ * test: it was the reverse under the previous key, the delete-plus-create was
+ * documented in four places, and a reader who remembers that needs to see the
+ * change pinned rather than described.
+ *
+ * A row whose ID changes is still a create plus a delete — that is what a
+ * re-keyed row means. Only the sheet's id column can cause it now.
  */
 export function reconcile(incoming, stored) {
   const creates = [];
@@ -348,19 +381,20 @@ export function reconcile(incoming, stored) {
  *
  *  - A zero-row read means the tab, its share, or its shape changed, not that
  *    every initiative was retired. Never overridable.
- *  - A shifted header row, or a bulk retitle, can key initiatives differently and
- *    produce a full delete-and-recreate at an UNCHANGED row count. Only a delete
- *    ceiling sees that run — and with a title-derived key this is the condition
- *    most likely to fire in practice.
+ *  - A shifted header row, or a renumbering of the sheet's id column, can key
+ *    initiatives differently and produce a full delete-and-recreate at an
+ *    UNCHANGED row count. Only a delete ceiling sees that run.
  *  - The delete ceiling is measured against a storedCount that shrinks with the
- *    damage, so repeated under-ceiling runs compound: 37 -> 34 -> 31 -> ..., with
+ *    damage, so repeated under-ceiling runs compound: 46 -> 42 -> 38 -> ..., with
  *    every run exiting clean. The baseline check and the absolute floor are what
  *    terminate that decay, and they are why a per-run ceiling is not enough.
  *
  * KNOWN LIMIT: every condition here counts records. None of them inspects field
- * VALUES, so a run that rewrites the contents of all 37 initiatives onto the wrong
+ * VALUES, so a run that rewrites the contents of all 46 initiatives onto the wrong
  * records — a sub-range sort in the sheet does exactly this — presents as 0 deletes
- * and 37 updates and passes untouched.
+ * and 46 updates and passes untouched. Note this limit got WORSE with an
+ * id-derived key: a sort that moves the ids along with their rows is invisible
+ * here, where a sort that renumbered them would trip the ceiling.
  */
 export function safetyVerdict({ incoming, storedCount, deletes, baseline, override = false }) {
   if (incoming === 0) {
@@ -385,9 +419,10 @@ export function safetyVerdict({ incoming, storedCount, deletes, baseline, overri
   if (storedCount > 0 && deletes > storedCount * MAX_DELETE_FRACTION) {
     return `Refusing: the run would delete ${deletes} of ${storedCount} stored initiatives, ` +
       `more than ${MAX_DELETE_FRACTION * 100}%. Note the row count alone would not have caught ` +
-      'this — a shifted header row, or a bulk retitle in the sheet, produces a full ' +
-      'delete-and-recreate at an unchanged count. Check the sheet before overriding: ids ' +
-      'come from the title, so renaming many initiatives at once looks exactly like this.';
+      'this — a shifted header row, or a renumbered id column, produces a full ' +
+      'delete-and-recreate at an unchanged count. Check the sheet before overriding: ids come ' +
+      'from the id column, so re-sorting the sheet and regenerating them looks exactly like ' +
+      'this. Retitling initiatives does NOT cause this and never needs an override.';
   }
 
   // Same reasoning as the ceiling: with an empty table there is nothing to drain,
