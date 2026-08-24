@@ -287,7 +287,7 @@ Returns 503 when the contracts, project-reference, or projects table is unconfig
 
 ## Initiatives
 
-AI initiatives mirrored from the first tab of the AI-initiatives workbook by `scripts/sync-initiatives.mjs`, run from the `sync-initiatives` workflow on manual dispatch. The sheet is authoritative and is the only write surface.
+AI initiatives mirrored from the `v2` tab of the AI-initiatives workbook by `scripts/sync-initiatives.mjs`, run from the `sync-initiatives` workflow on manual dispatch. The sheet is authoritative and is the only write surface.
 
 Requires only a session — **not** capability-gated, matching the Contract Explorer and unlike Projects above. The hub exists so any delivery team member can see what AI work is running and where; a capability role would be assigned to nobody.
 
@@ -301,17 +301,21 @@ Everything the Initiatives Hub needs in one response — the grid, the detail vi
 {
   "initiatives": [
     {
-      "initiative_id": "benefits-navigator-prototype",
+      "initiative_id": "init-2",
       "title": "Benefits navigator prototype",
-      "desc": "Exploring a navigator for multiple benefit types.",
-      "use_case_label": "AI-powered benefits assistant",
-      "use_case_theme": "AI-powered assistant that makes benefits easier to access",
-      "exposure": "client",
-      "people": "Ada Lovelace; Grace Hopper",
-      "status": "Apr 7–14, 2026",
+      "summary": "Prototype for a multi-benefit navigator.",
+      "description": "Exploring a navigator for multiple benefit types.",
+      "practice": "",
+      "exposure": "Client",
+      "contacts": "Ada Lovelace; Grace Hopper",
+      "link": "Demo: https://example.gov/demo",
+      "submitted_by": "Ada Lovelace",
+      "timestamp": "Jun 25, 2026, 7:00:00 PM",
+      "use_case": "AI-powered benefits assistant",
+      "ai_governance": "",
       "tags": "internal",
-      "links": "Demo: https://example.gov/demo",
-      "project_name": "User-Facing AI",
+      "status": "Apr 7–14, 2026",
+      "project": "User-Facing AI",
       "resolved_project": {
         "project_code": "LB001",
         "project_index_code": "UFAI",
@@ -323,28 +327,28 @@ Everything the Initiatives Hub needs in one response — the grid, the detail vi
         "archetype_primary": "Product Team",
         "archetype_additional": ""
       },
-      "first_seen_at": "2026-08-10T12:00:00.000Z",
-      "last_synced_at": "2026-08-10T12:00:00.000Z"
+      "first_seen_at": "2026-08-24T12:00:00.000Z",
+      "last_synced_at": "2026-08-24T12:00:00.000Z"
     }
   ],
   "population": {
     "state": "complete",
-    "captured_at": "2026-08-10T12:00:00.000Z",
-    "row_count": 37
+    "captured_at": "2026-08-24T12:00:00.000Z",
+    "row_count": 46
   }
 }
 ```
 
-`initiative_id` is a slug of the initiative's `title`, and doubles as the detail-page URL segment. The workbook supplies no id column, and `title` is the only column both populated on every row and unique across them. The consequence is worth knowing: **retitling an initiative re-keys the record**, so a rename presents as a delete plus a create, `first_seen_at` does not survive it, and the URL changes.
+`initiative_id` is the sheet's own `id` column, and doubles as the detail-page URL segment. Values are author-prefixed and not uniform (`init-12`, `ryan-41`) but are distinct, populated on every row, and already slug-safe. **Retitling an initiative is an ordinary update** — the key holds, `first_seen_at` survives, and the URL does not move. This reversed on 2026-08-24, when the key moved off a slug of `title`; that move changed every initiative URL once, with no redirect map, so links made before it return the not-found state.
 
-Attribute names are slugs derived from the sheet headers. Unlike Projects, the served set is a fixed **allowlist** rather than whatever the sheet holds: the sync carries new columns into the table automatically so none is ever silently dropped, so the allowlist here is the review step that keeps a new column from reaching every signed-in user unannounced. A column added to the sheet is invisible to this endpoint until it is added to `INITIATIVE_FIELDS`.
+Attribute names are slugs derived from the sheet headers. Unlike Projects, the served set is a fixed **allowlist** rather than whatever the sheet holds: the sync carries new columns into the table automatically so none is ever silently dropped, so the allowlist here is the review step that keeps a new column from reaching every signed-in user unannounced. A column added to the sheet is invisible to this endpoint until it is added to `INITIATIVE_FIELDS`. `source_location` is currently in that position deliberately: stored, empty on every row, and not served.
 
-`resolved_project` is the project whose `project_name` matches this initiative's `project_name`, case- and whitespace-insensitively, or `null`. It is a nine-field projection rather than the whole project record — initiatives are readable by every signed-in user while the projects table is not, and the full record carries period-of-performance dates and health links this audience has no reason to receive. Resolution happens on read, so correcting a name in the sheet fixes the page on the next load rather than the next sync.
+`resolved_project` is the project whose `project_name` matches this initiative's `project`, case- and whitespace-insensitively, or `null`. The two sides are spelled differently because the sheet's column is `Project` and the projects table's attribute is `project_name`. It is a nine-field projection rather than the whole project record — initiatives are readable by every signed-in user while the projects table is not, and the full record carries period-of-performance dates and health links this audience has no reason to receive. Resolution happens on read, so correcting a name in the sheet fixes the page on the next load rather than the next sync.
 
-`project_name` is served even when it resolves, so a client can name the value that failed when it does not. Two distinct non-resolving cases:
+`project` is served even when it resolves, so a client can name the value that failed when it does not. It is the sheet's own string, never the resolved record — the resolved record is always under `resolved_project`. Two distinct non-resolving cases:
 
-- `project_name` empty — the initiative names no project. Normal, not a defect; 14 of 37 rows as of 2026-08-10, and plenty of initiatives are internal.
-- `project_name` set but matching nothing — real drift. This is what fails a sync run, and it should be rare; it is reachable between a sheet edit and the next sync.
+- `project` empty — the initiative names no project. Normal, not a defect; 23 of 46 rows as of 2026-08-24, and plenty of initiatives are internal.
+- `project` set but matching nothing — real drift. This is what fails a sync run, and it should be rare; it is reachable between a sheet edit and the next sync.
 
 **`?id=<initiative_id>`** — optional. The response is unchanged except that the named record additionally carries `related_contracts`: the contracts belonging to its `resolved_project`, each with enough to identify it and a `contract_id` that addresses `/contracts/<contract_id>`.
 
@@ -378,7 +382,7 @@ Three things about this are load-bearing:
   Note that a failed contracts read **degrades rather than failing the request**: the response is still 200 and still carries the full initiative, because the contracts are one section of a page whose answer is the initiative. This includes the case where `CONTRACTS_TABLE` is unconfigured, which yields `null` rather than the 503 that a missing initiatives or projects table produces.
 
   `[]` is **not** evidence that the project has no contract. Only 43 of 119 contracts record a project name at all, so for the other 76 the join has nothing to work with. The two sheets can also spell the same project differently, in which case a contract that exists resolves to nothing — as of 2026-08-11 one contract still does, `HOR AARS`, matching no project record. Five of the 37 initiatives return `[]` today, and all five look genuine. Present the empty result as "no link recorded", not as "no contract exists".
-- **The join runs the contracts-side resolution rule**, which matches a project's `project_name` **or** its `contract_name`. The initiatives rule above matches `project_name` alone; using it here would silently drop every contract named the other way, which is a substantial share of the survey. The rule is applied against a list holding only the target project, which asks "does this contract name this project?" rather than "which project does this contract resolve to first?" — the latter mis-assigns contracts whenever one project's `contract_name` collides with another's `project_name`.
+- **The join runs the contracts-side resolution rule**, which matches a project's `project_name` **or** its `contract_name`. The initiatives rule above matches the project's `project_name` alone; using it here would silently drop every contract named the other way, which is a substantial share of the survey. The rule is applied against a list holding only the target project, which asks "does this contract name this project?" rather than "which project does this contract resolve to first?" — the latter mis-assigns contracts whenever one project's `contract_name` collides with another's `project_name`.
 
 The projection is narrower than `/api/contracts` on purpose — these entries are links, not records, and the contract's own page answers the rest. `ai_posture` is deliberately excluded: resolving a posture id to its display label needs the project-reference partition, which this route does not read, and a bare id badge would be worse than none.
 
