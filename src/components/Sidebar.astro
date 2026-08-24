@@ -1,26 +1,46 @@
 ---
 import UserFooter from './UserFooter.astro';
 
-// Each nav item: href, short icon glyph, label, accessible name, and whether
-// it's an external resource link (rendered with target="_blank").
-const mainNav = [
-  { id: 'nav-marketplace', href: '/',          icon: '⊞', label: 'Marketplace' },
-  { id: 'nav-my-skills',   href: '/my-skills', icon: '★', label: 'My Skills' },
-  { id: 'nav-whats-new',   href: '/whats-new', icon: '◈', label: "What's New" },
-  { id: 'nav-org-wide',    href: '/skills',    icon: '◆', label: 'Org-Wide Skills' },
-  { id: 'nav-contribute',  href: 'https://docs.google.com/forms/d/e/1FAIpQLSdW3RSdwVvbFDFz_OBdZ1CzyNq_pYq_z8zsR0NdOknRApcR6A/viewform', icon: '+', label: 'Add a Skill', external: true },
-  // Visible to every signed-in user, with no role condition. That is the origin
-  // decision, and it is why this is linked while /projects-admin stays unlinked.
-  { id: 'nav-contracts',   href: '/contracts', icon: '§', label: 'Contract Explorer' },
-  // Same posture as Contract Explorer above: visible to every signed-in user with
-  // no role condition, which is why it is linked while /projects-admin stays unlinked.
-  { id: 'nav-initiatives', href: '/initiatives', icon: '⚙', label: 'Initiatives Hub' },
-];
-
-const resources = [
-  { href: 'https://navasage.atlassian.net/wiki/spaces/NH/pages/3137536013/FAQ+Claude+Skills', icon: '?', label: 'FAQ: Claude Skills' },
-  { href: 'https://navasage.atlassian.net/wiki/spaces/CB/pages/1984135232/AI+Community+of+Practice', icon: '◎', label: 'Community of Practice' },
-  { href: 'https://navasage.atlassian.net/wiki/spaces/CB/pages/3211788396/AI+Office+Hours', icon: '◷', label: 'AI Office Hours' },
+// Sidebar sections, each with a heading and its items. An item is href, short
+// icon glyph, label (also the accessible name), an optional id used by the
+// active-link script in Base.astro, and `external` for links that leave the app
+// (rendered with target="_blank").
+const sections = [
+  {
+    heading: 'Skills',
+    items: [
+      { id: 'nav-my-skills',   href: '/my-skills', icon: '★', label: 'My Skills' },
+      { id: 'nav-marketplace', href: '/',          icon: '⊞', label: 'Skills Marketplace' },
+      { id: 'nav-whats-new',   href: '/whats-new', icon: '◈', label: "What's New" },
+      { id: 'nav-org-wide',    href: '/skills',    icon: '◆', label: 'Org-wide Skills' },
+      { id: 'nav-contribute',  href: 'https://docs.google.com/forms/d/e/1FAIpQLSdW3RSdwVvbFDFz_OBdZ1CzyNq_pYq_z8zsR0NdOknRApcR6A/viewform', icon: '+', label: 'Add a Skill', external: true },
+    ],
+  },
+  {
+    heading: 'AI at Nava',
+    items: [
+      // Visible to every signed-in user, with no role condition. That is the origin
+      // decision, and it is why this is linked while /projects-admin stays unlinked.
+      { id: 'nav-contracts',   href: '/contracts',   icon: '§', label: 'Contract Explorer' },
+      // Same posture as Contract Explorer above: visible to every signed-in user with
+      // no role condition, which is why it is linked while /projects-admin stays unlinked.
+      { id: 'nav-initiatives', href: '/initiatives', icon: '⚙', label: 'Initiatives Explorer' },
+    ],
+  },
+  {
+    heading: 'Using AI at Nava',
+    items: [
+      { id: 'nav-faq',    href: 'https://navasage.atlassian.net/wiki/spaces/NH/pages/3137536013/FAQ+Claude+Skills', icon: '?', label: 'FAQs: Claude Skills', external: true },
+      { id: 'nav-policy', href: 'https://navasage.atlassian.net/wiki/spaces/NH/pages/763494410/AI+Tool+Use+Policy', icon: '⚖', label: 'AI Tool Use Policy', external: true },
+    ],
+  },
+  {
+    heading: 'Community',
+    items: [
+      { id: 'nav-cop',          href: 'https://navasage.atlassian.net/wiki/spaces/CB/pages/1984135232/AI+Community+of+Practice', icon: '◎', label: 'Community of Practice', external: true },
+      { id: 'nav-office-hours', href: 'https://navasage.atlassian.net/wiki/spaces/CB/pages/3211788396/AI+Office+Hours', icon: '◷', label: 'AI Office Hours', external: true },
+    ],
+  },
 ];
 ---
 <aside id="app-sidebar" class="flex-shrink-0 flex flex-col bg-white border-r border-gray-200 overflow-y-auto" aria-label="Site sidebar">
@@ -47,36 +67,22 @@ const resources = [
       <span class="sidebar-label">Collapse</span>
     </button>
 
-    <div>
-      <p class="sidebar-label px-2 mb-1 text-xs font-semibold text-gray-600 uppercase tracking-wider" aria-hidden="true">Navigation</p>
-      <ul class="space-y-0.5 list-none p-0 m-0">
-        {mainNav.map((item) => (
-          <li>
-            <a href={item.href} id={item.id} aria-label={item.label} target={item.external ? '_blank' : undefined} rel={item.external ? 'noopener' : undefined} class="sidebar-nav-link group/nav relative flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
-              <span aria-hidden="true" class="text-gray-400 text-xs">{item.icon}</span>
-              <span class="sidebar-label">{item.label}</span>
-              <span class="sidebar-tip pointer-events-none absolute left-12 top-1/2 -translate-y-1/2 z-20 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 group-hover/nav:opacity-100 transition-opacity shadow-lg">{item.label}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </div>
-
-    <!-- Resources -->
-    <div>
-      <p class="sidebar-label px-2 mb-1 text-xs font-semibold text-gray-600 uppercase tracking-wider" aria-hidden="true">Resources</p>
-      <ul class="space-y-0.5 list-none p-0 m-0">
-        {resources.map((item) => (
-          <li>
-            <a href={item.href} target="_blank" rel="noopener" aria-label={item.label} class="sidebar-nav-link group/nav relative flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
-              <span aria-hidden="true" class="text-gray-400 text-xs">{item.icon}</span>
-              <span class="sidebar-label">{item.label}</span>
-              <span class="sidebar-tip pointer-events-none absolute left-12 top-1/2 -translate-y-1/2 z-20 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 group-hover/nav:opacity-100 transition-opacity shadow-lg">{item.label}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </div>
+    {sections.map((section) => (
+      <div>
+        <p class="sidebar-label px-2 mb-1 text-xs font-semibold text-gray-600 uppercase tracking-wider" aria-hidden="true">{section.heading}</p>
+        <ul class="space-y-0.5 list-none p-0 m-0">
+          {section.items.map((item) => (
+            <li>
+              <a href={item.href} id={item.id} aria-label={item.label} target={item.external ? '_blank' : undefined} rel={item.external ? 'noopener' : undefined} class="sidebar-nav-link group/nav relative flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900 no-underline transition-colors">
+                <span aria-hidden="true" class="text-gray-400 text-xs">{item.icon}</span>
+                <span class="sidebar-label">{item.label}</span>
+                <span class="sidebar-tip pointer-events-none absolute left-12 top-1/2 -translate-y-1/2 z-20 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 group-hover/nav:opacity-100 transition-opacity shadow-lg">{item.label}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
   </nav>
 
   <UserFooter />

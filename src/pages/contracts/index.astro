@@ -129,11 +129,11 @@ if (data) {
           <input type="search" id="contracts-search" placeholder="Search…" autocomplete="off"
             class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-plum-300 focus:border-plum-400 placeholder:text-gray-400" />
         </div>
-        <select id="contracts-posture" aria-label="Filter by AI posture" class="${selectClass}">
-          <option value="all">All postures</option>${postureOptions}
-        </select>
         <select id="contracts-portfolio" aria-label="Filter by portfolio" class="${selectClass}">
           <option value="all">All portfolios</option>${portfolioOptions}
+        </select>
+        <select id="contracts-posture" aria-label="Filter by AI posture" class="${selectClass}">
+          <option value="all">All postures</option>${postureOptions}
         </select>
       </div>
 
@@ -153,7 +153,7 @@ if (data) {
       const hidden = countHiddenUnclassified(contracts, { portfolio, query });
 
       toggleWrap.innerHTML = renderUnclassifiedToggle(hidden, includeUnclassified, posture !== 'all');
-      countEl.textContent = `${visible.length} of ${contracts.length} records${contracts.length === 1 ? '' : 's'}`;
+      countEl.textContent = `${visible.length} of ${contracts.length} record${contracts.length === 1 ? '' : 's'}`;
       gridEl.innerHTML = renderContractGrid(visible, postureById);
 
       document.getElementById('contracts-unclassified-toggle')?.addEventListener('click', () => {
