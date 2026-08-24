@@ -3,6 +3,7 @@ import {
   populateInitiatives,
   readSeedMeta,
   checkInitiativeResolution,
+  purgeInitiatives,
 } from '../scripts/lib/sync-initiatives-apply.mjs';
 import {
   RECORD_INITIATIVE,
@@ -463,5 +464,92 @@ describe('checkInitiativeResolution', () => {
     });
     expect(result.unresolvedProjects).toHaveLength(0);
     expect(result.missingProject).toHaveLength(0);
+  });
+});
+
+// ── purgeInitiatives ──────────────────────────────────────────────────────
+// The migration path off title-derived keys. Every assertion here guards real
+// data: this function's whole job is to delete, so the tests are what stop it
+// deleting the wrong partition or stopping short of the end of it.
+describe('purgeInitiatives', () => {
+  const META = {
+    record_type: RECORD_SEED_META, initiative_id: SEED_META_KEY,
+    status: SEED_COMPLETE, row_count: 37,
+  };
+
+  const purge = (ddb, extra = {}) =>
+    purgeInitiatives({ ddb, table: TABLE, DeleteCommand, QueryCommand, ...extra });
+
+  it('reports what it would delete without issuing a single delete', async () => {
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: META });
+    const report = await purge(ddb);
+
+    expect(report.deleted).toBe(0);
+    expect(report.applied).toBe(false);
+    expect(report.ids).toHaveLength(37);
+    expect(ddb.deletes()).toHaveLength(0);
+  });
+
+  it('deletes every initiative, keyed on both parts of the primary key', async () => {
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: META });
+    const report = await purge(ddb, { dryRun: false });
+
+    expect(report.deleted).toBe(37);
+    expect(report.applied).toBe(true);
+    expect(ddb.deletes()).toHaveLength(37);
+    for (const call of ddb.deletes()) {
+      expect(call.params.TableName).toBe(TABLE);
+      expect(call.params.Key.record_type).toBe(RECORD_INITIATIVE);
+      expect(call.params.Key.initiative_id).toMatch(/^init-/);
+    }
+  });
+
+  it('leaves the seed_meta record alone', async () => {
+    // Load-bearing, not tidiness: row_count is the baseline the next run's
+    // row-drop check measures against. Deleting it would disable that check on the
+    // run that repopulates the table.
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: META });
+    await purge(ddb, { dryRun: false });
+
+    expect(ddb.store.get(`${RECORD_SEED_META}#${SEED_META_KEY}`)).toEqual(META);
+    for (const call of ddb.deletes()) {
+      expect(call.params.Key.record_type).not.toBe(RECORD_SEED_META);
+    }
+  });
+
+  it('empties a partition that spans several pages', async () => {
+    // A truncated read leaves orphans the next sync cannot see, because they are
+    // absent from the sheet AND absent from what this reported.
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: META, pageAt: 20 });
+    const report = await purge(ddb, { dryRun: false });
+
+    expect(report.deleted).toBe(37);
+    const remaining = [...ddb.store.values()].filter((i) => i.record_type === RECORD_INITIATIVE);
+    expect(remaining).toEqual([]);
+  });
+
+  it('deletes nothing and reports the no-op on an already-empty partition', async () => {
+    const ddb = fakeDdb({ meta: META });
+    const report = await purge(ddb, { dryRun: false });
+
+    expect(report.deleted).toBe(0);
+    expect(report.ids).toEqual([]);
+    expect(report.applied).toBe(false);
+    expect(ddb.deletes()).toHaveLength(0);
+  });
+
+  it('surfaces a mid-purge failure rather than swallowing it', async () => {
+    // The operator has to learn the table is PARTIALLY purged. A swallowed error
+    // would report success over a half-emptied table.
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: META });
+    const realSend = ddb.send;
+    let seen = 0;
+    ddb.send = async (command) => {
+      if (command.type === 'Delete' && ++seen === 3) throw new Error('throttled');
+      return realSend(command);
+    };
+
+    await expect(purge(ddb, { dryRun: false })).rejects.toThrow(/throttled/);
+    expect(ddb.deletes().length).toBeLessThan(37);
   });
 });

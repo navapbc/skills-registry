@@ -238,6 +238,52 @@ export async function populateInitiatives({
 }
 
 /**
+ * Delete every initiative record in one table.
+ *
+ * Lives here rather than in the CLI for the same reason the gate does: a
+ * destructive path has to be testable against an injected client. It is exercised
+ * by tests/sync-initiatives-apply.test.mjs against the same fake table.
+ *
+ * TWO THINGS THIS DELIBERATELY DOES NOT DO:
+ *
+ *   - It does not touch the `seed_meta` record. The next run's baseline and header
+ *     set must keep describing the last COMPLETED run; clearing them would disable
+ *     the row-drop check on exactly the run that repopulates the table, which is
+ *     the run least able to afford it.
+ *   - It does not consult the safety gate. There is nothing for a gate to weigh —
+ *     the caller has asked for everything to go. What protects the operator is that
+ *     the CLI is dry-run by default and needs an explicit --apply.
+ *
+ * The read paginates. A truncated read here leaves orphans behind that the next
+ * sync cannot see, which is the failure mode worth spending a loop on.
+ */
+export async function purgeInitiatives({
+  ddb,
+  table,
+  dryRun = true,
+  DeleteCommand,
+  QueryCommand,
+}) {
+  const items = await readPartition({
+    ddb, table, keyName: 'record_type', keyValue: RECORD_INITIATIVE, QueryCommand,
+  });
+  const ids = items.map((item) => item.initiative_id);
+
+  if (dryRun || ids.length === 0) return { deleted: 0, ids, applied: false };
+
+  for (const id of ids) {
+    await ddb.send(
+      new DeleteCommand({
+        TableName: table,
+        Key: { record_type: RECORD_INITIATIVE, initiative_id: id },
+      }),
+    );
+  }
+
+  return { deleted: ids.length, ids, applied: true };
+}
+
+/**
  * Compare the populated initiatives against the project records.
  *
  * This function REPORTS; it does not decide. The caller fails the run on

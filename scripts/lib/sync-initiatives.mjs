@@ -64,10 +64,10 @@ export const HEADER_ROW = 0;
 // `first_seen_at` did not survive, and the detail URL changed. None of that is
 // true any more — a retitle is now an ordinary update.
 //
-// What replaces it as the mass-re-key risk is the id sequence itself. `init-N`
-// looks positional, and renumbering or re-sorting the column would re-key every
-// row at an unchanged row count. MAX_DELETE_FRACTION is what catches that; see
-// its note below.
+// What replaces it as the mass-re-key risk is the id sequence itself: a gapless
+// 2–47 run, which is what a position-generated column looks like. Renumbering or
+// re-sorting it would re-key every row at an unchanged row count.
+// MAX_DELETE_FRACTION is what catches that; see its note below.
 //
 // A list rather than a bare string, matching sync-contracts.mjs, so adding a
 // second column later is a data change rather than a rewrite.
