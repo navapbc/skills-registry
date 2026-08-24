@@ -357,20 +357,20 @@ function renderPostureSection(contract, posture) {
  * It reads as a script rather than as guidance because that is the point: someone
  * on a client call needs a sentence they can say, not a policy to interpret.
  *
- * Dark panel and orange accent set it apart from the surveyed fields around it, so
+ * Dark panel and gold accent set it apart from the surveyed fields around it, so
  * a reader can tell at a glance that this is Nava's language and not the contract's.
- * `orange-*` and `font-serif` come from Tailwind's defaults rather than the project
- * theme, which defines only plum, gray, and navy.
+ * The accents use `nava-gold`, the brand gold registered under @theme in
+ * src/styles/main.css. `font-serif` comes from Tailwind's defaults.
  */
 const CLIENT_ASK_SCRIPT = `<section aria-label="If the client asks about AI use"
   class="rounded-lg p-6 bg-gray-900">
-  <p class="text-xs font-semibold uppercase tracking-widest text-orange-400 m-0">
+  <p class="text-xs font-semibold uppercase tracking-widest text-nava-gold m-0">
     If the client asks about AI use
   </p>
   <h2 class="font-serif text-xl font-bold text-white mt-3 mb-4">
     Say this &mdash; word for word if it helps:
   </h2>
-  <blockquote class="border-l-2 border-orange-400 pl-4 m-0">
+  <blockquote class="border-l-2 border-nava-gold pl-4 m-0">
     <p class="font-serif text-lg text-white leading-relaxed m-0">
       &ldquo;Yes, Nava uses AI-assisted tools in a controlled manner to support internal
       development and drafting workflows. These tools are not used with agency or

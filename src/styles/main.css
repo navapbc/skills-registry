@@ -29,6 +29,7 @@
   --gray-900: #111827;
 
   --navy-900: #0a0539;
+  --nava-gold: #f8b712;
 }
 
 @theme inline {
@@ -56,6 +57,9 @@
   --color-gray-700: var(--gray-700);
   --color-gray-800: var(--gray-800);
   --color-gray-900: var(--gray-900);
+
+  /* Registered under @theme, unlike --navy-900, so `text-nava-gold` emits CSS. */
+  --color-nava-gold: var(--nava-gold);
 }
 
 *, *::before, *::after {
