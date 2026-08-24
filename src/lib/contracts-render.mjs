@@ -320,7 +320,7 @@ function renderPostureSection(contract, posture) {
       .map((s) => `<li class="text-sm text-gray-800">${escapeHtml(s)}</li>`).join('');
     return `<section aria-label="AI posture" class="rounded-lg p-4 border border-gray-200"
       style="background-color: ${escapeHtml(posture.color)}">
-      <h2 class="text-sm font-semibold text-gray-900 m-0">${escapeHtml(posture.label)}</h2>
+      <h3 class="text-sm font-semibold text-gray-900 m-0">${escapeHtml(posture.label)}</h3>
       ${steps
         // `list-decimal` is required, not decorative: Tailwind's preflight resets
         // ol to list-style:none, so an unclassed <ol> renders the guidance as an
@@ -340,7 +340,7 @@ function renderPostureSection(contract, posture) {
     : '';
 
   return `<section aria-label="AI posture" class="rounded-lg p-4 border border-gray-200 bg-gray-50">
-    <h2 class="text-sm font-semibold text-gray-900 m-0">No AI posture recorded yet</h2>
+    <h3 class="text-sm font-semibold text-gray-900 m-0">No AI posture recorded yet</h3>
     <p class="text-xs text-gray-500 mt-1 m-0">
       The AI-use survey has not been completed. What the contract
       itself says is below — treat it as the source, not as guidance.
@@ -367,9 +367,9 @@ const CLIENT_ASK_SCRIPT = `<section aria-label="If the client asks about AI use"
   <p class="text-xs font-semibold uppercase tracking-widest text-nava-gold m-0">
     If the client asks about AI use
   </p>
-  <h2 class="font-serif text-xl font-bold text-white mt-3 mb-4">
+  <h3 class="font-serif text-xl font-bold text-white mt-3 mb-4">
     Say this &mdash; word for word if it helps:
-  </h2>
+  </h3>
   <blockquote class="border-l-2 border-nava-gold pl-4 m-0">
     <p class="font-serif text-lg text-white leading-relaxed m-0">
       &ldquo;Yes, Nava uses AI-assisted tools in a controlled manner to support internal
@@ -405,7 +405,7 @@ const PRE_USE_CHECKLIST_ITEMS = [
 
 const PRE_USE_CHECKLIST = `<section aria-label="Pre-use checklist"
   class="rounded-lg p-4 border border-gray-200 bg-white">
-  <h2 class="text-sm font-semibold text-gray-900 m-0">Pre-use checklist</h2>
+  <h3 class="text-sm font-semibold text-gray-900 m-0">Pre-use checklist</h3>
   <p class="text-sm text-gray-700 mt-2 mb-0">
     Always confirm that AI use is allowed on your project. If AI is allowed, you also
     need to confirm the following items before opening or using an AI tool.
@@ -427,20 +427,20 @@ const PRE_USE_CHECKLIST = `<section aria-label="Pre-use checklist"
  */
 function renderProjectSection(contract) {
   if (!contract.resolved_project) {
-    return `<section aria-label="Project" class="rounded-lg p-4 border border-amber-200 bg-amber-50">
-      <h2 class="text-sm font-semibold text-amber-900 m-0">No matching project</h2>
+    return `<section aria-label="Project overview" class="rounded-lg p-4 border border-amber-200 bg-amber-50">
+      <h3 class="text-sm font-semibold text-amber-900 m-0">No matching project</h3>
       <p class="text-xs text-amber-900 mt-1 m-0">
         ${contract.project_name
           ? `This record names <code>${escapeHtml(contract.project_name)}</code>, which matches no project on file.`
           : 'This record has not been matched to a project.'}
-        The posture above does not depend on the link.
+        The posture does not depend on the link.
       </p>
     </section>`;
   }
 
   const p = contract.resolved_project;
-  return `<section aria-label="Project" class="rounded-lg p-4 border border-gray-200 bg-white">
-    <h2 class="text-sm font-semibold text-gray-900 m-0 mb-3">Project</h2>
+  return `<section aria-label="Project overview" class="rounded-lg p-4 border border-gray-200 bg-white">
+    <h3 class="text-sm font-semibold text-gray-900 m-0 mb-3">Project overview</h3>
     <dl class="grid grid-cols-2 gap-3 m-0">
       ${row('Project', p.project_name, (v) => renderProjectNameLink(v, p.project_index_code))}
       ${row('Portfolio', p.portfolio)}
@@ -493,6 +493,27 @@ const NARRATIVE_FIELDS = [
   ['Notes', 'notes'],
 ];
 
+/**
+ * A titled band of related sections.
+ *
+ * The page carries 7 sections, and read as one flat stack a reader could not tell
+ * which of them answer "what am I allowed to do" from which merely describe the
+ * contract. The group heading is the only cue, so it is a real `h2` with the
+ * sections' own headings demoted to `h3` beneath it: a screen-reader user
+ * navigating by heading gets the same 3 groups a sighted reader sees.
+ *
+ * Blank members are dropped rather than rendered empty, since `clause` and the
+ * posture fallback both render to '' on some records.
+ */
+function group(title, sections) {
+  const body = sections.filter((s) => s && s.trim()).join('');
+  if (!body) return '';
+  return `<section aria-label="${escapeHtml(title)}">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 m-0 mb-2 px-1">${escapeHtml(title)}</h2>
+    <div class="space-y-4">${body}</div>
+  </section>`;
+}
+
 export function renderContractDetail(contract, postureById, capturedAt) {
   const posture = postureById?.get(contract.posture_id) ?? null;
   const fields = DETAIL_FIELDS
@@ -503,7 +524,7 @@ export function renderContractDetail(contract, postureById, capturedAt) {
   // The clause text runs to multiple paragraphs. Open by default because the exact
   // contract language is the thing readers come here for, and a collapsed
   // disclosure hides it behind a click. Still a <details> so it can be collapsed
-  // when it crowds out the posture answer below it.
+  // when it crowds out the guidance group below it.
   const clause = contract.ai_use_terms_language
     ? `<details open class="rounded-lg border border-gray-200 bg-white p-4">
         <summary class="text-sm font-semibold text-gray-900 cursor-pointer">
@@ -539,25 +560,34 @@ export function renderContractDetail(contract, postureById, capturedAt) {
       ${termsDetail}
     </div>
 
-    <div class="space-y-4">
-      <!-- Both sections render unconditionally: every field in them now renders,
-           so every record shows the same shape and the same set of labels. -->
-      <section aria-label="Details" class="rounded-lg p-4 border border-gray-200 bg-white">
-        <h2 class="text-sm font-semibold text-gray-900 m-0 mb-3">Details</h2>
-        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 m-0">${fields}</dl>
-      </section>
+    <!-- Groups in the order a reader needs them: what the contract permits, then
+         what to do about it, then who and what the contract covers. The project and
+         contract attributes come last because a reader who opened this page already
+         knows which contract they are on. -->
+    <div class="space-y-6">
+      ${group('AI policy', [
+        // Both sections render unconditionally: every field in them now renders, so
+        // every record shows the same shape and the same set of labels.
+        `<section aria-label="Policy and AI use" class="rounded-lg p-4 border border-gray-200 bg-white">
+          <h3 class="text-sm font-semibold text-gray-900 m-0 mb-1">Policy and AI use</h3>
+          <dl class="divide-y divide-gray-100 m-0">${narrative}</dl>
+        </section>`,
+        clause,
+      ])}
 
-      ${renderPostureSection(contract, posture)}
-      ${CLIENT_ASK_SCRIPT}
+      ${group('Guidance for team members', [
+        renderPostureSection(contract, posture),
+        PRE_USE_CHECKLIST,
+        CLIENT_ASK_SCRIPT,
+      ])}
 
-      <section aria-label="Policy and AI use" class="rounded-lg p-4 border border-gray-200 bg-white">
-        <h2 class="text-sm font-semibold text-gray-900 m-0 mb-1">Policy and AI use</h2>
-        <dl class="divide-y divide-gray-100 m-0">${narrative}</dl>
-      </section>
-
-      ${renderProjectSection(contract)}
-      ${clause}
-      ${PRE_USE_CHECKLIST}
+      ${group('Project information', [
+        renderProjectSection(contract),
+        `<section aria-label="Contract details" class="rounded-lg p-4 border border-gray-200 bg-white">
+          <h3 class="text-sm font-semibold text-gray-900 m-0 mb-3">Contract details</h3>
+          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 m-0">${fields}</dl>
+        </section>`,
+      ])}
     </div>
 
     <p class="text-xs text-gray-400 mt-6 m-0">

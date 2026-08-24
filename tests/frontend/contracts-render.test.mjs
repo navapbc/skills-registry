@@ -196,6 +196,51 @@ describe('renderContractDetail', () => {
     expect(html.indexOf('Posture not recorded')).toBeLessThan(html.indexOf('<h1'));
   });
 
+  describe('the section groups', () => {
+    // 7 sections read as one flat stack gave no cue which of them answer "what am I
+    // allowed to do". The groups are the cue, so their order and membership are
+    // asserted rather than left to whoever edits the template next.
+    it('bands the sections into policy, then guidance, then project information', () => {
+      const html = renderContractDetail(
+        contract({ posture_id: 'allowed', ai_use_terms_language: 'Clause text.' }), byId, null,
+      );
+      const at = (label) => html.indexOf(`aria-label="${label}"`);
+      expect(at('AI policy')).toBeGreaterThan(-1);
+      expect(at('AI policy')).toBeLessThan(at('Guidance for team members'));
+      expect(at('Guidance for team members')).toBeLessThan(at('Project information'));
+    });
+
+    it('orders the members within each group', () => {
+      const html = renderContractDetail(
+        contract({ posture_id: 'allowed', ai_use_terms_language: 'Clause text.' }), byId, null,
+      );
+      const order = [
+        'aria-label="Policy and AI use"',
+        'Contract AI-use clause language',
+        'aria-label="AI posture"',
+        'aria-label="Pre-use checklist"',
+        'If the client asks about AI use',
+        'aria-label="Project overview"',
+        'aria-label="Contract details"',
+      ].map((needle) => html.indexOf(needle));
+      expect(order).not.toContain(-1);
+      expect([...order].sort((a, b) => a - b)).toEqual(order);
+    });
+
+    // A group heading that outranked the sections it introduces would make heading
+    // navigation report the page backwards.
+    it('outranks the sections it introduces', () => {
+      const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
+      const groupBand = html.match(
+        /<section aria-label="Guidance for team members">[\s\S]*?<h2[^>]*>([^<]+)</,
+      );
+      expect(groupBand[1]).toBe('Guidance for team members');
+      const posture = html.match(/<section aria-label="AI posture"[\s\S]*?<\/section>/)[0];
+      expect(posture).toContain('<h3');
+      expect(posture).not.toContain('<h2');
+    });
+  });
+
   it('renders the posture label and its guidance steps in order', () => {
     const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, '2026-08-07T00:00:00Z');
     expect(html).toContain('AI ALLOWED');
@@ -294,9 +339,13 @@ describe('renderContractDetail', () => {
     expect(html).toContain('aria-label="Policy and AI use"');
     expect(html).toContain('Never for decisions.');
     expect(html).toContain('Reviewed Q3.');
-    // Outside the grid: the narrative section opens after the details grid closes.
-    expect(html.indexOf('grid-cols-1 sm:grid-cols-2'))
-      .toBeLessThan(html.indexOf('aria-label="Policy and AI use"'));
+    // Asserted on containment rather than document order, which the section
+    // grouping is free to change: the narrative section holds no two-column grid,
+    // so a six-line answer cannot stretch a one-line neighbour's row.
+    const section = html.match(/<section aria-label="Policy and AI use"[\s\S]*?<\/section>/)[0];
+    expect(section).toContain('Never for decisions.');
+    expect(section).not.toContain('sm:grid-cols-2');
+    expect(html).toContain('sm:grid-cols-2');
   });
 
   // The section is a fixed part of the page. A record that answered none of it
@@ -471,12 +520,16 @@ describe('renderContractDetail', () => {
     expect(renderContractDetail(contract(), byId, '2026-08-07T18:53:15.161Z')).toMatch(/captured/i);
   });
 
-  it('puts long clause text behind a disclosure so it cannot bury the posture', () => {
+  // Open by default, because the exact contract language is what readers come for,
+  // but still collapsible so it cannot push the guidance group off-screen.
+  it('shows long clause text expanded in a disclosure that can be collapsed', () => {
     const html = renderContractDetail(
       contract({ ai_use_terms_language: 'Para one.\n\nPara two.' }), byId, null,
     );
-    expect(html).toContain('<details');
-    expect(html.indexOf('AI SILENT')).toBeLessThan(html.indexOf('<details'));
+    expect(html).toMatch(/<details open/);
+    expect(html).toContain('Para two.');
+    // The posture guidance still renders alongside it.
+    expect(html).toContain('AI SILENT');
   });
 
   // A missing row is indistinguishable from a field the page does not show, so
