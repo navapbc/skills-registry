@@ -346,6 +346,26 @@ describe('renderInitiativeCard', () => {
   });
 });
 
+describe('list rendering inside a whitespace-pre-line cell', () => {
+  // The `dd` preserves newlines, so markup whitespace around the list tags shows
+  // up as a blank line above the first item and below the last.
+  const NO_STRAY_WHITESPACE = /<ul[^>]*>(<li>.*?<\/li>)+<\/ul>/;
+
+  it('emits the contacts list with no whitespace between its tags', () => {
+    const html = renderInitiativeDetail(initiative({ contacts: 'Ada Lovelace; Grace Hopper' }), null);
+    expect(html).toMatch(NO_STRAY_WHITESPACE);
+    expect(html).toContain('<ul class="list-none p-0 m-0 space-y-0.5"><li>Ada Lovelace</li>');
+    expect(html).toContain('<li>Grace Hopper</li></ul>');
+  });
+
+  it('emits the links list with no whitespace between its tags', () => {
+    const html = renderLinks('Demo: https://example.gov/demo; https://example.gov/two');
+    expect(html).toMatch(/^<ul[^>]*><li>/);
+    expect(html).toMatch(/<\/li><\/ul>$/);
+    expect(html).not.toMatch(/>\s+</);
+  });
+});
+
 describe('renderInitiativeGrid', () => {
   it('renders one card per initiative', () => {
     const html = renderInitiativeGrid([initiative({ initiative_id: 'a' }), initiative({ initiative_id: 'b' })]);

@@ -237,13 +237,20 @@ const stackedRow = (label, value, render = plain) => `<div class="py-3 first:pt-
      <dd class="text-sm text-gray-800 mt-1 m-0 whitespace-pre-line">${render(value)}</dd>
    </div>`;
 
-/** A semicolon-separated cell as a list, so eight names do not read as one string. */
+/**
+ * A semicolon-separated cell as a list, so eight names do not read as one string.
+ *
+ * Written on ONE LINE, with no whitespace between the tags. The `<dd>` that holds
+ * this is `whitespace-pre-line` — it has to be, since the sheet's narrative answers
+ * carry real newlines — so a newline in the markup here is rendered, not ignored,
+ * and template indentation becomes a blank line above the first name and below the
+ * last. Same constraint applies to renderLinks.
+ */
 function renderNameList(value) {
   const names = splitList(value);
   if (names.length === 0) return NONE_LISTED;
-  return `<ul class="list-none p-0 m-0 space-y-0.5">
-    ${names.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}
-  </ul>`;
+  const items = names.map((n) => `<li>${escapeHtml(n)}</li>`).join('');
+  return `<ul class="list-none p-0 m-0 space-y-0.5">${items}</ul>`;
 }
 
 /**
@@ -300,12 +307,12 @@ export function renderLinks(value) {
   const parts = String(value).split(';').map((p) => p.trim()).filter((p) => p !== '');
   if (parts.length === 0) return NONE_LISTED;
 
-  return `<ul class="list-none p-0 m-0 space-y-1">
-    ${parts.map((part) => {
-      const parsed = parseLinkPart(part);
-      return `<li>${parsed ? renderOneLink(parsed) : escapeHtml(part)}</li>`;
-    }).join('')}
-  </ul>`;
+  // One line, no whitespace between the tags — see renderNameList.
+  const items = parts.map((part) => {
+    const parsed = parseLinkPart(part);
+    return `<li>${parsed ? renderOneLink(parsed) : escapeHtml(part)}</li>`;
+  }).join('');
+  return `<ul class="list-none p-0 m-0 space-y-1">${items}</ul>`;
 }
 
 const CONFLUENCE_SPACES = 'https://navasage.atlassian.net/wiki/spaces/';
