@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Reconcile the `initiatives` DynamoDB table against the first tab of the
+ * Reconcile the `initiatives` DynamoDB table against the `v2` tab of the
  * AI-initiatives workbook
- * (docs/plans/2026-08-10-001-feat-initiatives-hub-and-sync-plan.md, U6).
+ * (docs/plans/2026-08-24-001-feat-initiatives-v2-sheet-source-plan.md, U2).
  *
  * Run from CI on MANUAL DISPATCH only — there is no cron, deliberately, until the
  * workbook has proved stable across a few runs. Unlike scripts/sync-contracts.mjs
@@ -26,37 +26,42 @@
  *   --force                waive the gate's overridable conditions
  *
  * --force never waives the zero-row refusal. A zero-row read means the tab, its
- * share, or its shape changed — not that every initiative was retired. It also
- * does not waive the project-resolution failure below, which is not a data-loss
- * guard and has no escape hatch.
+ * share, or its shape changed — not that every initiative was retired.
  *
- * WHAT A RED RUN MEANS. Two findings come out of the resolution check and they
- * have different severities:
+ * THE RESOLUTION CHECK NEVER FAILS THE RUN. Both of its findings are warnings,
+ * printed here and written to the job summary:
  *
- *   - A project name that is STATED and matches no project FAILS the run. The
- *     initiatives synced fine; the sheet names a project that does not exist. As
- *     of 2026-08-10 zero of the 14 stated names fail, so the expected steady state
- *     is green — which is what makes a red run worth reading.
- *   - A row with NO project name only warns. 14 of 37 rows carry none, plenty of
- *     initiatives are genuinely internal, and failing on 38% of the sheet would
- *     train whoever reads these runs to ignore red. There is deliberately no flag
- *     to escalate it.
+ *   - A project name that is STATED and matches no project. Real drift worth
+ *     fixing — a typo, or a project renamed in the projects table. It does not
+ *     fail the run, because the initiatives synced correctly and the page renders
+ *     them: each shows its project name marked as unregistered, so the finding is
+ *     already visible to the people who can fix it. Failing here used to block the
+ *     prod job too, since it runs `needs: sync-staging` — one stale project name
+ *     stopped a correct sheet from reaching prod at all.
+ *   - A row with NO project name. Not a defect: 23 of 46 rows carry none and
+ *     plenty of initiatives are genuinely internal.
  *
- * IDS COME FROM THE TITLE. The workbook supplied an `id` column and a `programId`
- * column when this was planned; both were removed, leaving `title` as the only
- * column populated on every row and unique across them. So retitling an
- * initiative in the sheet re-keys the row: it appears as one create plus one
- * delete, `first_seen_at` does not survive, and the detail URL changes. A run
- * reporting both creates and deletes is almost always a retitle rather than a
- * removal — the summary says so too. A BULK retitle trips the delete ceiling and
- * is refused; check the sheet before reaching for --force.
+ * A run that cannot RUN the check still fails, which is a different thing — an
+ * absent alarm is not the same as a quiet one.
+ *
+ * IDS COME FROM THE SHEET'S `id` COLUMN, e.g. `init-12` or `ryan-41` — the prefix
+ * is the author's and carries no meaning here. Retitling an initiative is an
+ * ordinary update: the key holds, `first_seen_at`
+ * survives, and the detail URL does not move. This REVERSES the previous rule, so
+ * discount any older note claiming a rename is a delete plus a create.
+ *
+ * A run reporting both creates and deletes now means what it says — something was
+ * genuinely added and something genuinely removed — or that the sheet's ids were
+ * renumbered. Read the ids before assuming either. A wholesale renumbering trips
+ * the delete ceiling and is refused; check the sheet before reaching for --force.
  *
  * This workbook is NOT the projects sync's workbook and needs its own share with
  * the service account. Being able to read one says nothing about the other.
  *
  * Exit codes:
- *   0  applied, or nothing to do, or a clean dry run
- *   1  a failure, the gate refused, or a stated project name resolved to nothing
+ *   0  applied, or nothing to do, or a clean dry run — including with unresolved
+ *      project names, which warn rather than fail
+ *   1  a failure, the gate refused, or the resolution check could not run
  *
  * Prerequisites: a Google service-account key with read access to the workbook,
  * and AWS credentials with read/write on the initiatives table plus Query on the
@@ -170,11 +175,13 @@ function writeJobSummary(lines) {
   appendFileSync(path, `${lines.join('\n')}\n`);
 }
 
-// The two buckets go to different streams, so a reader can tell the alarm from the
-// background at a glance.
+// Both buckets go to stdout. They used to be split across stdout and stderr to
+// separate the alarm from the background, which made sense while one of them failed
+// the run — it does not now that both are warnings, and writing a non-failure to
+// stderr makes it look like an error to anything reading the streams apart.
 function logResolution(resolution) {
   for (const u of resolution.unresolvedProjects) {
-    console.error(`  NO SUCH PROJECT   ${u.initiative_id}  projectName = "${u.raw_value}"`);
+    console.log(`  UNREGISTERED PROJECT   ${u.initiative_id}  Project = "${u.raw_value}"`);
   }
   if (resolution.missingProject.length > 0) {
     console.log(`  ${resolution.missingProject.length} initiative(s) state no project:`);
@@ -190,22 +197,23 @@ async function main() {
   const auth = await authorize(loadServiceAccountKey(args.credentialsPath));
   console.log(`Authenticated as ${auth.clientEmail}`);
 
-  // The FIRST tab, by index — but its title is pinned, so a reordered workbook or
-  // a renamed tab fails loudly rather than importing whatever now sits at index 0.
+  // Located BY TITLE, not by index. The workbook holds four tabs and was
+  // reorganized around v2 on 2026-08-24 — the tab moved to index 0 and the former
+  // source was renamed "OLD: v1 from initiatives.json". Reading index 0 would be
+  // correct today and is a coincidence, not a contract.
   const titles = await fetchTabTitles(auth, args.spreadsheetId);
-  const firstTab = titles[0];
-  if (firstTab !== EXPECTED_TAB_TITLE) {
+  if (!titles.includes(EXPECTED_TAB_TITLE)) {
     fail(
-      `The first tab of workbook ${args.spreadsheetId} is "${firstTab}", but this sync expects ` +
-        `"${EXPECTED_TAB_TITLE}".\n` +
-        '  Either the tabs were reordered, or that tab was renamed. Restore the order, rename\n' +
-        '  the tab back, or update EXPECTED_TAB_TITLE in scripts/lib/sync-initiatives.mjs.\n' +
+      `Workbook ${args.spreadsheetId} has no tab named "${EXPECTED_TAB_TITLE}", which is the ` +
+        'tab this sync reads.\n' +
+        '  Either it was renamed, or this is the wrong workbook. Rename the tab back, or update\n' +
+        '  EXPECTED_TAB_TITLE in scripts/lib/sync-initiatives.mjs.\n' +
         `  Available tabs, in order: ${titles.map((t) => `"${t}"`).join(', ')}`,
     );
   }
 
-  const values = await fetchTabValues(auth, args.spreadsheetId, [firstTab]);
-  const grid = values[firstTab];
+  const values = await fetchTabValues(auth, args.spreadsheetId, [EXPECTED_TAB_TITLE]);
+  const grid = values[EXPECTED_TAB_TITLE];
 
   // The AWS SDK is installed in functions/api, not at the root.
   const require = createRequire(resolve(__dirname, '../functions/api/package.json'));
@@ -258,15 +266,15 @@ async function main() {
     );
   }
 
-  // Ids come from the title, so this combination is almost always a retitle. Saying
-  // so costs one line and saves an investigation into a data loss that never
-  // happened.
+  // Ids come from the sheet's id column, so this combination is no longer the
+  // reassuring case it used to be. Saying so costs one line and stops an operator
+  // who remembers the old rule from waving it through.
   if (report.created > 0 && report.deleted > 0) {
     console.log(
-      '\n  NOTE: this run both creates and deletes. Ids are derived from the initiative\n' +
-        '  title, so a retitled initiative shows up as one create plus one delete rather\n' +
-        '  than as an update. That is the usual explanation — check the ids above against\n' +
-        '  the sheet before concluding anything was removed.',
+      '\n  NOTE: this run both creates and deletes. Ids come from the sheet\'s `id` column,\n' +
+        '  so a retitled initiative is an ordinary UPDATE and cannot explain this. Either\n' +
+        '  rows were genuinely added and removed, or the ids were renumbered. Check the ids\n' +
+        '  above against the sheet before letting this stand.',
     );
   }
 
@@ -329,13 +337,14 @@ async function main() {
   logResolution(resolution);
 
   if (resolution.unresolvedProjects.length > 0) {
-    fail(
-      `${resolution.unresolvedProjects.length} stated project name(s) match no project record. ` +
-        'The initiatives synced successfully — this failure is the resolution alarm, not a ' +
-        'sync error.\n' +
-        '  Fix the value in the sheet, or check whether the project exists in the projects\n' +
-        '  table under a different name.',
+    console.log(
+      `\n  WARNING: ${resolution.unresolvedProjects.length} stated project name(s) match no ` +
+        'project record.\n' +
+        '  The initiatives synced correctly and the page renders them — each one shows its\n' +
+        '  project name marked as unregistered. Fix the value in the sheet, or check whether\n' +
+        '  the project exists in the projects table under a different name.\n',
     );
+    return;
   }
 
   console.log('\n  every stated project name resolves.\n');

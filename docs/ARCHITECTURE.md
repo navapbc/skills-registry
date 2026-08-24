@@ -221,13 +221,21 @@ Raw rows expire ~200 days after write via DynamoDB TTL (attribute `ttl`, Unix-ep
 
 ### `skills-registry-initiatives-{env}`
 
-AI initiatives mirrored from the first tab of the AI-initiatives workbook, plus one metadata record describing the last sync run. Primary key: `record_type` + `initiative_id`. The metadata record lives in its own partition so it can never be returned among the initiatives, and each read is a single Query on one partition — no GSI.
+AI initiatives mirrored from the `v2` tab of the AI-initiatives workbook, plus one metadata record describing the last sync run. Primary key: `record_type` + `initiative_id`. The metadata record lives in its own partition so it can never be returned among the initiatives, and each read is a single Query on one partition — no GSI.
 
-Key fields: `initiative_id`, `title`, `desc`, `use_case_label`, `use_case_theme`, `exposure`, `people`, `status`, `tags`, `links`, `project_name`, `first_seen_at`, `last_synced_at`.
+Key fields: `initiative_id`, `title`, `summary`, `description`, `practice`, `exposure`, `contacts`, `project`, `link`, `submitted_by`, `timestamp`, `use_case`, `ai_governance`, `tags`, `status`, `source_location`, `first_seen_at`, `last_synced_at`.
+
+Attribute names are slugs of the sheet's own headers, 1:1 with no alias layer, so `Use Case` is `use_case` and `Submitted By` is `submitted_by`. Note that `project` here is the sheet's own string and joins to the projects table's `project_name` — the two sides are spelled differently and `functions/api/lib/initiatives.mjs` is the seam. `source_location` is stored but not served.
 
 **Admission rule:** only records wholly derived from the initiatives workbook and re-creatable by re-running the sync. The GitHub deploy role holds `DeleteItem` here — the same rule and the same reason as `projects`. This is deliberately unlike `contracts`, which CI cannot touch at all because that data is operator-populated; do not extend the CI grant to it on a similarity argument.
 
-**The range key is a slug of `title`, and that has a cost worth knowing.** The workbook supplied an `id` column and a `programId` column when this was designed and both were removed, leaving `title` as the only column both populated on every row and unique across them. So **retitling an initiative re-keys the record**: the sync sees a delete plus a create, `first_seen_at` does not survive, and the detail URL changes. A single rename is intended behaviour; a bulk rename trips the sync's delete ceiling and is refused rather than applied. If shared links to initiatives become common, that is the trigger to ask the sheet's owners for a stable id column.
+**The range key is the sheet's own `id` column.** Values are author-prefixed and not uniform — `init-2` … `init-38` on the rows carried over from the v1 tab, `ryan-39` … `ryan-47` on those added since — but they are distinct, populated on every row, and already slug-safe, so they double as the detail-page URL segment unchanged.
+
+This replaced a `title`-derived key on 2026-08-24, and **retitling an initiative is now an ordinary update**: the key holds, `first_seen_at` survives, and the detail URL does not move. The previous rule was the reverse and was documented in several places, so treat any older note claiming a rename is a delete plus a create as stale.
+
+What the sync's delete ceiling now guards is a **renumbering or re-sort of the id column**. The ids form a gapless 2–47 sequence, which is what a position-generated column looks like, so regenerating them after a sort would re-key every row at an unchanged row count. That presents as a near-total delete and is refused rather than applied.
+
+The move off title-derived keys changed every initiative URL once, and there is no redirect map: links made before it 404. `scripts/purge-initiatives.mjs` exists for that migration — reconciliation alone would have presented it as a delete of everything stored.
 
 Read-only from the API — the sheet is the write surface, and the Lambda's IAM grant omits write actions. Unlike its neighbours the read is **not** capability-gated: any signed-in user can browse the Initiatives Hub.
 
@@ -267,7 +275,7 @@ Build artifacts go to `dist/` and are synced to S3 on deploy. Hashed `_astro/` c
 | `sync.yml` | Cron every 4h + `workflow_dispatch` | Syncs GitHub org skills to DynamoDB |
 | `sync-anthropic.yml` | Cron Mondays 9am + `workflow_dispatch` | Syncs Anthropic built-in skills to DynamoDB |
 | `sync-projects.yml` | Cron Mondays 8am UTC + `workflow_dispatch` | Mirrors the projects sheet, then fails on unresolved archetype values |
-| `sync-initiatives.yml` | `workflow_dispatch` only | Mirrors the initiatives sheet to staging then prod, then fails on a stated `projectName` matching no project. No cron until the workbook's shape proves stable |
+| `sync-initiatives.yml` | `workflow_dispatch` only | Mirrors the initiatives sheet's `v2` tab to staging then prod. A stated `Project` matching no project warns rather than failing — prod runs `needs: sync-staging`, so failing there blocked a correct sheet from shipping. No cron until the workbook's shape proves stable |
 
 All workflows use GitHub OIDC to assume AWS roles — no long-lived credentials stored in secrets.
 

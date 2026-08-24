@@ -153,9 +153,10 @@ function resolutionSection(resolution) {
     lines.push('Every stated project name matches a project on file. ✅', '');
   } else {
     lines.push(
-      `**${resolution.unresolvedProjects.length} stated project name(s) match no project.**`,
-      'This failed the run. Fix the value in the sheet, or check whether the project exists',
-      'in the projects table under a different name.',
+      `⚠️ **${resolution.unresolvedProjects.length} stated project name(s) match no project.**`,
+      'A warning, not a failure: the initiatives synced correctly and each of these renders on',
+      'the page with its project name marked as unregistered. Fix the value in the sheet, or',
+      'check whether the project exists in the projects table under a different name.',
       '',
       '| Initiative | Name in sheet |',
       '| --- | --- |',
@@ -166,8 +167,8 @@ function resolutionSection(resolution) {
     );
   }
 
-  // Warned, never failed: 14 of 37 rows state no project, plenty of initiatives are
-  // genuinely internal, and failing on 38% of the sheet would train the operator to
+  // Warned, never failed: 23 of 46 rows state no project, plenty of initiatives are
+  // genuinely internal, and failing on half the sheet would train the operator to
   // ignore red runs.
   if (resolution.missingProject.length > 0) {
     lines.push(

@@ -7,7 +7,7 @@
 
 import { escapeHtml } from './render.mjs';
 
-// The sheet's multi-value separator is `;`. Measured: `people` and `links` both
+// The sheet's multi-value separator is `;`. Measured: `contacts` and `link` both
 // use it, and no cell uses a comma as a separator. A comma is accepted anyway
 // because a hand-edited sheet will eventually contain one, and written as a
 // character class so a third separator is a one-line change — the same shape as
@@ -38,8 +38,13 @@ const listHas = (cell, wanted) => splitList(cell).some((v) => lower(v) === lower
  * There is deliberately NO hidden-by-default filter here. The Contract Explorer
  * hides unclassified contracts because 82 of its 119 records carry no posture,
  * making the landing view mostly unanswered. Nothing here is comparably empty:
- * every initiative has a title, a use case, an exposure, and a tag. So all 37
- * render by default and there is no unclassified toggle to copy across.
+ * every initiative has a title, a summary, and a tag. So all 46 render by default
+ * and there is no unclassified toggle to copy across.
+ *
+ * Note that `use_case` and `exposure` ARE blank on 9 of the 46 rows now — the
+ * Substack and marketing entries. They still render; they simply do not appear
+ * under any facet option, which is the honest outcome for a row that states no
+ * value.
  *
  * All three facets match by CONTAINMENT rather than equality, even though all
  * three are single-valued in the sheet today. If an editor writes `live; proto`
@@ -47,22 +52,24 @@ const listHas = (cell, wanted) => splitList(cell).some((v) => lower(v) === lower
  * row out of every facet including its own.
  */
 export function filterInitiatives(initiatives, {
-  useCaseLabel = 'all',
+  useCase = 'all',
   exposure = 'all',
   tag = 'all',
   query = '',
 } = {}) {
   const q = lower(query);
   return (initiatives ?? []).filter((i) => {
-    if (useCaseLabel !== 'all' && !listHas(i.use_case_label, useCaseLabel)) return false;
+    if (useCase !== 'all' && !listHas(i.use_case, useCase)) return false;
     if (exposure !== 'all' && !listHas(i.exposure, exposure)) return false;
     if (tag !== 'all' && !listHas(i.tags, tag)) return false;
     if (q) {
-      // `people` is in the haystack because searching for a colleague's name is one
-      // of the obvious ways someone arrives here.
+      // `contacts` is in the haystack because searching for a colleague's name is
+      // one of the obvious ways someone arrives here. Both `summary` and
+      // `description` are searched: they are complementary rather than duplicated —
+      // all 46 rows carry a summary, only 37 a description.
       const haystack = [
-        i.title, i.desc, i.use_case_label, i.use_case_theme, i.people, i.tags,
-        i.project_name, i.resolved_project?.project_name,
+        i.title, i.summary, i.description, i.use_case, i.contacts, i.tags,
+        i.project, i.resolved_project?.project_name,
       ].filter(Boolean).join(' ').toLowerCase();
       if (!haystack.includes(q)) return false;
     }
@@ -83,7 +90,7 @@ function facetOf(initiatives, field) {
   return [...seen.values()].sort((a, b) => a.localeCompare(b));
 }
 
-export const useCaseLabelsOf = (initiatives) => facetOf(initiatives, 'use_case_label');
+export const useCasesOf = (initiatives) => facetOf(initiatives, 'use_case');
 export const exposuresOf = (initiatives) => facetOf(initiatives, 'exposure');
 export const tagsOf = (initiatives) => facetOf(initiatives, 'tags');
 
@@ -154,11 +161,28 @@ export function describePopulationNotice(population) {
 const EXPOSURE_CLASSES = {
   client: 'bg-plum-100 text-plum-800',
   internal: 'bg-gray-100 text-gray-700',
+  // Both spellings. The v1 sheet said `infra` and v2 says `Infrastructure`; the
+  // lookup folds case, so keeping the old key costs a line and stops a badge
+  // silently falling back to gray if either spelling reappears.
   infra: 'bg-blue-100 text-blue-800',
+  infrastructure: 'bg-blue-100 text-blue-800',
   learning: 'bg-green-100 text-green-800',
 };
 const EXPOSURE_FALLBACK = 'bg-gray-100 text-gray-700';
 
+/**
+ * The exposure badge.
+ *
+ * CASING COMES FROM THE SHEET and is not transformed here. v2 supplies title case
+ * — `Client`, `Internal`, `Infrastructure`, `Learning` — so the badge reads
+ * `Infrastructure`. There is deliberately no `uppercase` class (which rendered
+ * `INFRASTRUCTURE`) and deliberately no capitalization helper: a future lowercase
+ * entry in the sheet should render lowercase and be VISIBLE as an inconsistency,
+ * rather than being papered over by code that makes every value look intentional.
+ *
+ * The colour lookup does fold case, because a colour is not information the reader
+ * is being shown — a gray badge for `infrastructure` would just look like a bug.
+ */
 export function renderExposureBadge(exposure) {
   const value = String(exposure ?? '').trim();
   if (value === '') {
@@ -167,7 +191,7 @@ export function renderExposureBadge(exposure) {
     </span>`;
   }
   const classes = EXPOSURE_CLASSES[lower(value)] ?? EXPOSURE_FALLBACK;
-  return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase ${classes}">${escapeHtml(value)}</span>`;
+  return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${classes}">${escapeHtml(value)}</span>`;
 }
 
 const rowShell = (label, body) => `<div class="flex flex-col gap-0.5">
@@ -247,7 +271,7 @@ function parseLinkPart(part) {
  *   href would resolve against /initiatives/<id> and 404 on our own site.
  *
  * A part that does not parse into label-plus-URL renders as the text it is rather
- * than being dropped: 26 of 37 rows carry links, and losing one silently is worse
+ * than being dropped: 35 of 46 rows carry links, and losing one silently is worse
  * than showing it unlinked.
  */
 function renderOneLink({ label, href }) {
@@ -287,6 +311,16 @@ export function renderLinks(value) {
 const CONFLUENCE_SPACES = 'https://navasage.atlassian.net/wiki/spaces/';
 
 /**
+ * Marks a project name the projects table does not have.
+ *
+ * The name is shown as the SHEET spells it, with this appended — not replaced by an
+ * error, and not hidden. Someone reading the page is usually the person who can fix
+ * the sheet, and they cannot fix a value they cannot see. The sync only warns on
+ * this now, so this suffix is the finding's main route to a human.
+ */
+const UNREGISTERED_PROJECT_SUFFIX = '(Could not find registered project name)';
+
+/**
  * The project name, linked to its Confluence space when the space key is known.
  *
  * The key is `project_index_code` on the resolved project. Not every project has
@@ -302,13 +336,24 @@ function renderProjectNameLink(name, spaceKey) {
 }
 
 /**
+ * The card's blurb.
+ *
+ * `summary` first because it is the only one of the two populated on every row —
+ * 46 of 46, against 37 for `description`. The fallback matters in the other
+ * direction too: a row could carry a description and no summary, and a card with
+ * an empty blurb beside a populated detail page reads as a bug.
+ */
+const cardBlurb = (initiative) =>
+  String(initiative.summary || initiative.description || '').slice(0, 180);
+
+/**
  * One card per initiative.
  *
  * Titles run to 91 characters, so the heading gets its own line clamp rather than
  * assuming two lines will always do.
  */
 export function renderInitiativeCard(initiative) {
-  const projectName = initiative.resolved_project?.project_name || initiative.project_name || '';
+  const projectName = initiative.resolved_project?.project_name || initiative.project || '';
   const subtitle = projectName
     ? `<p class="text-xs text-gray-400 m-0 mt-1">${escapeHtml(projectName)}</p>`
     : '';
@@ -330,7 +375,7 @@ export function renderInitiativeCard(initiative) {
     </h3>
     ${subtitle}
     <p class="text-xs text-gray-500 mt-2 mb-0 line-clamp-3 flex-1">
-      ${escapeHtml((initiative.desc ?? '').slice(0, 180))}
+      ${escapeHtml(cardBlurb(initiative))}
     </p>
   </a>`;
 }
@@ -355,18 +400,20 @@ export function renderInitiativeGrid(initiatives) {
  * page.
  *
  * The unresolved case needs TWO messages, because the causes have different owners
- * and together they are 14 of 37 records:
+ * and together they are 23 of 46 records:
  *
- *   - No project stated — normal. 14 rows, and plenty of initiatives are genuinely
- *     internal. An amber panel here would cry wolf on 38% of the page.
+ *   - No project stated — normal. 23 rows, and plenty of initiatives are genuinely
+ *     internal. An amber panel here would cry wolf on half the page.
  *   - A project stated that matches nothing — real drift someone should fix in the
- *     sheet. Zero rows today, and the sync now fails on it, so this should be rare
- *     — but it is reachable between a sheet edit and the next sync, which is
- *     exactly when a reader needs telling.
+ *     sheet, and the page NAMES it rather than hiding it. The sync only warns on
+ *     this, so the page is where the finding actually reaches someone who can act:
+ *     the project is shown as the sheet spells it, suffixed to say it matches no
+ *     registered project. Four rows as of 2026-08-24, all naming one project that
+ *     appears to have been renamed in the projects table.
  */
 export function renderProjectSection(initiative) {
   if (!initiative.resolved_project) {
-    if (isBlank(initiative.project_name)) {
+    if (isBlank(initiative.project)) {
       return `<section aria-label="Project" class="rounded-lg p-4 border border-gray-200 bg-white">
         <h2 class="text-sm font-semibold text-gray-900 m-0">Not linked to a project</h2>
         <p class="text-xs text-gray-500 mt-1 m-0">
@@ -376,11 +423,13 @@ export function renderProjectSection(initiative) {
       </section>`;
     }
     return `<section aria-label="Project" class="rounded-lg p-4 border border-amber-200 bg-amber-50">
-      <h2 class="text-sm font-semibold text-amber-900 m-0">No matching project</h2>
+      <h2 class="text-sm font-semibold text-amber-900 m-0">Project</h2>
+      <p class="text-sm text-amber-900 mt-1 m-0">
+        ${escapeHtml(initiative.project)}
+        <span class="text-xs">${UNREGISTERED_PROJECT_SUFFIX}</span>
+      </p>
       <p class="text-xs text-amber-900 mt-1 m-0">
-        This initiative names <code>${escapeHtml(initiative.project_name)}</code>, which matches
-        no project on file. Fix the name in the sheet, or check whether the project exists
-        under a different one.
+        Fix the name in the sheet, or check whether the project exists under a different one.
       </p>
     </section>`;
   }
@@ -497,11 +546,18 @@ export function renderRelatedContractsSection(initiative) {
  * unlabelled the moment someone edits the sheet.
  */
 const DETAIL_FIELDS = [
-  ['Use case', 'use_case_label'],
+  ['Use case', 'use_case'],
   ['Exposure', 'exposure'],
+  ['Practice', 'practice'],
   ['Tags', 'tags'],
   ['Status', 'status'],
-  ['People', 'people', renderNameList],
+  ['Contacts', 'contacts', renderNameList],
+  ['AI governance', 'ai_governance'],
+  ['Submitted by', 'submitted_by'],
+  // Free text from the sheet — `Jun 25, 2026, 7:00:00 PM`. Rendered by `plain`,
+  // which never parses it, for the same reason `status` is not parsed: it is the
+  // answer someone typed.
+  ['Submitted', 'timestamp'],
 ];
 
 /**
@@ -509,11 +565,16 @@ const DETAIL_FIELDS = [
  *
  * Split from DETAIL_FIELDS because these are answers, not attributes: the sheet
  * records them as free text and several run to multiple sentences.
+ *
+ * `Summary` and `Description` are BOTH here and are not duplicates. All 46 rows
+ * carry a summary; 37 carry a description. The 9 that do not are the Substack and
+ * marketing entries, whose summary is the whole of what the sheet records — so
+ * dropping either field would blank a real answer on part of the set.
  */
 const NARRATIVE_FIELDS = [
-  ['Description', 'desc'],
-  ['Use case theme', 'use_case_theme'],
-  ['Links', 'links', renderLinks],
+  ['Summary', 'summary'],
+  ['Description', 'description'],
+  ['Links', 'link', renderLinks],
 ];
 
 export function renderInitiativeDetail(initiative, capturedAt) {

@@ -1,33 +1,38 @@
 name: Sync Initiatives
 
-# Mirrors the first tab of the AI-initiatives workbook into the initiatives
-# DynamoDB table, then checks every stated projectName against the project
+# Mirrors the `v2` tab of the AI-initiatives workbook into the initiatives
+# DynamoDB table, then checks every stated Project name against the project
 # records.
 #
-# MANUAL DISPATCH ONLY — no schedule, deliberately. The workbook lost two columns
-# during this feature's implementation (an `id` column and a `programId` column),
-# so its shape has not yet been stable across even one steady-state run. Add a
-# weekly cron once it has; see the Deferred section of
-# docs/plans/2026-08-10-001-feat-initiatives-hub-and-sync-plan.md.
+# MANUAL DISPATCH ONLY — no schedule, deliberately. The workbook keeps moving: it
+# lost an `id` and a `programId` column during the original implementation, then
+# on 2026-08-24 was reorganized onto a v2 tab with renamed columns, seven new
+# ones, and a repopulated `id` column. Its shape has still not held steady across
+# one full run. Add a weekly cron once it has.
 #
-# The run FAILS when the sheet STATES a project name that matches no project
-# record. That failure is the drift alarm, not a sync error — the initiatives
-# synced fine. As of 2026-08-10 all 14 stated names resolve, so the expected
-# steady state is green, which is exactly what makes a red run worth reading.
+# THE RESOLUTION CHECK WARNS; IT DOES NOT FAIL THE RUN. Both findings — a stated
+# project name matching nothing, and a row stating no project at all — are printed
+# to the log and written to the job summary, and the job stays green.
 #
-# A row stating NO project only warns. 14 of the 37 rows state none, plenty of
-# initiatives are genuinely internal, and failing on 38% of the sheet would train
-# whoever reads these runs to ignore red.
+# It used to fail on the first of those, and that was worse than it sounds: the
+# prod job below runs `needs: sync-staging`, so ONE stale project name blocked a
+# correct sheet from reaching prod at all. The finding also already reaches the
+# people who can act on it — the detail page shows an unmatched name suffixed
+# "(Could not find registered project name)" — so failing CI added a blast radius
+# without adding a reader.
 #
-# IDS DERIVE FROM THE INITIATIVE TITLE, because the workbook supplies no id column
-# any more. Two consequences worth knowing before you read a run:
+# A run that cannot RUN the check still fails. An absent alarm is not a quiet one.
 #
-#   - Retitling an initiative re-keys its row, so it appears as one create plus one
-#     delete rather than an update. The job says so when both counts are non-zero.
-#   - A BULK retitle therefore looks like a mass delete-and-recreate and trips the
-#     delete ceiling, which refuses the run and writes nothing. That is the gate
-#     working. Check the sheet for renames before re-running with force — force
-#     waives the data-loss guard, which is not what a rename needs.
+# IDS DERIVE FROM THE SHEET'S `id` COLUMN. Two consequences worth knowing before
+# you read a run:
+#
+#   - Retitling an initiative is an ordinary UPDATE. It does not re-key the row,
+#     the detail URL holds, and first_seen_at survives. This reverses the older
+#     rule, so ignore any note claiming a rename is a delete plus a create.
+#   - A RENUMBERING or re-sort of the id column is what now looks like a mass
+#     delete-and-recreate, and it trips the delete ceiling, which refuses the run
+#     and writes nothing. That is the gate working. Check the ids in the sheet
+#     before re-running with force — force waives the data-loss guard.
 
 on:
   workflow_dispatch:
@@ -38,7 +43,7 @@ on:
         type: boolean
         default: false
       force:
-        description: 'Waive the safety gate (row-count drop, delete ceiling, absolute floor). Never waives the zero-row refusal or the project-resolution failure.'
+        description: 'Waive the safety gate (row-count drop, delete ceiling, absolute floor). Never waives the zero-row refusal.'
         required: false
         type: boolean
         default: false

@@ -37,27 +37,39 @@ import {
  * review. This list is that review step: a new column is invisible to the page
  * until someone adds it here on purpose.
  *
- * `people` names individuals. It is included on the same basis contracts.mjs
- * includes its three managers — the reader's whole question is often who to ask —
- * and the exposure is identical: Nava staff names on an authenticated internal
- * page.
+ * `contacts` and `submitted_by` name individuals. They are included on the same
+ * basis contracts.mjs includes its three managers — the reader's whole question is
+ * often who to ask — and the exposure is identical: Nava staff names on an
+ * authenticated internal page.
+ *
+ * `source_location` is the one v2 column deliberately left off. It is empty on all
+ * 46 rows, so serving it would widen the payload to say nothing.
  */
 const INITIATIVE_FIELDS = [
   // Required, not cosmetic: every card's href and the detail route's lookup key.
   // Dropping it renders every link as /initiatives/undefined.
   'initiative_id',
   'title',
-  'desc',
-  'use_case_label',
-  'use_case_theme',
+  // Populated on all 46 rows, unlike `description` at 37. The card blurb reads
+  // this one; the detail page shows both.
+  'summary',
+  'description',
+  'practice',
   'exposure',
-  'people',
-  'status',
+  'contacts',
+  'link',
+  'submitted_by',
+  // Free text from the sheet (`Jun 25, 2026, 7:00:00 PM`), served as written. The
+  // renderer must not parse it as a date — see the note on `status` handling in
+  // src/lib/initiatives-render.mjs.
+  'timestamp',
+  'use_case',
+  'ai_governance',
   'tags',
-  'links',
+  'status',
   // The sheet's own string. Kept even when it resolves, so the page can name the
   // value that failed when it does not.
-  'project_name',
+  'project',
 
   'first_seen_at',
   'last_synced_at',
@@ -144,7 +156,7 @@ function describePopulation(item) {
 }
 
 export function initiativesRoutes(app) {
-  // One endpoint rather than three. 37 records is far below a payload where
+  // One endpoint rather than three. 46 records is far below a payload where
   // splitting buys anything, and a single response means the grid, the detail view,
   // and the capture date cannot disagree about how fresh the data is.
   app.get('/api/initiatives', async (c) => {
@@ -188,7 +200,7 @@ async function serveInitiatives(c) {
 
   // The project→contracts join, computed ONLY when the request names one
   // initiative. The grid renders no contracts, so doing this unconditionally would
-  // read a whole extra partition on every hub load for data 36 of 37 records never
+  // read a whole extra partition on every hub load for data 45 of 46 records never
   // use. The client knows the id before it fetches, so it can ask.
   //
   // `related_contracts` therefore carries FOUR states, and the renderer keys off all
@@ -272,10 +284,11 @@ async function serveInitiatives(c) {
       ...(relatedContracts !== undefined && initiative === target
         ? { related_contracts: relatedContracts }
         : {}),
-      // NOT `project`: the sheet could gain a column of that name, and spreading a
-      // resolved object over it would replace a card's field with an object.
-      // contracts.mjs learned this the hard way; the naming should not depend on
-      // the sheet's current shape.
+      // NOT `project`, and this is no longer hypothetical: the v2 sheet HAS a
+      // `Project` column, carried as `project` and served above. Spreading a
+      // resolved object over that key would replace a card's own string with an
+      // object. contracts.mjs learned this the hard way; the sheet has now caught
+      // up with the precaution.
       resolved_project: project ? project_summary(project) : null,
     };
   });

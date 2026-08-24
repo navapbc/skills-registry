@@ -4,14 +4,17 @@ import {
   RECORD_SEED_META,
   SEED_META_KEY,
   TITLE_ATTR,
-  PROJECT_NAME_ATTR,
-  USE_CASE_LABEL_ATTR,
+  PROJECT_ATTR,
+  USE_CASE_ATTR,
   EXPOSURE_ATTR,
   TAGS_ATTR,
+  SUMMARY_ATTR,
+  DESCRIPTION_ATTR,
   resolveProject,
   contractsForProject,
   collectInitiativeIssues,
 } from '../../../functions/api/lib/initiatives.mjs';
+import { PROJECT_NAME_ATTR as CONTRACTS_PROJECT_NAME_ATTR } from '../../../functions/api/lib/contracts.mjs';
 
 // Real project names and codes from skills-registry-projects-staging, so the
 // punctuation these have to survive is the punctuation that actually exists.
@@ -31,9 +34,9 @@ const PROJECTS = [
 ];
 
 const initiative = (over = {}) => ({
-  initiative_id: 'askca-california-wide-chatbot',
+  initiative_id: 'init-2',
   title: 'AskCA California-wide chatbot',
-  project_name: '',
+  project: '',
   ...over,
 });
 
@@ -47,22 +50,32 @@ describe('record type constants', () => {
     // The sync asserts its own slug function reproduces these. If they drift, the
     // resolution reports zero findings — a false all-clear, not a visible failure.
     expect(TITLE_ATTR).toBe('title');
-    expect(PROJECT_NAME_ATTR).toBe('project_name');
-    expect(USE_CASE_LABEL_ATTR).toBe('use_case_label');
+    expect(PROJECT_ATTR).toBe('project');
+    expect(USE_CASE_ATTR).toBe('use_case');
     expect(EXPOSURE_ATTR).toBe('exposure');
     expect(TAGS_ATTR).toBe('tags');
+    expect(SUMMARY_ATTR).toBe('summary');
+    expect(DESCRIPTION_ATTR).toBe('description');
+  });
+
+  it('does not name the initiatives project attribute the way contracts names its own', () => {
+    // routes/initiatives.mjs imports PROJECT_NAME_ATTR from contracts.mjs one line
+    // from this module's import. Same name, different value, in the file that joins
+    // the two datasets, is a trap — so the names are deliberately distinct.
+    expect(PROJECT_ATTR).not.toBe(CONTRACTS_PROJECT_NAME_ATTR);
+    expect(CONTRACTS_PROJECT_NAME_ATTR).toBe('project_name');
   });
 });
 
 describe('resolveProject', () => {
-  it('resolves an exact project_name match', () => {
-    const found = resolveProject(initiative({ project_name: 'User-Facing AI' }), PROJECTS);
+  it('resolves an exact project match against the project record', () => {
+    const found = resolveProject(initiative({ project: 'User-Facing AI' }), PROJECTS);
     expect(found?.project_code).toBe('LB001');
   });
 
   it('resolves through case, surrounding whitespace, and collapsed inner whitespace', () => {
     const found = resolveProject(
-      initiative({ project_name: '  user-facing   AI ' }),
+      initiative({ project: '  user-facing   AI ' }),
       PROJECTS,
     );
     expect(found?.project_code).toBe('LB001');
@@ -70,31 +83,31 @@ describe('resolveProject', () => {
 
   it('resolves names carrying parentheses', () => {
     const found = resolveProject(
-      initiative({ project_name: 'MD Public Benefit Innovation Fund (PBIF)' }),
+      initiative({ project: 'MD Public Benefit Innovation Fund (PBIF)' }),
       PROJECTS,
     );
     expect(found?.project_code).toBe('ST014');
   });
 
   it('resolves names carrying an ampersand', () => {
-    const found = resolveProject(initiative({ project_name: 'PA HR1 IDP 1 & 2' }), PROJECTS);
+    const found = resolveProject(initiative({ project: 'PA HR1 IDP 1 & 2' }), PROJECTS);
     expect(found?.project_code).toBe('FC021');
   });
 
   it('returns null for a blank project name', () => {
-    expect(resolveProject(initiative({ project_name: '' }), PROJECTS)).toBeNull();
-    expect(resolveProject(initiative({ project_name: '   ' }), PROJECTS)).toBeNull();
+    expect(resolveProject(initiative({ project: '' }), PROJECTS)).toBeNull();
+    expect(resolveProject(initiative({ project: '   ' }), PROJECTS)).toBeNull();
   });
 
   it('returns null against an empty project list rather than throwing', () => {
-    expect(resolveProject(initiative({ project_name: 'User-Facing AI' }), [])).toBeNull();
+    expect(resolveProject(initiative({ project: 'User-Facing AI' }), [])).toBeNull();
   });
 
   it('does NOT resolve a project named by its contract_name', () => {
     // Pins the deliberate divergence from resolveProject in contracts.mjs, which
     // matches both fields. Measured to rescue zero rows here, so widening this
     // should be a visible test change rather than a silent consistency edit.
-    expect(resolveProject(initiative({ project_name: 'MD ADEPT WO-04' }), PROJECTS)).toBeNull();
+    expect(resolveProject(initiative({ project: 'MD ADEPT WO-04' }), PROJECTS)).toBeNull();
   });
 });
 
@@ -180,7 +193,7 @@ describe('collectInitiativeIssues', () => {
     // sheet on 2026-08-10; kept here as the regression case.
     const raw = 'MD Agile Digital Experience Product Transformation (ADEPT) WO4';
     const { unresolvedProjects, missingProject } = collectInitiativeIssues(
-      [initiative({ project_name: raw })],
+      [initiative({ project: raw })],
       PROJECTS,
     );
 
@@ -191,7 +204,7 @@ describe('collectInitiativeIssues', () => {
 
   it('carries the raw value, never the normalized form', () => {
     const { unresolvedProjects } = collectInitiativeIssues(
-      [initiative({ project_name: '  Nonexistent   Project  ' })],
+      [initiative({ project: '  Nonexistent   Project  ' })],
       PROJECTS,
     );
     expect(unresolvedProjects[0].raw_value).toBe('Nonexistent   Project');
@@ -199,18 +212,18 @@ describe('collectInitiativeIssues', () => {
 
   it('locates a finding by id and title so a human can find the sheet row', () => {
     const { unresolvedProjects } = collectInitiativeIssues(
-      [initiative({ project_name: 'Nope', title: 'AskCA California-wide chatbot' })],
+      [initiative({ project: 'Nope', title: 'AskCA California-wide chatbot' })],
       PROJECTS,
     );
     expect(unresolvedProjects[0]).toMatchObject({
-      initiative_id: 'askca-california-wide-chatbot',
+      initiative_id: 'init-2',
       title: 'AskCA California-wide chatbot',
     });
   });
 
   it('puts a blank project name in missingProject, not unresolvedProjects', () => {
     const { unresolvedProjects, missingProject } = collectInitiativeIssues(
-      [initiative({ project_name: '' })],
+      [initiative({ project: '' })],
       PROJECTS,
     );
     expect(unresolvedProjects).toHaveLength(0);
@@ -220,10 +233,10 @@ describe('collectInitiativeIssues', () => {
 
   it('separates the two buckets over a mixed set and double-counts nothing', () => {
     const initiatives = [
-      initiative({ initiative_id: 'a', project_name: 'User-Facing AI' }),
-      initiative({ initiative_id: 'b', project_name: '' }),
-      initiative({ initiative_id: 'c', project_name: '' }),
-      initiative({ initiative_id: 'd', project_name: 'Nope' }),
+      initiative({ initiative_id: 'a', project: 'User-Facing AI' }),
+      initiative({ initiative_id: 'b', project: '' }),
+      initiative({ initiative_id: 'c', project: '' }),
+      initiative({ initiative_id: 'd', project: 'Nope' }),
     ];
     const { unresolvedProjects, missingProject } = collectInitiativeIssues(initiatives, PROJECTS);
 
@@ -234,7 +247,7 @@ describe('collectInitiativeIssues', () => {
 
   it('reports nothing for a fully resolved set', () => {
     const { unresolvedProjects, missingProject } = collectInitiativeIssues(
-      [initiative({ project_name: 'PA HR1 IDP 1 & 2' })],
+      [initiative({ project: 'PA HR1 IDP 1 & 2' })],
       PROJECTS,
     );
     expect(unresolvedProjects).toHaveLength(0);

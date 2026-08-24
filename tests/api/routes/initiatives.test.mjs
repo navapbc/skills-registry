@@ -88,27 +88,33 @@ const PROJECT = {
 function initiative(overrides = {}) {
   return {
     record_type: RECORD_INITIATIVE,
-    initiative_id: 'benefits-navigator-prototype',
+    initiative_id: 'init-2',
     title: 'Benefits navigator prototype',
-    desc: 'Exploring a navigator for multiple benefit types.',
-    use_case_label: 'AI-powered benefits assistant',
-    use_case_theme: 'AI-powered assistant that makes benefits easier to access',
-    exposure: 'client',
-    people: 'Ada Lovelace; Grace Hopper',
-    status: 'Apr 7–14, 2026',
+    summary: 'Prototype for a multi-benefit navigator.',
+    description: 'Exploring a navigator for multiple benefit types.',
+    practice: '',
+    exposure: 'Client',
+    contacts: 'Ada Lovelace; Grace Hopper',
+    link: 'Demo: https://example.gov/demo',
+    submitted_by: 'Ada Lovelace',
+    timestamp: 'Jun 25, 2026, 7:00:00 PM',
+    use_case: 'AI-powered benefits assistant',
+    ai_governance: '',
     tags: 'internal',
-    links: 'Demo: https://example.gov/demo',
-    project_name: 'User-Facing AI',
-    first_seen_at: '2026-08-10T12:00:00.000Z',
-    last_synced_at: '2026-08-10T12:00:00.000Z',
+    status: 'Apr 7–14, 2026',
+    project: 'User-Facing AI',
+    // Present in the table, deliberately absent from the allowlist.
+    source_location: '',
+    first_seen_at: '2026-08-24T12:00:00.000Z',
+    last_synced_at: '2026-08-24T12:00:00.000Z',
     ...overrides,
   };
 }
 
 const META = {
   status: SEED_COMPLETE,
-  last_run_at: '2026-08-10T12:00:00.000Z',
-  row_count: 37,
+  last_run_at: '2026-08-24T12:00:00.000Z',
+  row_count: 46,
 };
 
 function contract(overrides = {}) {
@@ -211,8 +217,8 @@ describe('initiatives read', () => {
     expect(body.initiatives).toHaveLength(1);
     expect(body.population).toEqual({
       state: SEED_COMPLETE,
-      captured_at: '2026-08-10T12:00:00.000Z',
-      row_count: 37,
+      captured_at: '2026-08-24T12:00:00.000Z',
+      row_count: 46,
     });
   });
 
@@ -235,22 +241,22 @@ describe('initiatives read', () => {
     // 14 of 37 rows state no project, so this is the common case rather than an
     // edge one. Omitting the record would hide 38% of the data.
     const headers = as('user');
-    queueReads({ initiatives: [initiative({ project_name: '' })] });
+    queueReads({ initiatives: [initiative({ project: '' })] });
     const res = await app.request('/api/initiatives', { headers });
     const [got] = (await res.json()).initiatives;
 
     expect(got.resolved_project).toBeNull();
-    expect(got.project_name).toBe('');
+    expect(got.project).toBe('');
   });
 
-  it('keeps the raw project_name when it resolves to nothing, so the page can name it', async () => {
+  it('keeps the raw project string when it resolves to nothing, so the page can name it', async () => {
     const headers = as('user');
-    queueReads({ initiatives: [initiative({ project_name: 'MD ADEPT WO4' })] });
+    queueReads({ initiatives: [initiative({ project: 'MD ADEPT WO4' })] });
     const res = await app.request('/api/initiatives', { headers });
     const [got] = (await res.json()).initiatives;
 
     expect(got.resolved_project).toBeNull();
-    expect(got.project_name).toBe('MD ADEPT WO4');
+    expect(got.project).toBe('MD ADEPT WO4');
   });
 
   it('queries the initiative partition and the project partition', async () => {
@@ -305,11 +311,48 @@ describe('initiatives payload boundaries', () => {
     const [got] = (await res.json()).initiatives;
 
     for (const field of [
-      'initiative_id', 'title', 'desc', 'use_case_label', 'use_case_theme',
-      'exposure', 'people', 'status', 'tags', 'links', 'project_name',
+      'initiative_id', 'title', 'summary', 'description', 'practice',
+      'exposure', 'contacts', 'link', 'submitted_by', 'timestamp',
+      'use_case', 'ai_governance', 'tags', 'status', 'project',
     ]) {
       expect(got).toHaveProperty(field);
     }
+  });
+
+  it('withholds a stored column that is not on the allowlist', async () => {
+    // `source_location` is the v2 column deliberately left off: present in the
+    // table, empty on all 46 rows, and never served. This is the review step the
+    // allowlist exists to be — the sync carries new columns in automatically.
+    const headers = as('user');
+    queueReads({ initiatives: [initiative({ source_location: 'Slack #ai-initiatives' })] });
+    const res = await app.request('/api/initiatives', { headers });
+    const [got] = (await res.json()).initiatives;
+
+    expect(got).not.toHaveProperty('source_location');
+  });
+
+  it('serves the free-text timestamp exactly as the sheet holds it', async () => {
+    // Not an ISO date and never parsed as one, matching how `status` carries values
+    // like "Fall 2025 – present". Reformatting would hide what the record says.
+    const headers = as('user');
+    queueReads();
+    const res = await app.request('/api/initiatives', { headers });
+    const [got] = (await res.json()).initiatives;
+
+    expect(got.timestamp).toBe('Jun 25, 2026, 7:00:00 PM');
+  });
+
+  it('serves an empty string for a blank field rather than dropping the key', async () => {
+    // `practice` and `ai_governance` are empty on all 46 rows today. The page keeps
+    // its grid shape only if the key is present, so a reader can tell "the sheet has
+    // no answer" from "this page does not show that field".
+    const headers = as('user');
+    queueReads();
+    const res = await app.request('/api/initiatives', { headers });
+    const [got] = (await res.json()).initiatives;
+
+    expect(got.practice).toBe('');
+    expect(got.ai_governance).toBe('');
   });
 
   it('omits the projects table’s non-projected fields from resolved_project', async () => {
@@ -324,13 +367,18 @@ describe('initiatives payload boundaries', () => {
     expect(got.resolved_project).not.toHaveProperty('vehicle');
   });
 
-  it('attaches the project as resolved_project, never as project', async () => {
+  it('attaches the resolved project under resolved_project, leaving `project` the sheet string', async () => {
+    // The precaution the route comment predicted, now live: the v2 sheet HAS a
+    // `Project` column, carried as `project`. Spreading the resolved record over
+    // that key would replace a card's own string with an object.
     const headers = as('user');
     queueReads();
     const res = await app.request('/api/initiatives', { headers });
     const [got] = (await res.json()).initiatives;
 
-    expect(got).not.toHaveProperty('project');
+    expect(got.project).toBe('User-Facing AI');
+    expect(typeof got.project).toBe('string');
+    expect(got.resolved_project).toMatchObject({ project_code: 'LB001' });
   });
 });
 
@@ -340,7 +388,7 @@ describe('initiatives payload boundaries', () => {
 // answers — "not asked for" and "asked, and this project owns none" — and the
 // renderer keys off the difference, so both are pinned here.
 describe('initiatives related contracts', () => {
-  const ID = 'benefits-navigator-prototype';
+  const ID = 'init-2';
 
   it('attaches the contracts resolving to the initiative’s project', async () => {
     const headers = as('user');
@@ -392,7 +440,7 @@ describe('initiatives related contracts', () => {
 
   it('does not read the contracts partition when the initiative has no project', async () => {
     const headers = as('user');
-    queueReads({ initiatives: [initiative({ project_name: '' })] });
+    queueReads({ initiatives: [initiative({ project: '' })] });
     const res = await app.request(`/api/initiatives?id=${ID}`, { headers });
     const [got] = (await res.json()).initiatives;
 
@@ -582,7 +630,7 @@ describe('initiatives population states', () => {
 
   it('reports in_progress for a mid-flight table rather than vouching for it', async () => {
     const headers = as('user');
-    queueReads({ meta: { status: SEED_IN_PROGRESS, incoming_row_count: 37 } });
+    queueReads({ meta: { status: SEED_IN_PROGRESS, incoming_row_count: 46 } });
     const res = await app.request('/api/initiatives', { headers });
     const body = await res.json();
 
@@ -641,13 +689,13 @@ describe('initiatives is read-only', () => {
 // it are shared. These pin that the sharing never bleeds one id's join into
 // another's response, and that the four `related_contracts` states all survive.
 describe('initiatives partition cache', () => {
-  const ID = 'benefits-navigator-prototype';
+  const ID = 'init-2';
   const OTHER_ID = 'claims-triage-pilot';
 
   /** Two initiatives on different projects, each with a contract of its own. */
   const twoInitiatives = () => [
     initiative(),
-    initiative({ initiative_id: OTHER_ID, title: 'Claims triage pilot', project_name: 'MD PBIF' }),
+    initiative({ initiative_id: OTHER_ID, title: 'Claims triage pilot', project: 'MD PBIF' }),
   ];
   const twoProjects = () => [PROJECT, { ...PROJECT, project_name: 'MD PBIF', project_code: 'MD01' }];
   const twoContracts = () => [

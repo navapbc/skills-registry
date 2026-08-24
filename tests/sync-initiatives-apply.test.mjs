@@ -3,6 +3,7 @@ import {
   populateInitiatives,
   readSeedMeta,
   checkInitiativeResolution,
+  purgeInitiatives,
 } from '../scripts/lib/sync-initiatives-apply.mjs';
 import {
   RECORD_INITIATIVE,
@@ -13,9 +14,9 @@ import {
   SEED_NEVER,
 } from '../functions/api/lib/initiatives.mjs';
 import { RECORD_PROJECT } from '../functions/api/lib/projects.mjs';
-import { slugInitiativeId } from '../scripts/lib/sync-initiatives.mjs';
+import { slugAttribute } from '../scripts/lib/sync-initiatives.mjs';
 
-const NOW = '2026-08-10T12:00:00.000Z';
+const NOW = '2026-08-24T12:00:00.000Z';
 const EARLIER = '2026-01-01T00:00:00.000Z';
 const TABLE = 'skills-registry-initiatives-staging';
 const PROJECTS_TABLE = 'skills-registry-projects-staging';
@@ -27,28 +28,41 @@ const DeleteCommand = function (params) { return { type: 'Delete', params }; };
 const GetCommand = function (params) { return { type: 'Get', params }; };
 const QueryCommand = function (params) { return { type: 'Query', params }; };
 
+// The v2 tab's sixteen headers, in sheet order, as measured 2026-08-24.
 const HEADERS = [
-  'title', 'desc', 'useCaseLabel', 'useCaseTheme', 'exposure',
-  'people', 'status', 'tags', 'links', 'projectName',
+  'Title', 'Summary', 'Description', 'Practice', 'Exposure', 'Contacts',
+  'Project', 'Link', 'Submitted By', 'Timestamp', 'Source Location', 'id',
+  'Use Case', 'AI Governance', 'tags', 'status',
 ];
+
+// Every header except `id`: it sources the key and is deliberately not carried, so
+// a stored record never holds it.
+const CARRIED_HEADERS = HEADERS.filter((h) => h !== 'id');
+const BLANK_CARRIED = Object.fromEntries(
+  CARRIED_HEADERS.map((h) => [slugAttribute(h), '']),
+);
 
 const rowOf = (values) => HEADERS.map((h) => values[h] ?? '');
 const gridOf = (...rows) => [HEADERS, ...rows];
 
-// Enough rows to clear the absolute floor of 30 in tests that should not trip it,
+// Enough rows to clear the absolute floor of 38 in tests that should not trip it,
 // the same approach tests/sync-contracts-apply.test.mjs takes for its floor of 90.
 const manyRows = (count, { from = 0 } = {}) =>
-  Array.from({ length: count }, (_, i) =>
-    rowOf({ title: `Filler initiative ${from + i}`, exposure: 'internal', tags: 'internal' }));
+  Array.from({ length: count }, (_, i) => rowOf({
+    id: `init-${from + i}`,
+    Title: `Filler initiative ${from + i}`,
+    Exposure: 'Internal',
+    tags: 'internal',
+  }));
 
 /** The stored form of manyRows, as the table would hold it after a run. */
 const manyStored = (count, { from = 0, now = NOW } = {}) =>
   Array.from({ length: count }, (_, i) => ({
-    initiative_id: slugInitiativeId(`Filler initiative ${from + i}`),
+    initiative_id: `init-${from + i}`,
+    ...BLANK_CARRIED,
     title: `Filler initiative ${from + i}`,
-    exposure: 'internal', tags: 'internal',
-    desc: '', use_case_label: '', use_case_theme: '', people: '', status: '',
-    links: '', project_name: '',
+    exposure: 'Internal',
+    tags: 'internal',
     first_seen_at: now, last_synced_at: now,
   }));
 
@@ -125,12 +139,12 @@ describe('readSeedMeta', () => {
     const ddb = fakeDdb({
       meta: {
         record_type: RECORD_SEED_META, initiative_id: SEED_META_KEY,
-        status: SEED_IN_PROGRESS, row_count: 37,
+        status: SEED_IN_PROGRESS, row_count: 46,
       },
     });
     const meta = await readSeedMeta({ ddb, table: TABLE, GetCommand });
     expect(meta.state).toBe(SEED_IN_PROGRESS);
-    expect(meta.baseline).toBe(37);
+    expect(meta.baseline).toBe(46);
   });
 
   it('reads the metadata record from its own partition', async () => {
@@ -145,21 +159,21 @@ describe('readSeedMeta', () => {
 describe('populateInitiatives — first run', () => {
   it('writes the marker, one Put per row, then the completed marker', async () => {
     const ddb = fakeDdb();
-    const report = await run(ddb, gridOf(...manyRows(37)));
+    const report = await run(ddb, gridOf(...manyRows(46)));
 
     expect(report.applied).toBe(true);
-    expect(report.incoming).toBe(37);
-    expect(report.created).toBe(37);
-    expect(ddb.writes()).toHaveLength(37);
+    expect(report.incoming).toBe(46);
+    expect(report.created).toBe(46);
+    expect(ddb.writes()).toHaveLength(46);
 
     const markers = ddb.metaWrites();
     expect(markers).toHaveLength(2);
     expect(markers[0].params.Item.status).toBe(SEED_IN_PROGRESS);
-    expect(markers[1].params.Item).toMatchObject({ status: SEED_COMPLETE, row_count: 37 });
+    expect(markers[1].params.Item).toMatchObject({ status: SEED_COMPLETE, row_count: 46 });
   });
 
   it('reports never-populated as the previous state', async () => {
-    const report = await run(fakeDdb(), gridOf(...manyRows(37)));
+    const report = await run(fakeDdb(), gridOf(...manyRows(46)));
     expect(report.previousState).toBe(SEED_NEVER);
   });
 
@@ -167,15 +181,15 @@ describe('populateInitiatives — first run', () => {
     // The baseline must keep describing the last COMPLETED run, or a death
     // mid-apply leaves the next run measuring against a half-written table.
     const ddb = fakeDdb();
-    await run(ddb, gridOf(...manyRows(37)));
+    await run(ddb, gridOf(...manyRows(46)));
     const inProgress = ddb.metaWrites()[0].params.Item;
     expect(inProgress.row_count).toBeUndefined();
-    expect(inProgress.incoming_row_count).toBe(37);
+    expect(inProgress.incoming_row_count).toBe(46);
   });
 
   it('stamps first_seen_at and last_synced_at on every created record', async () => {
     const ddb = fakeDdb();
-    await run(ddb, gridOf(...manyRows(37)));
+    await run(ddb, gridOf(...manyRows(46)));
     for (const call of ddb.writes()) {
       expect(call.params.Item.first_seen_at).toBe(NOW);
       expect(call.params.Item.last_synced_at).toBe(NOW);
@@ -187,8 +201,8 @@ describe('populateInitiatives — ordering', () => {
   it('applies marker, then writes, then deletes, then marker', async () => {
     // Assert on the sequence, not just the final state: the ordering is the
     // recovery guarantee, and a reordering leaves the table indistinguishable.
-    const ddb = fakeDdb({ initiatives: [...manyStored(37), ...manyStored(1, { from: 90 })] });
-    await run(ddb, gridOf(...manyRows(37)));
+    const ddb = fakeDdb({ initiatives: [...manyStored(46), ...manyStored(1, { from: 90 })] });
+    await run(ddb, gridOf(...manyRows(46)));
 
     const shape = ddb.mutations().map((c) => {
       if (c.type === 'Delete') return 'delete';
@@ -205,13 +219,13 @@ describe('populateInitiatives — ordering', () => {
 describe('populateInitiatives — idempotence', () => {
   it('issues no record writes and no deletes for an unchanged re-run', async () => {
     const ddb = fakeDdb({
-      initiatives: manyStored(37),
+      initiatives: manyStored(46),
       meta: {
         record_type: RECORD_SEED_META, initiative_id: SEED_META_KEY,
-        status: SEED_COMPLETE, row_count: 37,
+        status: SEED_COMPLETE, row_count: 46,
       },
     });
-    const report = await run(ddb, gridOf(...manyRows(37)));
+    const report = await run(ddb, gridOf(...manyRows(46)));
 
     expect(report).toMatchObject({ created: 0, updated: 0, deleted: 0, applied: true });
     expect(ddb.writes()).toHaveLength(0);
@@ -221,11 +235,11 @@ describe('populateInitiatives — idempotence', () => {
   });
 
   it('carries first_seen_at forward and refreshes last_synced_at on an update', async () => {
-    const initiatives = manyStored(37);
-    initiatives[0] = { ...initiatives[0], exposure: 'client', first_seen_at: EARLIER };
+    const initiatives = manyStored(46);
+    initiatives[0] = { ...initiatives[0], exposure: 'Client', first_seen_at: EARLIER };
     const ddb = fakeDdb({ initiatives });
 
-    await run(ddb, gridOf(...manyRows(37)));
+    await run(ddb, gridOf(...manyRows(46)));
 
     const written = ddb.writes();
     expect(written).toHaveLength(1);
@@ -236,21 +250,21 @@ describe('populateInitiatives — idempotence', () => {
 
 describe('populateInitiatives — deletes', () => {
   it('deletes a stored id the sheet no longer lists, with the right key', async () => {
-    const ddb = fakeDdb({ initiatives: [...manyStored(37), ...manyStored(1, { from: 90 })] });
-    const report = await run(ddb, gridOf(...manyRows(37)));
+    const ddb = fakeDdb({ initiatives: [...manyStored(46), ...manyStored(1, { from: 90 })] });
+    const report = await run(ddb, gridOf(...manyRows(46)));
 
     expect(report.deleted).toBe(1);
     expect(ddb.deletes()).toHaveLength(1);
     expect(ddb.deletes()[0].params.Key).toEqual({
       record_type: RECORD_INITIATIVE,
-      initiative_id: slugInitiativeId('Filler initiative 90'),
+      initiative_id: 'init-90',
     });
   });
 });
 
 describe('populateInitiatives — the gate', () => {
   it('writes nothing at all when the gate refuses, not even the marker', async () => {
-    const ddb = fakeDdb({ initiatives: manyStored(37) });
+    const ddb = fakeDdb({ initiatives: manyStored(46) });
     const report = await run(ddb, gridOf(...manyRows(4)));
 
     expect(report.refusal).toBeTruthy();
@@ -258,28 +272,54 @@ describe('populateInitiatives — the gate', () => {
     expect(ddb.mutations()).toHaveLength(0);
   });
 
-  it('refuses a bulk retitle rather than applying it', async () => {
-    // The scenario a title-derived key makes possible: every row reworded, so every
-    // id changes. It presents as 37 creates and 37 deletes at an unchanged row
-    // count, which only the delete ceiling can see.
-    const retitled = Array.from({ length: 37 }, (_, i) =>
-      rowOf({ title: `Renamed initiative ${i}`, exposure: 'internal', tags: 'internal' }));
+  it('refuses a renumbered id column rather than applying it', async () => {
+    // The mass re-key an id-derived key makes possible: the sheet re-sorted and its
+    // ids regenerated, so every row lands on a different key. It presents as 46
+    // creates and 46 deletes at an unchanged row count, which only the delete
+    // ceiling can see.
+    const renumbered = manyRows(46, { from: 500 });
     const ddb = fakeDdb({
-      initiatives: manyStored(37),
+      initiatives: manyStored(46),
       meta: {
         record_type: RECORD_SEED_META, initiative_id: SEED_META_KEY,
-        status: SEED_COMPLETE, row_count: 37,
+        status: SEED_COMPLETE, row_count: 46,
+      },
+    });
+
+    const report = await run(ddb, gridOf(...renumbered));
+
+    expect(report.refusal).toMatch(/renumbered id column/);
+    expect(ddb.mutations()).toHaveLength(0);
+  });
+
+  it('applies a bulk retitle, which is no longer a re-key', async () => {
+    // The inverse of the refusal above, and the migration's whole point. Under a
+    // title-derived key this tripped the ceiling; now every row keeps its id and the
+    // run is 46 ordinary updates.
+    const retitled = Array.from({ length: 46 }, (_, i) => rowOf({
+      id: `init-${i}`,
+      Title: `Renamed initiative ${i}`,
+      Exposure: 'Internal',
+      tags: 'internal',
+    }));
+    const ddb = fakeDdb({
+      initiatives: manyStored(46),
+      meta: {
+        record_type: RECORD_SEED_META, initiative_id: SEED_META_KEY,
+        status: SEED_COMPLETE, row_count: 46,
       },
     });
 
     const report = await run(ddb, gridOf(...retitled));
 
-    expect(report.refusal).toMatch(/bulk retitle/);
-    expect(ddb.mutations()).toHaveLength(0);
+    expect(report.refusal).toBeNull();
+    expect(report.updated).toBe(46);
+    expect(report.created).toBe(0);
+    expect(report.deleted).toBe(0);
   });
 
   it('refuses a zero-row sheet even under override', async () => {
-    const ddb = fakeDdb({ initiatives: manyStored(37) });
+    const ddb = fakeDdb({ initiatives: manyStored(46) });
     const report = await run(ddb, gridOf(), { override: true });
     expect(report.refusal).toMatch(/never overridable/);
     expect(ddb.mutations()).toHaveLength(0);
@@ -289,13 +329,13 @@ describe('populateInitiatives — the gate', () => {
     // The in-progress marker carries incoming_row_count from the dead run; the
     // baseline has to keep coming from row_count.
     const ddb = fakeDdb({
-      initiatives: manyStored(37),
+      initiatives: manyStored(46),
       meta: {
         record_type: RECORD_SEED_META, initiative_id: SEED_META_KEY,
-        status: SEED_IN_PROGRESS, row_count: 37, incoming_row_count: 5,
+        status: SEED_IN_PROGRESS, row_count: 46, incoming_row_count: 5,
       },
     });
-    const report = await run(ddb, gridOf(...manyRows(37)));
+    const report = await run(ddb, gridOf(...manyRows(46)));
     expect(report.previousState).toBe(SEED_IN_PROGRESS);
     expect(report.refusal).toBeNull();
   });
@@ -303,9 +343,9 @@ describe('populateInitiatives — the gate', () => {
 
 describe('populateInitiatives — dry run', () => {
   it('reads and diffs but writes nothing', async () => {
-    const ddb = fakeDdb({ initiatives: manyStored(37) });
-    const report = await run(ddb, gridOf(...manyRows(37), rowOf({
-      title: 'New initiative', exposure: 'client', tags: 'live',
+    const ddb = fakeDdb({ initiatives: manyStored(46) });
+    const report = await run(ddb, gridOf(...manyRows(46), rowOf({
+      id: 'init-900', Title: 'New initiative', Exposure: 'Client', tags: 'live',
     })), { dryRun: true });
 
     expect(report.created).toBe(1);
@@ -317,64 +357,65 @@ describe('populateInitiatives — dry run', () => {
 describe('populateInitiatives — new columns', () => {
   const metaWith = (columnNames) => ({
     record_type: RECORD_SEED_META, initiative_id: SEED_META_KEY,
-    status: SEED_COMPLETE, row_count: 37, column_names: columnNames,
+    status: SEED_COMPLETE, row_count: 46, column_names: columnNames,
   });
 
-  it('reports nothing new on a first run, rather than all ten columns', () => {
+  it('reports nothing new on a first run, rather than all sixteen columns', () => {
     // Reporting every column with a check-these-for-renames warning on a first run is
     // noise that trains the reader to ignore the one signal that matters.
-    return run(fakeDdb(), gridOf(...manyRows(37))).then((report) => {
+    return run(fakeDdb(), gridOf(...manyRows(46))).then((report) => {
       expect(report.newColumns).toEqual([]);
     });
   });
 
   it('reports a column that appeared since the last completed run', async () => {
     const headers = [...HEADERS, 'owner'];
-    const grid = [headers, ...manyRows(37).map((r) => [...r, 'Ada'])];
-    const ddb = fakeDdb({ initiatives: manyStored(37), meta: metaWith(HEADERS) });
+    const grid = [headers, ...manyRows(46).map((r) => [...r, 'Ada'])];
+    const ddb = fakeDdb({ initiatives: manyStored(46), meta: metaWith(CARRIED_HEADERS) });
 
     const report = await run(ddb, grid);
     expect(report.newColumns).toEqual(['owner']);
   });
 
   it('reports nothing when the header set is unchanged', async () => {
-    const ddb = fakeDdb({ initiatives: manyStored(37), meta: metaWith(HEADERS) });
-    const report = await run(ddb, gridOf(...manyRows(37)));
+    const ddb = fakeDdb({ initiatives: manyStored(46), meta: metaWith(CARRIED_HEADERS) });
+    const report = await run(ddb, gridOf(...manyRows(46)));
     expect(report.newColumns).toEqual([]);
   });
 
   it('persists the header set on the completed marker for the next run to diff', async () => {
     const ddb = fakeDdb();
-    await run(ddb, gridOf(...manyRows(37)));
+    await run(ddb, gridOf(...manyRows(46)));
     const complete = ddb.metaWrites()[1].params.Item;
-    expect(complete.column_names).toEqual(HEADERS);
+    // `id` is absent: it sources the key and is never carried.
+    expect(complete.column_names).toEqual(CARRIED_HEADERS);
     expect(complete.new_columns).toEqual([]);
   });
 
   it('carries the previous header set onto the in-progress marker', async () => {
     // Same reasoning as row_count: the set must keep describing the last COMPLETED
     // run, or a death mid-apply makes the next run diff against an unfinished set.
-    const ddb = fakeDdb({ initiatives: manyStored(37), meta: metaWith(['title', 'desc']) });
-    await run(ddb, gridOf(...manyRows(37)));
-    expect(ddb.metaWrites()[0].params.Item.column_names).toEqual(['title', 'desc']);
+    const ddb = fakeDdb({ initiatives: manyStored(46), meta: metaWith(['Title', 'Description']) });
+    await run(ddb, gridOf(...manyRows(46)));
+    expect(ddb.metaWrites()[0].params.Item.column_names).toEqual(['Title', 'Description']);
   });
 
   it('treats a renamed column as a new one, since nothing can tell them apart', async () => {
-    const headers = HEADERS.map((h) => (h === 'desc' ? 'description' : h));
-    const grid = [headers, ...manyRows(37)];
-    const ddb = fakeDdb({ initiatives: manyStored(37), meta: metaWith(HEADERS) });
+    const headers = HEADERS.map((h) => (h === 'Description' ? 'Detail' : h));
+    const grid = [headers, ...manyRows(46)];
+    const ddb = fakeDdb({ initiatives: manyStored(46), meta: metaWith(CARRIED_HEADERS) });
 
     const report = await run(ddb, grid);
-    expect(report.newColumns).toEqual(['description']);
+    expect(report.newColumns).toEqual(['Detail']);
   });
 });
 
 describe('populateInitiatives — paging', () => {
   it('follows LastEvaluatedKey so a paged read is not seen as a smaller sheet', async () => {
-    const ddb = fakeDdb({ initiatives: manyStored(37), pageAt: 20 });
-    const report = await run(ddb, gridOf(...manyRows(37)));
+    const ddb = fakeDdb({ initiatives: manyStored(46), pageAt: 20 });
+    const report = await run(ddb, gridOf(...manyRows(46)));
 
-    expect(report.storedCount).toBe(37);
+    expect(report.storedCount).toBe(46);
     expect(report.deleted).toBe(0);
   });
 });
@@ -386,9 +427,9 @@ describe('checkInitiativeResolution', () => {
   ];
 
   const initiatives = {
-    a: { initiative_id: 'a', title: 'A', project_name: 'User-Facing AI' },
-    b: { initiative_id: 'b', title: 'B', project_name: '' },
-    c: { initiative_id: 'c', title: 'C', project_name: 'Nonexistent Project' },
+    a: { initiative_id: 'a', title: 'A', project: 'User-Facing AI' },
+    b: { initiative_id: 'b', title: 'B', project: '' },
+    c: { initiative_id: 'c', title: 'C', project: 'Nonexistent Project' },
   };
 
   it('separates stated-unresolved from absent, and neither throws nor exits', async () => {
@@ -423,5 +464,92 @@ describe('checkInitiativeResolution', () => {
     });
     expect(result.unresolvedProjects).toHaveLength(0);
     expect(result.missingProject).toHaveLength(0);
+  });
+});
+
+// ── purgeInitiatives ──────────────────────────────────────────────────────
+// The migration path off title-derived keys. Every assertion here guards real
+// data: this function's whole job is to delete, so the tests are what stop it
+// deleting the wrong partition or stopping short of the end of it.
+describe('purgeInitiatives', () => {
+  const META = {
+    record_type: RECORD_SEED_META, initiative_id: SEED_META_KEY,
+    status: SEED_COMPLETE, row_count: 37,
+  };
+
+  const purge = (ddb, extra = {}) =>
+    purgeInitiatives({ ddb, table: TABLE, DeleteCommand, QueryCommand, ...extra });
+
+  it('reports what it would delete without issuing a single delete', async () => {
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: META });
+    const report = await purge(ddb);
+
+    expect(report.deleted).toBe(0);
+    expect(report.applied).toBe(false);
+    expect(report.ids).toHaveLength(37);
+    expect(ddb.deletes()).toHaveLength(0);
+  });
+
+  it('deletes every initiative, keyed on both parts of the primary key', async () => {
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: META });
+    const report = await purge(ddb, { dryRun: false });
+
+    expect(report.deleted).toBe(37);
+    expect(report.applied).toBe(true);
+    expect(ddb.deletes()).toHaveLength(37);
+    for (const call of ddb.deletes()) {
+      expect(call.params.TableName).toBe(TABLE);
+      expect(call.params.Key.record_type).toBe(RECORD_INITIATIVE);
+      expect(call.params.Key.initiative_id).toMatch(/^init-/);
+    }
+  });
+
+  it('leaves the seed_meta record alone', async () => {
+    // Load-bearing, not tidiness: row_count is the baseline the next run's
+    // row-drop check measures against. Deleting it would disable that check on the
+    // run that repopulates the table.
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: META });
+    await purge(ddb, { dryRun: false });
+
+    expect(ddb.store.get(`${RECORD_SEED_META}#${SEED_META_KEY}`)).toEqual(META);
+    for (const call of ddb.deletes()) {
+      expect(call.params.Key.record_type).not.toBe(RECORD_SEED_META);
+    }
+  });
+
+  it('empties a partition that spans several pages', async () => {
+    // A truncated read leaves orphans the next sync cannot see, because they are
+    // absent from the sheet AND absent from what this reported.
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: META, pageAt: 20 });
+    const report = await purge(ddb, { dryRun: false });
+
+    expect(report.deleted).toBe(37);
+    const remaining = [...ddb.store.values()].filter((i) => i.record_type === RECORD_INITIATIVE);
+    expect(remaining).toEqual([]);
+  });
+
+  it('deletes nothing and reports the no-op on an already-empty partition', async () => {
+    const ddb = fakeDdb({ meta: META });
+    const report = await purge(ddb, { dryRun: false });
+
+    expect(report.deleted).toBe(0);
+    expect(report.ids).toEqual([]);
+    expect(report.applied).toBe(false);
+    expect(ddb.deletes()).toHaveLength(0);
+  });
+
+  it('surfaces a mid-purge failure rather than swallowing it', async () => {
+    // The operator has to learn the table is PARTIALLY purged. A swallowed error
+    // would report success over a half-emptied table.
+    const ddb = fakeDdb({ initiatives: manyStored(37), meta: META });
+    const realSend = ddb.send;
+    let seen = 0;
+    ddb.send = async (command) => {
+      if (command.type === 'Delete' && ++seen === 3) throw new Error('throttled');
+      return realSend(command);
+    };
+
+    await expect(purge(ddb, { dryRun: false })).rejects.toThrow(/throttled/);
+    expect(ddb.deletes().length).toBeLessThan(37);
   });
 });

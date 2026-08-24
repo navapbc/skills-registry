@@ -47,33 +47,47 @@ export const SEED_NEVER = 'never_populated';
 // slug function reproduces them — a mismatch there yields a false all-clear
 // rather than a visible failure.
 //
-// TITLE_ATTR carries more weight than the others: it is the source of the range
-// key, so a change to how it slugs re-keys the entire table.
+// TITLE_ATTR no longer sources the range key. That comes from the sheet's own `id`
+// column now, which is why retitling an initiative is an ordinary update rather
+// than a re-key. Do not restore a title-derived key on the strength of this
+// constant's name.
+//
+// PROJECT_ATTR is deliberately NOT called PROJECT_NAME_ATTR. contracts.mjs exports
+// a constant by that name whose value is still `project_name`, and
+// routes/initiatives.mjs imports both — one line apart, in the file that joins the
+// two datasets. Same name with a different value there would be a trap.
 export const TITLE_ATTR = 'title';
-export const PROJECT_NAME_ATTR = 'project_name';
-export const USE_CASE_LABEL_ATTR = 'use_case_label';
+export const PROJECT_ATTR = 'project';
+export const USE_CASE_ATTR = 'use_case';
 export const EXPOSURE_ATTR = 'exposure';
 export const TAGS_ATTR = 'tags';
+export const SUMMARY_ATTR = 'summary';
+export const DESCRIPTION_ATTR = 'description';
 
 /**
  * Find the project an initiative belongs to, or null.
  *
- * Matches the initiative's project name against the project's own
- * `project_name`, case-folded and whitespace-collapsed. The sheet is
- * hand-maintained and nothing enforces casing at write time.
+ * Matches the initiative's `project` against the project's own `project_name`,
+ * case-folded and whitespace-collapsed. The sheet is hand-maintained and nothing
+ * enforces casing at write time.
+ *
+ * The two sides are spelled differently and that is not an oversight: the v2
+ * sheet's column is `Project`, and the projects table's attribute is
+ * `project_name`. This function is the seam between them.
  *
  * `contract_name` is deliberately NOT consulted, which is the one place this
  * diverges from resolveProject in contracts.mjs. That function matches both
  * fields because the contracts survey's naming follows neither consistently.
  * Here it was measured: against the real workbook and the 53 stored projects,
  * matching `project_name` alone resolves all 14 stated names, and adding a
- * `contract_name` fallback rescues zero additional rows. The narrower rule costs
- * nothing, so it is the rule the requirement asked for. Do not widen it for
- * symmetry with contracts.mjs — widening should follow a measurement, not a
- * consistency argument.
+ * `contract_name` fallback rescues zero additional rows. The v2 sheet carries the
+ * same 14 distinct names across 23 rows, so the measurement still holds. The
+ * narrower rule costs nothing, so it is the rule the requirement asked for. Do not
+ * widen it for symmetry with contracts.mjs — widening should follow a measurement,
+ * not a consistency argument.
  */
 export function resolveProject(initiative, projectRecords) {
-  const value = normalizeLabel(initiative?.[PROJECT_NAME_ATTR]);
+  const value = normalizeLabel(initiative?.[PROJECT_ATTR]);
   if (value === '') return null;
   return projectRecords.find((p) => normalizeLabel(p.project_name) === value) ?? null;
 }
@@ -116,11 +130,11 @@ export function contractsForProject(project, contracts) {
  *
  *   - `unresolvedProjects` — a project name is STATED and matches nothing. This
  *     is a typo or a renamed project, and it is what FAILS a sync run. Zero rows
- *     as of 2026-08-10, which is what makes the alarm worth reading.
+ *     as of 2026-08-24, which is what makes the alarm worth reading.
  *   - `missingProject` — no project name at all. Fixed in the sheet if the
  *     initiative does belong to a project, and otherwise not a defect: plenty of
- *     initiatives are internal. This only WARNS. 14 of 37 rows as of 2026-08-10,
- *     and failing on 38% of the sheet would make every run red and train the
+ *     initiatives are internal. This only WARNS. 23 of 46 rows as of 2026-08-24,
+ *     and failing on half the sheet would make every run red and train the
  *     operator to ignore it.
  *
  * The severity split is where this diverges from collectContractIssues, where a
@@ -138,7 +152,7 @@ export function collectInitiativeIssues(initiatives, projectRecords) {
       title: initiative[TITLE_ATTR] ?? '',
     });
 
-    const projectName = String(initiative[PROJECT_NAME_ATTR] ?? '').trim();
+    const projectName = String(initiative[PROJECT_ATTR] ?? '').trim();
     if (projectName === '') {
       missingProject.push(locate());
     } else if (resolveProject(initiative, projectRecords) === null) {
