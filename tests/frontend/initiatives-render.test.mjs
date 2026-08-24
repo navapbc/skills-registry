@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   splitList,
   filterInitiatives,
-  useCaseLabelsOf,
+  useCasesOf,
   exposuresOf,
   tagsOf,
   formatCapturedAt,
@@ -30,17 +30,21 @@ const PROJECT = {
 };
 
 const initiative = (over = {}) => ({
-  initiative_id: 'benefits-navigator-prototype',
+  initiative_id: 'init-2',
   title: 'Benefits navigator prototype',
-  desc: 'Exploring a navigator for multiple benefit types.',
-  use_case_label: 'AI-powered benefits assistant',
-  use_case_theme: 'AI-powered assistant that makes benefits easier to access',
-  exposure: 'client',
-  people: 'Ada Lovelace; Grace Hopper',
-  status: 'Apr 7–14, 2026',
+  summary: 'Prototype for a multi-benefit navigator.',
+  description: 'Exploring a navigator for multiple benefit types.',
+  practice: '',
+  exposure: 'Client',
+  contacts: 'Ada Lovelace; Grace Hopper',
+  link: 'Demo: https://example.gov/demo',
+  submitted_by: 'Ada Lovelace',
+  timestamp: 'Jun 25, 2026, 7:00:00 PM',
+  use_case: 'AI-powered benefits assistant',
+  ai_governance: '',
   tags: 'internal',
-  links: 'Demo: https://example.gov/demo',
-  project_name: 'User-Facing AI',
+  status: 'Apr 7–14, 2026',
+  project: 'User-Facing AI',
   resolved_project: PROJECT,
   ...over,
 });
@@ -64,9 +68,9 @@ describe('splitList', () => {
 
 describe('filterInitiatives', () => {
   const set = [
-    initiative({ initiative_id: 'a', exposure: 'client', tags: 'proto', use_case_label: 'Delivery prototyping' }),
-    initiative({ initiative_id: 'b', exposure: 'internal', tags: 'live', use_case_label: 'Knowledge management' }),
-    initiative({ initiative_id: 'c', exposure: 'client', tags: 'live; proto', use_case_label: 'Delivery prototyping' }),
+    initiative({ initiative_id: 'a', exposure: 'Client', tags: 'proto', use_case: 'Delivery prototyping' }),
+    initiative({ initiative_id: 'b', exposure: 'Internal', tags: 'live', use_case: 'Knowledge management' }),
+    initiative({ initiative_id: 'c', exposure: 'Client', tags: 'live; proto', use_case: 'Delivery prototyping' }),
   ];
   const ids = (result) => result.map((i) => i.initiative_id);
 
@@ -75,12 +79,12 @@ describe('filterInitiatives', () => {
     expect(filterInitiatives(set, {})).toHaveLength(3);
   });
 
-  it('filters by useCaseLabel', () => {
-    expect(ids(filterInitiatives(set, { useCaseLabel: 'Delivery prototyping' }))).toEqual(['a', 'c']);
+  it('filters by useCase', () => {
+    expect(ids(filterInitiatives(set, { useCase: 'Delivery prototyping' }))).toEqual(['a', 'c']);
   });
 
   it('filters by exposure', () => {
-    expect(ids(filterInitiatives(set, { exposure: 'internal' }))).toEqual(['b']);
+    expect(ids(filterInitiatives(set, { exposure: 'Internal' }))).toEqual(['b']);
   });
 
   it('filters by tag through CONTAINMENT, not equality', () => {
@@ -91,13 +95,13 @@ describe('filterInitiatives', () => {
   });
 
   it('composes facets as AND, not OR', () => {
-    expect(ids(filterInitiatives(set, { exposure: 'client', tag: 'live' }))).toEqual(['c']);
-    expect(filterInitiatives(set, { exposure: 'internal', tag: 'proto' })).toHaveLength(0);
+    expect(ids(filterInitiatives(set, { exposure: 'Client', tag: 'live' }))).toEqual(['c']);
+    expect(filterInitiatives(set, { exposure: 'Internal', tag: 'proto' })).toHaveLength(0);
   });
 
   it('composes three facets with a query', () => {
     const result = filterInitiatives(set, {
-      exposure: 'client', tag: 'proto', useCaseLabel: 'Delivery prototyping', query: 'navigator',
+      exposure: 'Client', tag: 'proto', useCase: 'Delivery prototyping', query: 'navigator',
     });
     expect(ids(result)).toEqual(['a', 'c']);
   });
@@ -106,12 +110,30 @@ describe('filterInitiatives', () => {
     expect(filterInitiatives(set, { query: '  NAVIGATOR ' })).toHaveLength(3);
   });
 
-  it('matches a query against people, so searching a colleague works', () => {
+  it('matches a query against contacts, so searching a colleague works', () => {
     const result = filterInitiatives(
-      [initiative({ initiative_id: 'x', people: 'Katherine Johnson' })],
+      [initiative({ initiative_id: 'x', contacts: 'Katherine Johnson' })],
       { query: 'katherine' },
     );
     expect(result).toHaveLength(1);
+  });
+
+  it('matches a query against summary and description alike', () => {
+    // Complementary, not duplicated: all 46 rows carry a summary and 37 a
+    // description, so searching only one silently misses part of the set.
+    const set = [
+      initiative({ initiative_id: 'summary-only', summary: 'Voice AI triage', description: '' }),
+      initiative({ initiative_id: 'desc-only', summary: '', description: 'Voice AI triage' }),
+    ];
+    expect(filterInitiatives(set, { query: 'voice ai' })).toHaveLength(2);
+  });
+
+  it('keeps a row with no use case or exposure out of those facets but in the unfiltered set', () => {
+    // The shape of 9 of the 46 real rows.
+    const sparse = [initiative({ initiative_id: 'sparse', use_case: '', exposure: '' })];
+    expect(filterInitiatives(sparse)).toHaveLength(1);
+    expect(filterInitiatives(sparse, { useCase: 'Delivery prototyping' })).toHaveLength(0);
+    expect(filterInitiatives(sparse, { exposure: 'Client' })).toHaveLength(0);
   });
 
   it('matches a query against the resolved project name', () => {
@@ -132,15 +154,17 @@ describe('filterInitiatives', () => {
 
 describe('facet extractors', () => {
   const set = [
-    initiative({ exposure: 'client', tags: 'proto', use_case_label: 'Delivery prototyping' }),
-    initiative({ exposure: 'internal', tags: 'live; proto', use_case_label: 'Knowledge management' }),
-    initiative({ exposure: 'client', tags: '', use_case_label: 'Delivery prototyping' }),
+    initiative({ exposure: 'Client', tags: 'proto', use_case: 'Delivery prototyping' }),
+    initiative({ exposure: 'internal', tags: 'live; proto', use_case: 'Knowledge management' }),
+    initiative({ exposure: 'client', tags: '', use_case: 'Delivery prototyping' }),
   ];
 
   it('de-duplicates, drops empties, and sorts stably', () => {
     expect(tagsOf(set)).toEqual(['live', 'proto']);
-    expect(exposuresOf(set)).toEqual(['client', 'internal']);
-    expect(useCaseLabelsOf(set)).toEqual(['Delivery prototyping', 'Knowledge management']);
+    // Title case, because that is what v2 supplies and the facet keeps the first
+    // spelling it sees rather than normalizing one.
+    expect(exposuresOf(set)).toEqual(['Client', 'internal']);
+    expect(useCasesOf(set)).toEqual(['Delivery prototyping', 'Knowledge management']);
   });
 
   it('treats differently-cased spellings as one option, keeping the first seen', () => {
@@ -148,9 +172,10 @@ describe('facet extractors', () => {
     expect(tagsOf(mixed)).toEqual(['Live']);
   });
 
-  it('returns the four real exposure values from real spellings', () => {
-    const all = ['client', 'internal', 'infra', 'learning'].map((e) => initiative({ exposure: e }));
-    expect(exposuresOf(all)).toEqual(['client', 'infra', 'internal', 'learning']);
+  it('returns the four real exposure values in the sheet\'s own spellings', () => {
+    const all = ['Client', 'Internal', 'Infrastructure', 'Learning']
+      .map((e) => initiative({ exposure: e }));
+    expect(exposuresOf(all)).toEqual(['Client', 'Infrastructure', 'Internal', 'Learning']);
   });
 
   it('returns an empty list for a nullish set', () => {
@@ -164,15 +189,38 @@ describe('renderExposureBadge', () => {
     // source text at build time, so a runtime-assembled name emits no CSS and the
     // badge renders blank.
     for (const [value, expected] of [
-      ['client', 'bg-plum-100'],
-      ['internal', 'bg-gray-100'],
-      ['infra', 'bg-blue-100'],
-      ['learning', 'bg-green-100'],
+      ['Client', 'bg-plum-100'],
+      ['Internal', 'bg-gray-100'],
+      ['Infrastructure', 'bg-blue-100'],
+      ['Learning', 'bg-green-100'],
     ]) {
       const html = renderExposureBadge(value);
       expect(html).toContain(expected);
       expect(html).toContain(value);
     }
+  });
+
+  it('renders capitalized words, neither uppercased nor lowercased', () => {
+    // The badge used to carry Tailwind's `uppercase`, which rendered
+    // INFRASTRUCTURE. Casing comes from the sheet and is shown as written.
+    const html = renderExposureBadge('Infrastructure');
+    expect(html).toContain('>Infrastructure<');
+    expect(html).not.toContain('uppercase');
+    expect(html).not.toContain('>INFRASTRUCTURE<');
+    expect(html).not.toContain('>infrastructure<');
+  });
+
+  it('colours `Infrastructure` and the older `infra` alike, rather than falling back', () => {
+    // v1 said `infra`, v2 says `Infrastructure`. A gray badge for either would read
+    // as a bug rather than as information.
+    expect(renderExposureBadge('Infrastructure')).toContain('bg-blue-100');
+    expect(renderExposureBadge('infra')).toContain('bg-blue-100');
+  });
+
+  it('folds case for the colour lookup while leaving the label alone', () => {
+    const html = renderExposureBadge('cLiEnT');
+    expect(html).toContain('bg-plum-100');
+    expect(html).toContain('>cLiEnT<');
   });
 
   it('renders an unrecognised fifth value through the fallback, not as a blank badge', () => {
@@ -187,7 +235,7 @@ describe('renderExposureBadge', () => {
   });
 
   it('never emits a class attribute containing an unresolved template value', () => {
-    expect(renderExposureBadge('client')).not.toMatch(/class="[^"]*\$\{/);
+    expect(renderExposureBadge('Client')).not.toMatch(/class="[^"]*\$\{/);
   });
 });
 
@@ -253,7 +301,7 @@ describe('renderLinks', () => {
 describe('renderInitiativeCard', () => {
   it('links to the encoded detail route', () => {
     const html = renderInitiativeCard(initiative());
-    expect(html).toContain('href="/initiatives/benefits-navigator-prototype"');
+    expect(html).toContain('href="/initiatives/init-2"');
   });
 
   it('percent-encodes an id containing a space or a slash', () => {
@@ -270,12 +318,12 @@ describe('renderInitiativeCard', () => {
 
   it('subtitles with the resolved project name, falling back to the raw one', () => {
     expect(renderInitiativeCard(initiative())).toContain('User-Facing AI');
-    const unresolved = initiative({ resolved_project: null, project_name: 'MD ADEPT WO4' });
+    const unresolved = initiative({ resolved_project: null, project: 'MD ADEPT WO4' });
     expect(renderInitiativeCard(unresolved)).toContain('MD ADEPT WO4');
   });
 
   it('omits the subtitle entirely when no project is named', () => {
-    const html = renderInitiativeCard(initiative({ resolved_project: null, project_name: '' }));
+    const html = renderInitiativeCard(initiative({ resolved_project: null, project: '' }));
     expect(html).not.toContain('mt-1">');
   });
 
@@ -343,14 +391,14 @@ describe('renderProjectSection', () => {
   it('renders a neutral note when no project is stated, not an alarm', () => {
     // 14 of 37 rows state none, and plenty are genuinely internal. An amber panel
     // here would cry wolf on 38% of the page.
-    const html = renderProjectSection(initiative({ resolved_project: null, project_name: '' }));
+    const html = renderProjectSection(initiative({ resolved_project: null, project: '' }));
     expect(html).toContain('Not linked to a project');
     expect(html).not.toContain('amber');
   });
 
   it('renders an amber note naming the raw value when a stated project resolves to nothing', () => {
     const html = renderProjectSection(initiative({
-      resolved_project: null, project_name: 'MD ADEPT WO4',
+      resolved_project: null, project: 'MD ADEPT WO4',
     }));
     expect(html).toContain('amber');
     expect(html).toContain('No matching project');
@@ -359,7 +407,7 @@ describe('renderProjectSection', () => {
 
   it('escapes an unresolved project name containing markup', () => {
     const html = renderProjectSection(initiative({
-      resolved_project: null, project_name: '<img src=x onerror=alert(1)>',
+      resolved_project: null, project: '<img src=x onerror=alert(1)>',
     }));
     expect(html).not.toContain('<img');
     expect(html).toContain('&lt;img');
@@ -376,8 +424,8 @@ describe('initiativesApiPath', () => {
   });
 
   it('asks for the join on a detail view', () => {
-    expect(initiativesApiPath('benefits-navigator-prototype'))
-      .toBe('/initiatives?id=benefits-navigator-prototype');
+    expect(initiativesApiPath('init-2'))
+      .toBe('/initiatives?id=init-2');
   });
 
   it('encodes an id carrying characters that would otherwise alter the query', () => {
@@ -508,22 +556,24 @@ describe('renderInitiativeDetail', () => {
     // The same-shape-every-record assertion: a reader must be able to tell "the
     // sheet has no answer" from "this page does not show that field".
     const blank = {
-      initiative_id: 'x', title: 'X', desc: '', use_case_label: '', use_case_theme: '',
-      exposure: '', people: '', status: '', tags: '', links: '', project_name: '',
+      initiative_id: 'x', title: 'X', summary: '', description: '', practice: '',
+      exposure: '', contacts: '', submitted_by: '', timestamp: '', use_case: '',
+      ai_governance: '', tags: '', status: '', link: '', project: '',
       resolved_project: null,
     };
     const html = renderInitiativeDetail(blank, null);
     for (const label of [
-      'Use case', 'Exposure', 'Tags', 'Status', 'People',
-      'Description', 'Use case theme', 'Links',
+      'Use case', 'Exposure', 'Practice', 'Tags', 'Status', 'Contacts',
+      'AI governance', 'Submitted by', 'Submitted',
+      'Summary', 'Description', 'Links',
     ]) {
       expect(html).toContain(label);
     }
-    expect(html.match(/None listed/g).length).toBeGreaterThanOrEqual(7);
+    expect(html.match(/None listed/g).length).toBeGreaterThanOrEqual(11);
   });
 
-  it('renders people as a list, not one run-together string', () => {
-    const html = renderInitiativeDetail(initiative({ people: 'Ada Lovelace; Grace Hopper' }), null);
+  it('renders contacts as a list, not one run-together string', () => {
+    const html = renderInitiativeDetail(initiative({ contacts: 'Ada Lovelace; Grace Hopper' }), null);
     expect(html).toContain('<li>Ada Lovelace</li>');
     expect(html).toContain('<li>Grace Hopper</li>');
   });

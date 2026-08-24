@@ -30,7 +30,7 @@ import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
 import {
   filterInitiatives,
-  useCaseLabelsOf,
+  useCasesOf,
   exposuresOf,
   tagsOf,
   describePopulationNotice,
@@ -58,15 +58,18 @@ function errorHtml(message: string) {
   </div>`;
 }
 
-// The retitle explanation is deliberate. Ids are a slug of the initiative title, so
-// a rename genuinely does change the URL — someone arriving from an old bookmark
-// deserves that rather than being told it was deleted.
+// Addresses now come from the sheet's own `id` column, so a retitle no longer moves
+// one — the explanation this used to give became wrong when the key changed. Two
+// causes remain: the record was removed, or the link predates the move off
+// title-derived addresses, which changed every URL once.
 function notFoundHtml() {
   return `<div class="max-w-xl">
     <h1 class="text-2xl font-bold text-gray-900 m-0">Initiative not found</h1>
     <p class="text-sm text-gray-600 mt-2">
-      No record matches this address. Addresses are derived from the initiative's title,
-      so it may have been retitled in the initiatives sheet rather than removed.
+      No record matches this address. Either the initiative was removed from the
+      initiatives sheet, or this is an older link — addresses used to be built from the
+      initiative's title and now come from the sheet's own id, so links made before that
+      change no longer resolve.
     </p>
     <p class="text-sm mt-4"><a href="/initiatives" class="text-plum-700">&larr; All initiatives</a></p>
   </div>`;
@@ -106,7 +109,7 @@ if (data) {
     // ── Grid view ────────────────────────────────────────────────────────
     document.title = 'Initiatives Hub · Skills Hub';
 
-    let useCaseLabel = 'all';
+    let useCase = 'all';
     let exposure = 'all';
     let tag = 'all';
     let query = '';
@@ -136,7 +139,7 @@ if (data) {
             class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-plum-300 focus:border-plum-400 placeholder:text-gray-400" />
         </div>
         <select id="initiatives-use-case" aria-label="Filter by use case" class="${selectClass}">
-          <option value="all">All use cases</option>${optionsFor(useCaseLabelsOf(initiatives))}
+          <option value="all">All use cases</option>${optionsFor(useCasesOf(initiatives))}
         </select>
         <select id="initiatives-exposure" aria-label="Filter by exposure" class="${selectClass}">
           <option value="all">All exposures</option>${optionsFor(exposuresOf(initiatives))}
@@ -156,7 +159,7 @@ if (data) {
     const countEl = document.getElementById('initiatives-count')!;
 
     function render() {
-      const visible = filterInitiatives(initiatives, { useCaseLabel, exposure, tag, query });
+      const visible = filterInitiatives(initiatives, { useCase, exposure, tag, query });
       countEl.textContent = `${visible.length} of ${initiatives.length} initiative${initiatives.length === 1 ? '' : 's'}`;
       gridEl.innerHTML = renderInitiativeGrid(visible);
     }
@@ -168,7 +171,7 @@ if (data) {
       render();
     });
     document.getElementById('initiatives-use-case')!.addEventListener('change', (e) => {
-      useCaseLabel = (e.target as HTMLSelectElement).value;
+      useCase = (e.target as HTMLSelectElement).value;
       render();
     });
     document.getElementById('initiatives-exposure')!.addEventListener('change', (e) => {
