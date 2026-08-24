@@ -60,7 +60,9 @@ describe('buildRunSummary — resolution', () => {
       }),
     });
     expect(md).toContain('1 stated project name(s) match no project.');
-    expect(md).toContain('This failed the run.');
+    // A warning, not a failure. The run stays green and the page names the value.
+    expect(md).toContain('A warning, not a failure');
+    expect(md).not.toContain('This failed the run.');
     expect(md).toContain('AskCA chatbot');
     expect(md).toContain('`MD ADEPT WO4`');
   });
@@ -75,7 +77,7 @@ describe('buildRunSummary — resolution', () => {
       }),
     });
     expect(md).toContain('14 initiative(s) with no project stated (not a failure)');
-    expect(md).not.toContain('This failed the run.');
+    expect(md).not.toContain('A warning, not a failure');
   });
 
   it('does not read as a failure when there are blanks but nothing unresolved', () => {

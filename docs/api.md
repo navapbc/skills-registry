@@ -348,7 +348,7 @@ Attribute names are slugs derived from the sheet headers. Unlike Projects, the s
 `project` is served even when it resolves, so a client can name the value that failed when it does not. It is the sheet's own string, never the resolved record — the resolved record is always under `resolved_project`. Two distinct non-resolving cases:
 
 - `project` empty — the initiative names no project. Normal, not a defect; 23 of 46 rows as of 2026-08-24, and plenty of initiatives are internal.
-- `project` set but matching nothing — real drift. This is what fails a sync run, and it should be rare; it is reachable between a sheet edit and the next sync.
+- `project` set but matching nothing — real drift, and worth fixing in the sheet. It does **not** fail the sync: the run warns, and the detail page shows the name as the sheet spells it followed by `(Could not find registered project name)`. 4 of 46 rows as of 2026-08-24, all naming one project that appears to have been renamed in the projects table.
 
 **`?id=<initiative_id>`** — optional. The response is unchanged except that the named record additionally carries `related_contracts`: the contracts belonging to its `resolved_project`, each with enough to identify it and a `contract_id` that addresses `/contracts/<contract_id>`.
 

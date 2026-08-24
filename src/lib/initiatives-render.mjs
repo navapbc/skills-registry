@@ -311,6 +311,16 @@ export function renderLinks(value) {
 const CONFLUENCE_SPACES = 'https://navasage.atlassian.net/wiki/spaces/';
 
 /**
+ * Marks a project name the projects table does not have.
+ *
+ * The name is shown as the SHEET spells it, with this appended — not replaced by an
+ * error, and not hidden. Someone reading the page is usually the person who can fix
+ * the sheet, and they cannot fix a value they cannot see. The sync only warns on
+ * this now, so this suffix is the finding's main route to a human.
+ */
+const UNREGISTERED_PROJECT_SUFFIX = '(Could not find registered project name)';
+
+/**
  * The project name, linked to its Confluence space when the space key is known.
  *
  * The key is `project_index_code` on the resolved project. Not every project has
@@ -395,9 +405,11 @@ export function renderInitiativeGrid(initiatives) {
  *   - No project stated — normal. 23 rows, and plenty of initiatives are genuinely
  *     internal. An amber panel here would cry wolf on half the page.
  *   - A project stated that matches nothing — real drift someone should fix in the
- *     sheet. Zero rows today, and the sync now fails on it, so this should be rare
- *     — but it is reachable between a sheet edit and the next sync, which is
- *     exactly when a reader needs telling.
+ *     sheet, and the page NAMES it rather than hiding it. The sync only warns on
+ *     this, so the page is where the finding actually reaches someone who can act:
+ *     the project is shown as the sheet spells it, suffixed to say it matches no
+ *     registered project. Four rows as of 2026-08-24, all naming one project that
+ *     appears to have been renamed in the projects table.
  */
 export function renderProjectSection(initiative) {
   if (!initiative.resolved_project) {
@@ -411,11 +423,13 @@ export function renderProjectSection(initiative) {
       </section>`;
     }
     return `<section aria-label="Project" class="rounded-lg p-4 border border-amber-200 bg-amber-50">
-      <h2 class="text-sm font-semibold text-amber-900 m-0">No matching project</h2>
+      <h2 class="text-sm font-semibold text-amber-900 m-0">Project</h2>
+      <p class="text-sm text-amber-900 mt-1 m-0">
+        ${escapeHtml(initiative.project)}
+        <span class="text-xs">${UNREGISTERED_PROJECT_SUFFIX}</span>
+      </p>
       <p class="text-xs text-amber-900 mt-1 m-0">
-        This initiative names <code>${escapeHtml(initiative.project)}</code>, which matches
-        no project on file. Fix the name in the sheet, or check whether the project exists
-        under a different one.
+        Fix the name in the sheet, or check whether the project exists under a different one.
       </p>
     </section>`;
   }

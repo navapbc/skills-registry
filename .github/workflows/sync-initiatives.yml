@@ -10,14 +10,18 @@ name: Sync Initiatives
 # ones, and a repopulated `id` column. Its shape has still not held steady across
 # one full run. Add a weekly cron once it has.
 #
-# The run FAILS when the sheet STATES a project name that matches no project
-# record. That failure is the drift alarm, not a sync error — the initiatives
-# synced fine. As of 2026-08-24 all 14 stated names resolve, so the expected
-# steady state is green, which is exactly what makes a red run worth reading.
+# THE RESOLUTION CHECK WARNS; IT DOES NOT FAIL THE RUN. Both findings — a stated
+# project name matching nothing, and a row stating no project at all — are printed
+# to the log and written to the job summary, and the job stays green.
 #
-# A row stating NO project only warns. 23 of the 46 rows state none, plenty of
-# initiatives are genuinely internal, and failing on half the sheet would train
-# whoever reads these runs to ignore red.
+# It used to fail on the first of those, and that was worse than it sounds: the
+# prod job below runs `needs: sync-staging`, so ONE stale project name blocked a
+# correct sheet from reaching prod at all. The finding also already reaches the
+# people who can act on it — the detail page shows an unmatched name suffixed
+# "(Could not find registered project name)" — so failing CI added a blast radius
+# without adding a reader.
+#
+# A run that cannot RUN the check still fails. An absent alarm is not a quiet one.
 #
 # IDS DERIVE FROM THE SHEET'S `id` COLUMN. Two consequences worth knowing before
 # you read a run:
@@ -39,7 +43,7 @@ on:
         type: boolean
         default: false
       force:
-        description: 'Waive the safety gate (row-count drop, delete ceiling, absolute floor). Never waives the zero-row refusal or the project-resolution failure.'
+        description: 'Waive the safety gate (row-count drop, delete ceiling, absolute floor). Never waives the zero-row refusal.'
         required: false
         type: boolean
         default: false

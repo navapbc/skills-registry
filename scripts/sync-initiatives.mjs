@@ -26,21 +26,23 @@
  *   --force                waive the gate's overridable conditions
  *
  * --force never waives the zero-row refusal. A zero-row read means the tab, its
- * share, or its shape changed — not that every initiative was retired. It also
- * does not waive the project-resolution failure below, which is not a data-loss
- * guard and has no escape hatch.
+ * share, or its shape changed — not that every initiative was retired.
  *
- * WHAT A RED RUN MEANS. Two findings come out of the resolution check and they
- * have different severities:
+ * THE RESOLUTION CHECK NEVER FAILS THE RUN. Both of its findings are warnings,
+ * printed here and written to the job summary:
  *
- *   - A project name that is STATED and matches no project FAILS the run. The
- *     initiatives synced fine; the sheet names a project that does not exist. As
- *     of 2026-08-24 zero of the 14 stated names fail, so the expected steady state
- *     is green — which is what makes a red run worth reading.
- *   - A row with NO project name only warns. 23 of 46 rows carry none, plenty of
- *     initiatives are genuinely internal, and failing on half the sheet would
- *     train whoever reads these runs to ignore red. There is deliberately no flag
- *     to escalate it.
+ *   - A project name that is STATED and matches no project. Real drift worth
+ *     fixing — a typo, or a project renamed in the projects table. It does not
+ *     fail the run, because the initiatives synced correctly and the page renders
+ *     them: each shows its project name marked as unregistered, so the finding is
+ *     already visible to the people who can fix it. Failing here used to block the
+ *     prod job too, since it runs `needs: sync-staging` — one stale project name
+ *     stopped a correct sheet from reaching prod at all.
+ *   - A row with NO project name. Not a defect: 23 of 46 rows carry none and
+ *     plenty of initiatives are genuinely internal.
+ *
+ * A run that cannot RUN the check still fails, which is a different thing — an
+ * absent alarm is not the same as a quiet one.
  *
  * IDS COME FROM THE SHEET'S `id` COLUMN, e.g. `init-12` or `ryan-41` — the prefix
  * is the author's and carries no meaning here. Retitling an initiative is an
@@ -57,8 +59,9 @@
  * the service account. Being able to read one says nothing about the other.
  *
  * Exit codes:
- *   0  applied, or nothing to do, or a clean dry run
- *   1  a failure, the gate refused, or a stated project name resolved to nothing
+ *   0  applied, or nothing to do, or a clean dry run — including with unresolved
+ *      project names, which warn rather than fail
+ *   1  a failure, the gate refused, or the resolution check could not run
  *
  * Prerequisites: a Google service-account key with read access to the workbook,
  * and AWS credentials with read/write on the initiatives table plus Query on the
@@ -172,11 +175,13 @@ function writeJobSummary(lines) {
   appendFileSync(path, `${lines.join('\n')}\n`);
 }
 
-// The two buckets go to different streams, so a reader can tell the alarm from the
-// background at a glance.
+// Both buckets go to stdout. They used to be split across stdout and stderr to
+// separate the alarm from the background, which made sense while one of them failed
+// the run — it does not now that both are warnings, and writing a non-failure to
+// stderr makes it look like an error to anything reading the streams apart.
 function logResolution(resolution) {
   for (const u of resolution.unresolvedProjects) {
-    console.error(`  NO SUCH PROJECT   ${u.initiative_id}  Project = "${u.raw_value}"`);
+    console.log(`  UNREGISTERED PROJECT   ${u.initiative_id}  Project = "${u.raw_value}"`);
   }
   if (resolution.missingProject.length > 0) {
     console.log(`  ${resolution.missingProject.length} initiative(s) state no project:`);
@@ -332,13 +337,14 @@ async function main() {
   logResolution(resolution);
 
   if (resolution.unresolvedProjects.length > 0) {
-    fail(
-      `${resolution.unresolvedProjects.length} stated project name(s) match no project record. ` +
-        'The initiatives synced successfully — this failure is the resolution alarm, not a ' +
-        'sync error.\n' +
-        '  Fix the value in the sheet, or check whether the project exists in the projects\n' +
-        '  table under a different name.',
+    console.log(
+      `\n  WARNING: ${resolution.unresolvedProjects.length} stated project name(s) match no ` +
+        'project record.\n' +
+        '  The initiatives synced correctly and the page renders them — each one shows its\n' +
+        '  project name marked as unregistered. Fix the value in the sheet, or check whether\n' +
+        '  the project exists in the projects table under a different name.\n',
     );
+    return;
   }
 
   console.log('\n  every stated project name resolves.\n');

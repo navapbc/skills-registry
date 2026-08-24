@@ -389,20 +389,34 @@ describe('renderProjectSection', () => {
   });
 
   it('renders a neutral note when no project is stated, not an alarm', () => {
-    // 14 of 37 rows state none, and plenty are genuinely internal. An amber panel
-    // here would cry wolf on 38% of the page.
+    // 23 of 46 rows state none, and plenty are genuinely internal. An amber panel
+    // here would cry wolf on half the page.
     const html = renderProjectSection(initiative({ resolved_project: null, project: '' }));
     expect(html).toContain('Not linked to a project');
     expect(html).not.toContain('amber');
   });
 
-  it('renders an amber note naming the raw value when a stated project resolves to nothing', () => {
+  it('names an unresolved project as the sheet spells it, with the unregistered suffix', () => {
+    // The sync only warns on this, so the page is where the finding reaches someone
+    // who can fix it. The name is shown, not replaced by an error.
     const html = renderProjectSection(initiative({
       resolved_project: null, project: 'MD ADEPT WO4',
     }));
     expect(html).toContain('amber');
-    expect(html).toContain('No matching project');
     expect(html).toContain('MD ADEPT WO4');
+    expect(html).toContain('(Could not find registered project name)');
+  });
+
+  it('does not suffix a project that resolves', () => {
+    const html = renderProjectSection(initiative());
+    expect(html).not.toContain('(Could not find registered project name)');
+  });
+
+  it('does not suffix an initiative that states no project at all', () => {
+    // Stating none is not the same as naming one that does not exist, and the
+    // suffix would turn a normal record into a finding.
+    const html = renderProjectSection(initiative({ resolved_project: null, project: '' }));
+    expect(html).not.toContain('(Could not find registered project name)');
   });
 
   it('escapes an unresolved project name containing markup', () => {

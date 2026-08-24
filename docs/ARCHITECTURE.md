@@ -275,7 +275,7 @@ Build artifacts go to `dist/` and are synced to S3 on deploy. Hashed `_astro/` c
 | `sync.yml` | Cron every 4h + `workflow_dispatch` | Syncs GitHub org skills to DynamoDB |
 | `sync-anthropic.yml` | Cron Mondays 9am + `workflow_dispatch` | Syncs Anthropic built-in skills to DynamoDB |
 | `sync-projects.yml` | Cron Mondays 8am UTC + `workflow_dispatch` | Mirrors the projects sheet, then fails on unresolved archetype values |
-| `sync-initiatives.yml` | `workflow_dispatch` only | Mirrors the initiatives sheet's `v2` tab to staging then prod, then fails on a stated `Project` matching no project. No cron until the workbook's shape proves stable |
+| `sync-initiatives.yml` | `workflow_dispatch` only | Mirrors the initiatives sheet's `v2` tab to staging then prod. A stated `Project` matching no project warns rather than failing — prod runs `needs: sync-staging`, so failing there blocked a correct sheet from shipping. No cron until the workbook's shape proves stable |
 
 All workflows use GitHub OIDC to assume AWS roles — no long-lived credentials stored in secrets.
 
