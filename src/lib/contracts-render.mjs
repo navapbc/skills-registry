@@ -13,6 +13,17 @@ const BLURB_LIMIT = 180;
 // export const UNIT_LABEL = 'Engagement';
 
 /**
+ * The posture's short name — ALLOWED, RESTRICTED, SILENT, PROHIBITED.
+ *
+ * The record's `label` is a full sentence fragment ("AI ALLOWED — how to proceed"),
+ * right for the detail page's guidance heading and far too long for a badge or a
+ * filter option. The id is the short name, and uppercasing it here rather than with
+ * a `uppercase` class means callers that cannot style text get the same string —
+ * a native `<option>` ignores text-transform on most platforms.
+ */
+export const postureShortName = (posture) => String(posture?.id ?? '').toUpperCase();
+
+/**
  * Posture colours come from the posture records and are applied as INLINE STYLES.
  *
  * Never as interpolated Tailwind classes: those are generated at build time from
@@ -26,9 +37,9 @@ export function renderPostureBadge(posture) {
     </span>`;
   }
   return `<span
-    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase text-gray-900"
+    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-gray-900"
     style="background-color: ${escapeHtml(posture.color)}"
-  >${escapeHtml(posture.id)}</span>`;
+  >${escapeHtml(postureShortName(posture))}</span>`;
 }
 
 /** Index postures by id so callers resolve without rescanning the list. */

@@ -29,6 +29,7 @@ import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
 import {
   indexPostures,
+  postureShortName,
   filterContracts,
   countHiddenUnclassified,
   portfoliosOf,
@@ -104,8 +105,11 @@ if (data) {
     let portfolio = 'all';
     let query = '';
 
+    // Short names, so an option reads as the same thing as the badge on the cards
+    // below it. The full label stays on the detail page, where it is the heading
+    // for that posture's guidance.
     const postureOptions = (data.postures ?? [])
-      .map((p: any) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.label)}</option>`)
+      .map((p: any) => `<option value="${escapeHtml(p.id)}">${escapeHtml(postureShortName(p))}</option>`)
       .join('');
     const portfolioOptions = portfoliosOf(contracts)
       .map((p) => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`)
@@ -133,7 +137,7 @@ if (data) {
           <option value="all">All portfolios</option>${portfolioOptions}
         </select>
         <select id="contracts-posture" aria-label="Filter by AI posture" class="${selectClass}">
-          <option value="all">All postures</option>${postureOptions}
+          <option value="all">All AI postures</option>${postureOptions}
         </select>
       </div>
 

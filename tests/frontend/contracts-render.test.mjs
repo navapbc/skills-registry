@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   renderPostureBadge,
+  postureShortName,
   indexPostures,
   hasPosture,
   filterContracts,
@@ -33,7 +34,28 @@ const contract = (over = {}) => ({
   ...over,
 });
 
+describe('postureShortName', () => {
+  it('uppercases the id rather than using the sentence-long label', () => {
+    expect(postureShortName(POSTURES[0])).toBe('ALLOWED');
+    expect(postureShortName(POSTURES[0])).not.toContain('how to proceed');
+  });
+
+  it('is empty for a missing posture instead of throwing', () => {
+    expect(postureShortName(null)).toBe('');
+    expect(postureShortName(undefined)).toBe('');
+  });
+});
+
 describe('renderPostureBadge', () => {
+  it('shows the short name as literal uppercase, not a text-transform', () => {
+    // The filter dropdown reuses this string, and a native <option> ignores
+    // text-transform on most platforms.
+    const html = renderPostureBadge(POSTURES[0]);
+    expect(html).toContain('>ALLOWED</span>');
+    expect(html).not.toContain('uppercase');
+  });
+
+
   it('applies the posture colour as an inline style', () => {
     // An interpolated Tailwind class emits no CSS and the badge renders blank.
     const html = renderPostureBadge(POSTURES[0]);
