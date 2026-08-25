@@ -67,6 +67,7 @@ import Base from '../layouts/Base.astro';
 <script>
   import { getFavorites, getInstalled, removeFavorite, removeInstalled, clearInstalled, initFromUser } from '../lib/favorites.mjs';
   import { fetchApi } from '../lib/api.mjs';
+  import { escapeHtml } from '../lib/render.mjs';
   import type { Skill, InstalledSkill } from '../lib/types';
 
   // Sync server-side favorites in the background; re-render if data changed
@@ -212,10 +213,15 @@ import Base from '../layouts/Base.astro';
                 class="copy-btn px-2 py-1 text-xs font-medium text-plum-600 border border-plum-200 rounded hover:bg-plum-50 cursor-pointer transition-colors bg-white"
                 data-copy="${cmd.replace(/"/g, '&quot;')}"
               >Copy</button>` : ''}
+              <!-- The skill name is in the label, not just "Remove": every card
+                   carries one of these buttons, and a screen reader reading the
+                   list back needs to know which skill each one removes. The glyph
+                   is hidden so the label is the whole accessible name. -->
               <button
                 class="remove-btn px-2 py-1 text-xs text-gray-600 border border-gray-200 rounded hover:border-gray-300 hover:text-gray-800 cursor-pointer transition-colors bg-white"
                 data-slug="${skill.slug}"
-              >✕</button>
+                aria-label="Remove ${escapeHtml(skill.name)} from installed skills"
+              ><span aria-hidden="true">✕</span></button>
             </div>
           </div>
         </div>
