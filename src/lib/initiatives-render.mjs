@@ -134,7 +134,7 @@ export function describePopulationNotice(population) {
       A sync run did not finish, so this data may be incomplete.
     </p>`;
   }
-  return `<p class="text-xs text-gray-400 mt-1 m-0">
+  return `<p class="text-xs text-gray-600 mt-1 m-0">
     Captured ${escapeHtml(formatCapturedAt(population?.captured_at ?? null))}.
   </p>`;
 }
@@ -186,7 +186,7 @@ const EXPOSURE_FALLBACK = 'bg-gray-100 text-gray-700';
 export function renderExposureBadge(exposure) {
   const value = String(exposure ?? '').trim();
   if (value === '') {
-    return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+    return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
       Exposure not recorded
     </span>`;
   }
@@ -195,12 +195,12 @@ export function renderExposureBadge(exposure) {
 }
 
 const rowShell = (label, body) => `<div class="flex flex-col gap-0.5">
-     <dt class="text-xs text-gray-400">${escapeHtml(label)}</dt>
+     <dt class="text-xs text-gray-600">${escapeHtml(label)}</dt>
      <dd class="text-sm text-gray-800 m-0 whitespace-pre-line">${body}</dd>
    </div>`;
 
 /** Styled unlike a real value, so an absent answer never reads as one. */
-const NONE_LISTED = '<span class="text-gray-400 italic">None listed</span>';
+const NONE_LISTED = '<span class="text-gray-600 italic">None listed</span>';
 
 const isBlank = (value) => !value || !String(value).trim();
 
@@ -233,7 +233,7 @@ const row = (label, value, render = plain) => rowShell(label, render(value));
  * new field started.
  */
 const stackedRow = (label, value, render = plain) => `<div class="py-3 first:pt-0 last:pb-0">
-     <dt class="text-xs text-gray-400">${escapeHtml(label)}</dt>
+     <dt class="text-xs text-gray-600">${escapeHtml(label)}</dt>
      <dd class="text-sm text-gray-800 mt-1 m-0 whitespace-pre-line">${render(value)}</dd>
    </div>`;
 
@@ -368,7 +368,7 @@ const cardBlurb = (initiative) =>
 export function renderInitiativeCard(initiative) {
   const projectName = initiative.resolved_project?.project_name || initiative.project || '';
   const subtitle = projectName
-    ? `<p class="text-xs text-gray-400 m-0 mt-1">${escapeHtml(projectName)}</p>`
+    ? `<p class="text-xs text-gray-600 m-0 mt-1">${escapeHtml(projectName)}</p>`
     : '';
 
   return `<a
@@ -382,7 +382,7 @@ export function renderInitiativeCard(initiative) {
       ${escapeHtml(initiative.title || initiative.initiative_id)}
     </h3>
     ${subtitle}
-    <p class="text-xs text-gray-500 mt-2 mb-0 line-clamp-3 flex-1">
+    <p class="text-xs text-gray-600 mt-2 mb-0 line-clamp-3 flex-1">
       ${escapeHtml(cardBlurb(initiative))}
     </p>
   </a>`;
@@ -390,7 +390,7 @@ export function renderInitiativeCard(initiative) {
 
 export function renderInitiativeGrid(initiatives) {
   if (!initiatives?.length) {
-    return '<p class="text-sm text-gray-400 italic">No initiatives matched.</p>';
+    return '<p class="text-sm text-gray-600 italic">No initiatives matched.</p>';
   }
   return `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     ${initiatives.map((i) => `<div class="h-full">${renderInitiativeCard(i)}</div>`).join('')}
@@ -424,7 +424,7 @@ export function renderProjectSection(initiative) {
     if (isBlank(initiative.project)) {
       return `<section aria-label="Project" class="rounded-lg p-4 border border-gray-200 bg-white">
         <h2 class="text-sm font-semibold text-gray-900 m-0">Not linked to a project</h2>
-        <p class="text-xs text-gray-500 mt-1 m-0">
+        <p class="text-xs text-gray-600 mt-1 m-0">
           This initiative names no project. Plenty are internal, so this is not
           necessarily missing information.
         </p>
@@ -488,7 +488,7 @@ function renderRelatedContract(contract) {
   const meta = contractMeta(contract);
   return `<li>
     <a href="${escapeHtml(href)}" class="text-plum-700 underline break-words">${escapeHtml(name)}</a>
-    ${meta ? `<span class="block text-xs text-gray-500">${escapeHtml(meta)}</span>` : ''}
+    ${meta ? `<span class="block text-xs text-gray-600">${escapeHtml(meta)}</span>` : ''}
   </li>`;
 }
 
@@ -523,7 +523,7 @@ export function renderRelatedContractsSection(initiative) {
   const contracts = initiative?.related_contracts;
   if (contracts === undefined) return '';
 
-  const note = (text) => `<p class="text-sm text-gray-400 italic mt-1 m-0">${text}</p>`;
+  const note = (text) => `<p class="text-sm text-gray-600 italic mt-1 m-0">${text}</p>`;
 
   let body;
   if (contracts === null) {
@@ -621,7 +621,7 @@ export function renderInitiativeDetail(initiative, capturedAt) {
       ${renderRelatedContractsSection(initiative)}
     </div>
 
-    <p class="text-xs text-gray-400 mt-6 m-0">
+    <p class="text-xs text-gray-600 mt-6 m-0">
       Data captured from the initiatives sheet on ${escapeHtml(formatCapturedAt(capturedAt))}.
       It is not live — re-run the sync workflow to refresh it.
     </p>`;

@@ -8,6 +8,7 @@ import {
   assertValid,
   ICON_MAP,
   POSTURE_COLORS,
+  contrastRatio,
   SeedError,
 } from '../scripts/lib/seed-project-reference.mjs';
 
@@ -174,6 +175,64 @@ describe('posturesFromSource', () => {
   it('rejects a source with no guidance object', () => {
     expect(() => posturesFromSource({ checklist: [] })).toThrow(/`guidance` object/);
     expect(() => posturesFromSource({ guidance: [] })).toThrow(/`guidance` object/);
+  });
+});
+
+/**
+ * The Contract Explorer draws hardcoded dark text on the posture color, so a dark
+ * color would render the guidance steps unreadable. Nothing downstream can catch
+ * that — an inline background-color has no class to adapt — so the seed is the
+ * only boundary where a bad color can be stopped.
+ */
+describe('posture color legibility', () => {
+  // Substituting a color is the only way to reach the branch: the shipped map is
+  // all light tints, which is exactly what the first test below asserts.
+  const withPostureColor = (id, color, fn) => {
+    const original = POSTURE_COLORS[id];
+    POSTURE_COLORS[id] = color;
+    try {
+      fn();
+    } finally {
+      POSTURE_COLORS[id] = original;
+    }
+  };
+
+  it('every shipped posture color clears WCAG AA against the text drawn on it', () => {
+    for (const [id, color] of Object.entries(POSTURE_COLORS)) {
+      expect(contrastRatio(color, '#1f2937'), id).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('rejects a posture color too dark for the text drawn on it', () => {
+    withPostureColor('allowed', '#651a94', () => {
+      expect(() => posturesFromSource(POLICY_SOURCE)).toThrow(/allowed.*4\.5:1 WCAG AA floor/s);
+    });
+  });
+
+  it('names the measured ratio so the fix is obvious', () => {
+    withPostureColor('allowed', '#4b5563', () => {
+      expect(() => posturesFromSource(POLICY_SOURCE)).toThrow(/1\.\d\d:1 against/);
+    });
+  });
+
+  it('rejects a malformed hex rather than reading NaN as compliant', () => {
+    for (const bad of ['#fff', 'e0f5f0', 'rebeccapurple', '#e0f5fz']) {
+      withPostureColor('allowed', bad, () => {
+        expect(() => posturesFromSource(POLICY_SOURCE)).toThrow(/not a six-digit hex color/);
+      });
+    }
+  });
+
+  it('accepts a light tint at the boundary', () => {
+    withPostureColor('allowed', '#8a9099', () => {
+      expect(() => posturesFromSource(POLICY_SOURCE)).not.toThrow();
+    });
+  });
+
+  it('measures contrast symmetrically and anchors the endpoints', () => {
+    expect(contrastRatio('#ffffff', '#000000')).toBeCloseTo(21, 5);
+    expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 5);
+    expect(contrastRatio('#1f2937', '#1f2937')).toBeCloseTo(1, 5);
   });
 });
 

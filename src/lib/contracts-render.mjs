@@ -32,7 +32,7 @@ export const postureShortName = (posture) => String(posture?.id ?? '').toUpperCa
  */
 export function renderPostureBadge(posture) {
   if (!posture) {
-    return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+    return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
       Posture not recorded
     </span>`;
   }
@@ -110,7 +110,7 @@ export function describePopulationNotice(population) {
       A population run did not finish, so this data may be incomplete.
     </p>`;
   }
-  return `<p class="text-xs text-gray-400 mt-1 m-0">
+  return `<p class="text-xs text-gray-600 mt-1 m-0">
     Captured ${escapeHtml(formatCapturedAt(population?.captured_at ?? null))}.
   </p>`;
 }
@@ -137,7 +137,7 @@ export function formatCapturedAt(iso) {
 export function renderContractCard(contract, postureById) {
   const posture = postureById?.get(contract.posture_id) ?? null;
   const parent = contract.contract_num
-    ? `<p class="text-xs text-gray-400 m-0 mt-1">
+    ? `<p class="text-xs text-gray-600 m-0 mt-1">
          Contract <code class="text-xs">${escapeHtml(contract.contract_num)}</code>
        </p>`
     : '';
@@ -156,7 +156,7 @@ export function renderContractCard(contract, postureById) {
       ${escapeHtml(contract.project || contract.contract_id)}
     </h3>
     ${parent}
-    <p class="text-xs text-gray-500 mt-2 mb-0 line-clamp-3 flex-1">
+    <p class="text-xs text-gray-600 mt-2 mb-0 line-clamp-3 flex-1">
       ${escapeHtml(truncate(contract.client_policy_summary, BLURB_LIMIT))}
     </p>
   </a>`;
@@ -164,7 +164,7 @@ export function renderContractCard(contract, postureById) {
 
 export function renderContractGrid(contracts, postureById) {
   if (!contracts?.length) {
-    return '<p class="text-sm text-gray-400 italic">No contracts matched.</p>';
+    return '<p class="text-sm text-gray-600 italic">No contracts matched.</p>';
   }
   return `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     ${contracts.map((c) => `<div class="h-full">${renderContractCard(c, postureById)}</div>`).join('')}
@@ -184,7 +184,7 @@ export function renderUnclassifiedToggle(hiddenCount, includeUnclassified, postu
     // falsehood for 82 of 119 records.
     return postureFiltered
       ? ''
-      : `<p class="text-xs text-gray-400 m-0">Every contract has a posture recorded.</p>`;
+      : `<p class="text-xs text-gray-600 m-0">Every contract has a posture recorded.</p>`;
   }
   return `<button
     id="contracts-unclassified-toggle"
@@ -203,12 +203,12 @@ export function renderUnclassifiedToggle(hiddenCount, includeUnclassified, postu
 }
 
 const rowShell = (label, body) => `<div class="flex flex-col gap-0.5">
-     <dt class="text-xs text-gray-400">${escapeHtml(label)}</dt>
+     <dt class="text-xs text-gray-600">${escapeHtml(label)}</dt>
      <dd class="text-sm text-gray-800 m-0 whitespace-pre-line">${body}</dd>
    </div>`;
 
 /** Styled unlike a real value, so an absent answer never reads as one. */
-const NONE_LISTED = '<span class="text-gray-400 italic">None listed</span>';
+const NONE_LISTED = '<span class="text-gray-600 italic">None listed</span>';
 
 const isBlank = (value) => !value || !String(value).trim();
 
@@ -284,7 +284,7 @@ function renderNavaPolicy(value) {
  * Blank values render as "None listed", on the same reasoning as `row`.
  */
 const stackedRow = (label, value, render = plain) => `<div class="py-3 first:pt-0 last:pb-0">
-     <dt class="text-xs text-gray-400">${escapeHtml(label)}</dt>
+     <dt class="text-xs text-gray-600">${escapeHtml(label)}</dt>
      <dd class="text-sm text-gray-800 mt-1 m-0 whitespace-pre-line">${render(value)}</dd>
    </div>`;
 
@@ -355,7 +355,7 @@ function renderPostureSection(contract, posture) {
 
   return `<section aria-label="AI posture" class="rounded-lg p-4 border border-gray-200 bg-gray-50">
     <h3 class="text-sm font-semibold text-gray-900 m-0">No AI posture recorded yet</h3>
-    <p class="text-xs text-gray-500 mt-1 m-0">
+    <p class="text-xs text-gray-600 mt-1 m-0">
       The AI-use survey has not been completed. What the contract
       itself says is below — treat it as the source, not as guidance.
     </p>
@@ -606,7 +606,7 @@ export function renderContractDetail(contract, postureById, capturedAt) {
       ])}
     </div>
 
-    <p class="text-xs text-gray-400 mt-6 m-0">
+    <p class="text-xs text-gray-600 mt-6 m-0">
       Data captured from the AI-use survey on ${escapeHtml(formatCapturedAt(capturedAt))}.
       It is not live — re-run the population script to refresh it.
     </p>`;

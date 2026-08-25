@@ -17,6 +17,21 @@
   --plum-800: #760c71;
   --plum-900: #5b0462;
 
+  /*
+   * Contrast floor for text on white (WCAG 2.1 AA, 4.5:1 for normal text):
+   *
+   *   gray-400  2.65:1  NON-TEXT ONLY — aria-hidden icons, list markers,
+   *                     sparkline strokes. Never `text-gray-400` on words.
+   *   gray-500  4.60:1  passes, but with almost no margin. Reserved for
+   *                     de-emphasized body copy at text-sm and above.
+   *   gray-600  7.46:1  the floor for de-emphasized text at text-xs, and the
+   *                     default choice when in doubt.
+   *
+   * Most of the small grey text on these pages is load-bearing rather than
+   * decorative — contract numbers that disambiguate 17 same-named records,
+   * "None listed" placeholders that distinguish an unanswered survey field
+   * from an unrendered one. It has to be readable, so it gets gray-600.
+   */
   --gray-50:  #f9fafb;
   --gray-100: #f3f4f6;
   --gray-200: #e5e7eb;
