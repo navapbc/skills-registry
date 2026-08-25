@@ -15,7 +15,7 @@ import {
 
 // NOTE: this read is deliberately NOT capability-gated, matching the Contract
 // Explorer and unlike projects.mjs and project-reference.mjs, which both gate on
-// `manage:project-reference`. The Initiatives Hub exists to let any delivery team
+// `manage:project-reference`. The Initiatives Explorer exists to let any delivery team
 // member see what AI work is running and where, and a capability role would be
 // assigned to nobody.
 //

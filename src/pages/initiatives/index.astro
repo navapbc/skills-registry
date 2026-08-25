@@ -10,7 +10,7 @@ import Base from '../../layouts/Base.astro';
 // /initiatives/* to this shell. Without that entry the grid works and every detail
 // URL serves the 404 page.
 ---
-<Base title="Initiatives Hub" description="AI initiatives across Nava, and the projects they run on.">
+<Base title="Initiatives Explorer" description="AI initiatives across Nava, and the projects they run on.">
   <div id="initiatives-content">
     <div class="animate-pulse">
       <div class="h-4 bg-gray-100 rounded w-28 mb-5"></div>
@@ -101,12 +101,12 @@ if (data) {
       document.title = 'Initiative not found · Skills Hub';
       container.innerHTML = notFoundHtml();
     } else {
-      document.title = `${initiative.title || initiative.initiative_id} · Initiatives Hub`;
+      document.title = `${initiative.title || initiative.initiative_id} · Initiatives Explorer`;
       container.innerHTML = renderInitiativeDetail(initiative, capturedAt);
     }
   } else {
     // ── Grid view ────────────────────────────────────────────────────────
-    document.title = 'Initiatives Hub · Skills Hub';
+    document.title = 'Initiatives Explorer · Skills Hub';
 
     let useCase = 'all';
     let exposure = 'all';
@@ -123,7 +123,7 @@ if (data) {
     container.innerHTML = `
       <div class="mb-6">
         <a href="/" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">&larr; Back to hub</a>
-        <h1 class="text-2xl font-bold text-gray-900 m-0">Initiatives Hub</h1>
+        <h1 class="text-2xl font-bold text-gray-900 m-0">Initiatives Explorer</h1>
         <p class="text-sm text-gray-500 mt-1 m-0">
           Examples of AI in use at Nava.
         </p>

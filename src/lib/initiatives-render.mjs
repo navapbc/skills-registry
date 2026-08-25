@@ -1,4 +1,4 @@
-// Rendering for the Initiatives Hub.
+// Rendering for the Initiatives Explorer.
 //
 // Kept out of src/lib/contracts-render.mjs, which is entirely contract markup —
 // these share only escapeHtml. A separate module also keeps these functions

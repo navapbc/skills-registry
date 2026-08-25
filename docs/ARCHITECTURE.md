@@ -237,7 +237,7 @@ What the sync's delete ceiling now guards is a **renumbering or re-sort of the i
 
 The move off title-derived keys changed every initiative URL once, and there is no redirect map: links made before it 404. `scripts/purge-initiatives.mjs` exists for that migration — reconciliation alone would have presented it as a delete of everything stored.
 
-Read-only from the API — the sheet is the write surface, and the Lambda's IAM grant omits write actions. Unlike its neighbours the read is **not** capability-gated: any signed-in user can browse the Initiatives Hub.
+Read-only from the API — the sheet is the write surface, and the Lambda's IAM grant omits write actions. Unlike its neighbours the read is **not** capability-gated: any signed-in user can browse the Initiatives Explorer.
 
 ---
 

@@ -295,7 +295,7 @@ Requires only a session — **not** capability-gated, matching the Contract Expl
 
 ### `GET /api/initiatives`
 
-Everything the Initiatives Hub needs in one response — the grid, the detail view, and the capture date cannot disagree about freshness if they come from the same read.
+Everything the Initiatives Explorer needs in one response — the grid, the detail view, and the capture date cannot disagree about freshness if they come from the same read.
 
 ```json
 {
