@@ -17,20 +17,20 @@ import Base from '../../layouts/Base.astro';
           <input id="f-name" type="text" required placeholder="My Skill" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-plum-300" />
         </div>
         <div>
-          <label class="text-xs font-medium text-gray-700 block mb-1">Slug * <span class="text-gray-400 font-normal">(auto-generated)</span></label>
+          <label class="text-xs font-medium text-gray-700 block mb-1">Slug * <span class="text-gray-600 font-normal">(auto-generated)</span></label>
           <input id="f-slug" type="text" required placeholder="my-skill" class="w-full text-sm border border-gray-200 rounded px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-plum-300" />
         </div>
       </div>
 
       <div>
-        <label class="text-xs font-medium text-gray-700 block mb-1">Description * <span class="text-gray-400 font-normal">(max 500 chars)</span></label>
+        <label class="text-xs font-medium text-gray-700 block mb-1">Description * <span class="text-gray-600 font-normal">(max 500 chars)</span></label>
         <textarea id="f-desc" rows="3" required maxlength="500" placeholder="What does this skill do? When would someone use it?" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-plum-300 resize-none"></textarea>
-        <p class="text-xs text-gray-400 mt-1"><span id="f-desc-count">0</span>/500</p>
+        <p class="text-xs text-gray-600 mt-1"><span id="f-desc-count">0</span>/500</p>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="text-xs font-medium text-gray-700 block mb-1">Plugin / repo * <span class="text-gray-400 font-normal">(org/repo)</span></label>
+          <label class="text-xs font-medium text-gray-700 block mb-1">Plugin / repo * <span class="text-gray-600 font-normal">(org/repo)</span></label>
           <input id="f-plugin" type="text" required placeholder="navapbc/my-skills" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-plum-300" />
         </div>
         <div>
@@ -61,7 +61,7 @@ import Base from '../../layouts/Base.astro';
       </div>
 
       <div>
-        <label class="text-xs font-medium text-gray-700 block mb-1">Tags <span class="text-gray-400 font-normal">(comma-separated)</span></label>
+        <label class="text-xs font-medium text-gray-700 block mb-1">Tags <span class="text-gray-600 font-normal">(comma-separated)</span></label>
         <input id="f-tags" type="text" placeholder="testing, documentation, accessibility" class="w-full text-sm border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-plum-300" />
       </div>
 
@@ -69,7 +69,7 @@ import Base from '../../layouts/Base.astro';
 
       <div class="flex items-center gap-3 pt-2">
         <button type="submit" class="px-4 py-2 text-sm bg-plum-600 text-white rounded-lg hover:bg-plum-700 transition-colors font-medium">Submit for review</button>
-        <span id="form-submitting" class="hidden text-xs text-gray-400">Submitting...</span>
+        <span id="form-submitting" class="hidden text-xs text-gray-600">Submitting...</span>
       </div>
     </form>
 

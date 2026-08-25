@@ -33,7 +33,7 @@ function notFoundHtml(entity: string) {
   return `<div class="flex flex-col items-center justify-center py-24 text-center">
     <pre class="text-gray-200 text-sm leading-tight font-mono mb-8 select-none">${NAVA_N}</pre>
     <p class="text-base font-semibold text-gray-700 m-0 mb-1">${entity.charAt(0).toUpperCase() + entity.slice(1)} not found</p>
-    <p class="text-sm text-gray-400 m-0 mb-6">This ${entity} may have moved or been removed.</p>
+    <p class="text-sm text-gray-600 m-0 mb-6">This ${entity} may have moved or been removed.</p>
     <a href="/" class="px-4 py-2 text-sm bg-plum-600 text-white rounded-lg hover:bg-plum-700 transition-colors no-underline font-medium">&larr; Back to hub</a>
   </div>`;
 }
@@ -97,9 +97,9 @@ if (!slug) {
 
     <!-- Search results overlay (shown when query is active) -->
     <div id="skills-search-results" class="hidden">
-      <p class="text-xs text-gray-400 mb-4" id="skills-search-summary"></p>
+      <p class="text-xs text-gray-600 mb-4" id="skills-search-summary"></p>
       <div id="skills-search-grid"></div>
-      <p class="text-sm text-gray-400 italic hidden" id="skills-no-results">No skills matched your search.</p>
+      <p class="text-sm text-gray-600 italic hidden" id="skills-no-results">No skills matched your search.</p>
     </div>
   `;
 
@@ -173,12 +173,12 @@ if (!slug) {
       if (orgGrid) {
         orgGrid.innerHTML = orgWide.length
           ? renderSkillGrid(orgWide)
-          : '<p class="text-sm text-gray-400 italic">No org-wide skills yet.</p>';
+          : '<p class="text-sm text-gray-600 italic">No org-wide skills yet.</p>';
       }
 
       document.getElementById('skills-list-grid')!.innerHTML = community.length
         ? renderSkillGrid(community)
-        : '<p class="text-sm text-gray-400 italic">No Claude Code Skills yet.</p>';
+        : '<p class="text-sm text-gray-600 italic">No Claude Code Skills yet.</p>';
 
       initGithubLinks();
       initFavoriteButtons();

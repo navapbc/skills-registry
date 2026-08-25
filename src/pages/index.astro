@@ -77,7 +77,7 @@ import Tooltip from '../components/Tooltip.astro';
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-1.5">
           <h2 class="text-base font-semibold text-gray-700 m-0">Skills</h2>
-          <span class="text-xs text-gray-400" id="skills-count"></span>
+          <span class="text-xs text-gray-600" id="skills-count"></span>
           <Tooltip text='A Skill is a reusable prompt workflow (SKILL.md) that guides an AI through a specific task — like "debug", "write tests", or "plan implementation". You invoke it deliberately.' width="w-64" />
         </div>
         <a id="skills-expand" href="/skills" class="text-xs text-plum-600 hover:text-plum-700 no-underline hidden">
@@ -101,7 +101,7 @@ import Tooltip from '../components/Tooltip.astro';
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-1.5">
           <h2 class="text-base font-semibold text-gray-700 m-0">Agents</h2>
-          <span class="text-xs text-gray-400" id="agents-count"></span>
+          <span class="text-xs text-gray-600" id="agents-count"></span>
           <Tooltip text="An Agent is a project-level AI config file (CLAUDE.md, .cursorrules, copilot-instructions.md) that sets baseline behavior across a whole project — more like a system prompt than a task." width="w-64" />
         </div>
         <a id="agents-expand" href="/agents" class="text-xs text-plum-600 hover:text-plum-700 no-underline hidden">
@@ -121,7 +121,7 @@ import Tooltip from '../components/Tooltip.astro';
     <section class="mb-10">
       <div class="flex items-center gap-1.5 mb-3">
         <h2 class="text-base font-semibold text-gray-700 m-0">Plugins</h2>
-        <span class="text-xs text-gray-400" id="plugins-count"></span>
+        <span class="text-xs text-gray-600" id="plugins-count"></span>
       </div>
       <div id="plugins-list"></div>
     </section>
@@ -135,7 +135,7 @@ import Tooltip from '../components/Tooltip.astro';
         <Tooltip text="Model Context Protocol servers expose tools, resources, and prompts to AI assistants. Registry support for MCP servers is coming soon." width="w-64" />
       </div>
       <div class="p-6 bg-white border border-gray-200 border-dashed rounded-lg text-center">
-        <p class="text-sm text-gray-400 m-0">MCP server discovery will appear here once registry support is added.</p>
+        <p class="text-sm text-gray-600 m-0">MCP server discovery will appear here once registry support is added.</p>
         <a href="/contribute" class="inline-block mt-3 text-xs text-plum-600 hover:text-plum-700 no-underline">Learn how to contribute →</a>
       </div>
     </section>
@@ -144,9 +144,9 @@ import Tooltip from '../components/Tooltip.astro';
 
   <!-- Search results -->
   <div id="search-results" class="hidden" role="region" aria-label="Search results" aria-live="polite">
-    <p class="text-xs text-gray-400 mb-4" id="search-summary"></p>
+    <p class="text-xs text-gray-600 mb-4" id="search-summary"></p>
     <div id="results-list" class="space-y-1"></div>
-    <p class="text-sm text-gray-400 italic hidden" id="no-results">No results found.</p>
+    <p class="text-sm text-gray-600 italic hidden" id="no-results">No results found.</p>
   </div>
 
 </Base>
@@ -178,7 +178,7 @@ function renderHomepageFavorites() {
           <span class="font-semibold text-sm text-gray-900">${escapeHtml(f.name)}</span>
         </div>
         <p class="text-xs text-gray-500 leading-relaxed m-0 flex-1">${escapeHtml(f.description ? (f.description.length > 110 ? f.description.slice(0, 110) + '...' : f.description) : '')}</p>
-        <span class="text-xs text-gray-400">${escapeHtml(f.plugin || '')}</span>
+        <span class="text-xs text-gray-600">${escapeHtml(f.plugin || '')}</span>
       </a>
       <button
         class="unfav-homepage-btn absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center text-amber-400 hover:text-amber-600 transition-colors rounded cursor-pointer bg-transparent border-0"
@@ -281,7 +281,7 @@ Promise.all([
       const total = skills + agents;
       return `<a href="/plugins/${escapeHtml(p.slug)}" class="flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-plum-300 hover:shadow-sm no-underline transition-all group">
         <span class="text-sm font-medium text-gray-800 group-hover:text-plum-700 truncate transition-colors">${escapeHtml(p.name)}</span>
-        <span class="text-xs text-gray-400 ml-2 flex-shrink-0 tabular-nums">${total}</span>
+        <span class="text-xs text-gray-600 ml-2 flex-shrink-0 tabular-nums">${total}</span>
       </a>`;
     }).join('')}
   </div>`;
@@ -296,7 +296,7 @@ Promise.all([
   if (allAgents.length) {
     renderGrid('agents-grid', 'agents-expand', allAgents);
   } else {
-    document.getElementById('agents-grid')!.innerHTML = '<p class="text-sm text-gray-400 italic">No agents in the registry yet.</p>';
+    document.getElementById('agents-grid')!.innerHTML = '<p class="text-sm text-gray-600 italic">No agents in the registry yet.</p>';
   }
 
   // Build search index
@@ -393,7 +393,7 @@ function renderResults(query: string) {
         <p class="text-sm font-semibold text-gray-900 m-0 group-hover:text-plum-700 transition-colors">${escapeHtml(item.name)}</p>
         ${item.description ? `<p class="text-xs text-gray-500 m-0 mt-0.5 truncate">${escapeHtml(item.description)}</p>` : ''}
       </div>
-      <span class="ml-auto text-xs text-gray-400 flex-shrink-0 mt-0.5">${escapeHtml(item.meta)}</span>
+      <span class="ml-auto text-xs text-gray-600 flex-shrink-0 mt-0.5">${escapeHtml(item.meta)}</span>
     </a>
   `).join('');
 

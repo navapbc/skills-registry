@@ -149,7 +149,7 @@ import Base from '../layouts/Base.astro';
           </div>
           <p class="text-xs text-gray-500 leading-relaxed m-0 flex-1">${preview}</p>
           <div class="flex items-center justify-between mt-auto pt-1 gap-2">
-            <span class="text-xs text-gray-400">${fav.plugin || ''}</span>
+            <span class="text-xs text-gray-600">${fav.plugin || ''}</span>
             <button
               class="unfav-btn px-2 py-1 text-xs text-amber-600 border border-amber-200 rounded hover:border-amber-300 hover:text-amber-700 cursor-pointer transition-colors bg-white"
               data-slug="${fav.slug}"
@@ -206,14 +206,14 @@ import Base from '../layouts/Base.astro';
           </div>
           <p class="text-xs text-gray-500 leading-relaxed m-0 flex-1">${preview}</p>
           <div class="flex items-center justify-between mt-auto pt-1 gap-2">
-            <span class="text-xs text-gray-400">Installed ${timeAgo(skill.installedAt)}</span>
+            <span class="text-xs text-gray-600">Installed ${timeAgo(skill.installedAt)}</span>
             <div class="flex items-center gap-1.5">
               ${cmd ? `<button
                 class="copy-btn px-2 py-1 text-xs font-medium text-plum-600 border border-plum-200 rounded hover:bg-plum-50 cursor-pointer transition-colors bg-white"
                 data-copy="${cmd.replace(/"/g, '&quot;')}"
               >Copy</button>` : ''}
               <button
-                class="remove-btn px-2 py-1 text-xs text-gray-400 border border-gray-200 rounded hover:border-gray-300 hover:text-gray-600 cursor-pointer transition-colors bg-white"
+                class="remove-btn px-2 py-1 text-xs text-gray-600 border border-gray-200 rounded hover:border-gray-300 hover:text-gray-800 cursor-pointer transition-colors bg-white"
                 data-slug="${skill.slug}"
               >✕</button>
             </div>

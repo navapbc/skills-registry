@@ -5,7 +5,7 @@ import Base from '../../layouts/Base.astro';
 <Base title="Plugin" description="Browse plugins — GitHub repos containing skills and agents for Nava teams.">
   <div id="plugin-content">
     <div class="flex items-center justify-center py-20">
-      <span class="text-sm text-gray-400">Loading plugin...</span>
+      <span class="text-sm text-gray-600">Loading plugin...</span>
     </div>
   </div>
 </Base>
@@ -20,7 +20,7 @@ const container = document.getElementById('plugin-content')!;
 const slug = window.location.pathname.replace(/^\/plugins\//, '').replace(/\/$/, '');
 
 if (!slug) {
-  container.innerHTML = '<p class="text-sm text-gray-400">No plugin specified.</p>';
+  container.innerHTML = '<p class="text-sm text-gray-600">No plugin specified.</p>';
 } else {
   Promise.all([
     fetchApi('/plugins/' + slug),

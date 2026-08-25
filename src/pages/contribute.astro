@@ -119,10 +119,10 @@ import Base from '../layouts/Base.astro';
           <p class="text-sm font-semibold text-gray-900 mb-1">Create a <code class="bg-gray-100 px-1 rounded">SKILL.md</code> in your repo</p>
           <p class="text-sm text-gray-500 mb-3">Place it in any of these locations — the scanner finds them all:</p>
           <div class="bg-gray-50 border border-gray-200 rounded p-3 font-mono text-xs text-gray-600 space-y-1">
-            <p class="m-0">SKILL.md                          <span class="text-gray-400"># repo root</span></p>
-            <p class="m-0">.claude/skills/my-skill/SKILL.md  <span class="text-gray-400"># Claude Code skills dir</span></p>
-            <p class="m-0">.claude/commands/my-command.md    <span class="text-gray-400"># Claude Code commands</span></p>
-            <p class="m-0">plugins/*/skills/*/SKILL.md       <span class="text-gray-400"># nested plugin structure</span></p>
+            <p class="m-0">SKILL.md                          <span class="text-gray-600"># repo root</span></p>
+            <p class="m-0">.claude/skills/my-skill/SKILL.md  <span class="text-gray-600"># Claude Code skills dir</span></p>
+            <p class="m-0">.claude/commands/my-command.md    <span class="text-gray-600"># Claude Code commands</span></p>
+            <p class="m-0">plugins/*/skills/*/SKILL.md       <span class="text-gray-600"># nested plugin structure</span></p>
           </div>
         </div>
       </li>
@@ -132,13 +132,13 @@ import Base from '../layouts/Base.astro';
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold text-gray-900 mb-1">Add frontmatter at the top</p>
           <div class="bg-gray-50 border border-gray-200 rounded p-3 font-mono text-xs text-gray-600">
-            <p class="m-0 text-gray-400">---</p>
+            <p class="m-0 text-gray-600">---</p>
             <p class="m-0"><span class="text-plum-700">name</span>: My Skill Name</p>
             <p class="m-0"><span class="text-plum-700">description</span>: A one-line description shown on the card</p>
             <p class="m-0"><span class="text-plum-700">compatibility</span>: [claude-code, claude-chat]</p>
             <p class="m-0"><span class="text-plum-700">version</span>: 1.0.0</p>
             <p class="m-0"><span class="text-plum-700">sensitive_data</span>: false</p>
-            <p class="m-0 text-gray-400">---</p>
+            <p class="m-0 text-gray-600">---</p>
             <p class="m-0 mt-2 text-gray-500"># Your skill content here...</p>
           </div>
         </div>
@@ -203,11 +203,11 @@ import Base from '../layouts/Base.astro';
     <h2 class="text-base font-semibold text-gray-700 mb-2">For Agents</h2>
     <p class="text-sm text-gray-500 mb-3">Agent config files are auto-detected — no special file naming needed beyond what your AI tool already expects:</p>
     <div class="bg-gray-50 border border-gray-200 rounded p-3 font-mono text-xs text-gray-600 space-y-1">
-      <p class="m-0">CLAUDE.md             <span class="text-gray-400"># Claude Code project instructions</span></p>
-      <p class="m-0">.claude/agents/*.md   <span class="text-gray-400"># Claude Code sub-agents</span></p>
-      <p class="m-0">.cursorrules          <span class="text-gray-400"># Cursor</span></p>
-      <p class="m-0">.github/copilot-instructions.md  <span class="text-gray-400"># GitHub Copilot</span></p>
-      <p class="m-0">GEMINI.md             <span class="text-gray-400"># Gemini CLI</span></p>
+      <p class="m-0">CLAUDE.md             <span class="text-gray-600"># Claude Code project instructions</span></p>
+      <p class="m-0">.claude/agents/*.md   <span class="text-gray-600"># Claude Code sub-agents</span></p>
+      <p class="m-0">.cursorrules          <span class="text-gray-600"># Cursor</span></p>
+      <p class="m-0">.github/copilot-instructions.md  <span class="text-gray-600"># GitHub Copilot</span></p>
+      <p class="m-0">GEMINI.md             <span class="text-gray-600"># Gemini CLI</span></p>
     </div>
   </section>
 
