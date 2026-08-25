@@ -616,13 +616,13 @@ describe('renderInitiativeDetail', () => {
     };
     const html = renderInitiativeDetail(blank, null);
     for (const label of [
-      'Use case', 'Exposure', 'Practice', 'Tags', 'Status', 'Contacts',
+      'Use case', 'Exposure', 'Practice', 'Status', 'Contacts',
       'AI governance', 'Submitted by', 'Submitted',
       'Summary', 'Description', 'Links',
     ]) {
       expect(html).toContain(label);
     }
-    expect(html.match(/None listed/g).length).toBeGreaterThanOrEqual(11);
+    expect(html.match(/None listed/g).length).toBeGreaterThanOrEqual(10);
   });
 
   it('renders contacts as a list, not one run-together string', () => {

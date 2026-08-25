@@ -32,7 +32,6 @@ import {
   filterInitiatives,
   useCasesOf,
   exposuresOf,
-  tagsOf,
   describePopulationNotice,
   initiativesApiPath,
   renderInitiativeGrid,
@@ -111,11 +110,10 @@ if (data) {
 
     let useCase = 'all';
     let exposure = 'all';
-    let tag = 'all';
     let query = '';
 
-    // Options come from the data, not from hardcoded lists, so a new exposure or
-    // tag value in the sheet appears in the filter without a deploy.
+    // Options come from the data, not from hardcoded lists, so a new use case or
+    // exposure value in the sheet appears in the filter without a deploy.
     const optionsFor = (values: string[]) => values
       .map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`)
       .join('');
@@ -144,9 +142,6 @@ if (data) {
         <select id="initiatives-exposure" aria-label="Filter by exposure" class="${selectClass}">
           <option value="all">All exposures</option>${optionsFor(exposuresOf(initiatives))}
         </select>
-        <select id="initiatives-tag" aria-label="Filter by tag" class="${selectClass}">
-          <option value="all">All tags</option>${optionsFor(tagsOf(initiatives))}
-        </select>
       </div>
 
       <div class="flex flex-wrap items-center gap-3 mb-6">
@@ -159,7 +154,7 @@ if (data) {
     const countEl = document.getElementById('initiatives-count')!;
 
     function render() {
-      const visible = filterInitiatives(initiatives, { useCase, exposure, tag, query });
+      const visible = filterInitiatives(initiatives, { useCase, exposure, query });
       countEl.textContent = `${visible.length} of ${initiatives.length} initiative${initiatives.length === 1 ? '' : 's'}`;
       gridEl.innerHTML = renderInitiativeGrid(visible);
     }
@@ -176,10 +171,6 @@ if (data) {
     });
     document.getElementById('initiatives-exposure')!.addEventListener('change', (e) => {
       exposure = (e.target as HTMLSelectElement).value;
-      render();
-    });
-    document.getElementById('initiatives-tag')!.addEventListener('change', (e) => {
-      tag = (e.target as HTMLSelectElement).value;
       render();
     });
   }

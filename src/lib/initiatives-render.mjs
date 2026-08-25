@@ -370,17 +370,12 @@ export function renderInitiativeCard(initiative) {
   const subtitle = projectName
     ? `<p class="text-xs text-gray-400 m-0 mt-1">${escapeHtml(projectName)}</p>`
     : '';
-  const tags = splitList(initiative.tags);
-  const tagBadge = tags.length
-    ? `<span class="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">${escapeHtml(tags[0])}</span>`
-    : '';
 
   return `<a
     href="/initiatives/${encodeURIComponent(initiative.initiative_id)}"
     class="initiative-card flex flex-col h-full bg-white border border-gray-200 rounded-lg p-4 no-underline hover:border-plum-300 transition-colors"
   >
-    <div class="flex items-start justify-between gap-2 mb-2">
-      ${tagBadge}
+    <div class="flex items-start justify-end gap-2 mb-2">
       ${renderExposureBadge(initiative.exposure)}
     </div>
     <h3 class="text-sm font-semibold text-gray-900 m-0 leading-snug line-clamp-3">
@@ -562,7 +557,6 @@ const DETAIL_FIELDS = [
   ['Use case', 'use_case'],
   ['Exposure', 'exposure'],
   ['Practice', 'practice'],
-  ['Tags', 'tags'],
   ['Status', 'status'],
   ['Contacts', 'contacts', renderNameList],
   ['AI governance', 'ai_governance'],
@@ -595,14 +589,12 @@ export function renderInitiativeDetail(initiative, capturedAt) {
     .map(([label, key, render]) => row(label, initiative[key], render)).join('');
   const narrative = NARRATIVE_FIELDS
     .map(([label, key, render]) => stackedRow(label, initiative[key], render)).join('');
-  const tags = splitList(initiative.tags);
 
   return `
     <a href="/initiatives" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">&larr; All initiatives</a>
 
     <div class="mb-5">
       <div class="flex items-center flex-wrap gap-2">
-        ${tags.map((t) => `<span class="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">${escapeHtml(t)}</span>`).join('')}
         ${renderExposureBadge(initiative.exposure)}
       </div>
       <h1 class="text-2xl font-bold text-gray-900 mt-2 mb-1">${escapeHtml(initiative.title || initiative.initiative_id)}</h1>
