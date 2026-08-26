@@ -45,6 +45,26 @@
 
   --navy-900: #0a0539;
   --nava-gold: #f8b712;
+
+  /*
+   * Informational alert, three values that belong together: a solid accent for
+   * the left bar, a pale fill, and a text colour dark enough to read on that
+   * fill. Taken as a trio from Nava's own token sheet rather than mixed here, so
+   * the pairing carries its contrast guarantee with it.
+   *
+   *   --info-text on --info-bg   6.96:1  passes AA for normal text
+   *   gray-900 on --info-bg     15.09:1  heading and quoted script
+   *   --info bar on --info-bg    2.15:1  BELOW the 3:1 non-text floor
+   *
+   * The bar is deliberately allowed to fail 3:1. It is a reinforcing accent, not
+   * the signal: the alert states "If the client asks about AI use" in words, so
+   * a reader who cannot resolve the bar loses nothing. This is the same division
+   * USWDS and the CMS Design System make in their own alert components. It does
+   * mean the bar must never become the only thing marking the panel.
+   */
+  --info:      #6fa8dc;
+  --info-bg:   #e3eef9;
+  --info-text: #21527d;
 }
 
 @theme inline {
@@ -75,6 +95,10 @@
 
   /* Registered under @theme, unlike --navy-900, so `text-nava-gold` emits CSS. */
   --color-nava-gold: var(--nava-gold);
+
+  --color-info:      var(--info);
+  --color-info-bg:   var(--info-bg);
+  --color-info-text: var(--info-text);
 }
 
 *, *::before, *::after {

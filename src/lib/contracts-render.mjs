@@ -371,29 +371,39 @@ function renderPostureSection(contract, posture) {
  * It reads as a script rather than as guidance because that is the point: someone
  * on a client call needs a sentence they can say, not a policy to interpret.
  *
- * Dark panel and gold accent set it apart from the surveyed fields around it, so
- * a reader can tell at a glance that this is Nava's language and not the contract's.
- * The accents use `nava-gold`, the brand gold registered under @theme in
- * src/styles/main.css. Type is the page's own Inter: the panel already reads as
- * separate on colour and scale alone, and a second typeface made it read as
- * pasted in from another site.
+ * Styled as an INFORMATIONAL alert, following the structure USWDS and the CMS
+ * Design System use: a solid left bar, a pale fill, and a short uppercase label
+ * naming the alert type in words. Info rather than warning because this content
+ * is reassurance to relay, not a risk to weigh — the yellow warning treatment is
+ * reserved for the posture panel, which is the part of this page that can tell a
+ * reader to stop.
+ *
+ * This replaced a solid gray-900 panel. The dark fill separated the block from the
+ * surveyed fields around it, which is worth keeping, so the separation now comes
+ * from the tinted fill and the bar instead — same job, at the weight the rest of
+ * the page is built at. The label is what actually classifies the block; colour
+ * only reinforces it, which is why the bar is allowed to sit below 3:1 (see the
+ * --info trio in src/styles/main.css).
  */
 const CLIENT_ASK_SCRIPT = `<section aria-label="If the client asks about AI use"
-  class="rounded-lg p-6 bg-gray-900">
-  <p class="text-xs font-semibold uppercase tracking-widest text-nava-gold m-0">
-    If the client asks about AI use
-  </p>
-  <h3 class="text-xl font-bold text-white mt-3 mb-4">
-    Say this &mdash; word for word if it helps:
-  </h3>
-  <blockquote class="border-l-2 border-nava-gold pl-4 m-0">
-    <p class="text-lg text-white leading-relaxed m-0">
-      &ldquo;Yes, Nava uses AI-assisted tools in a controlled manner to support internal
-      development and drafting workflows. These tools are not used with agency or
-      sensitive data, and all outputs are reviewed and validated by the team prior to
-      use.&rdquo;
+  class="rounded-lg p-6 bg-info-bg flex gap-4">
+  <div class="w-1 rounded shrink-0 bg-info" aria-hidden="true"></div>
+  <div class="flex-1 min-w-0">
+    <p class="text-xs font-semibold uppercase tracking-widest text-info-text m-0">
+      If the client asks about AI use
     </p>
-  </blockquote>
+    <h3 class="text-xl font-bold text-gray-900 mt-3 mb-4">
+      Say this &mdash; word for word if it helps:
+    </h3>
+    <blockquote class="border-l-2 border-info pl-4 m-0">
+      <p class="text-lg text-gray-900 leading-relaxed m-0">
+        &ldquo;Yes, Nava uses AI-assisted tools in a controlled manner to support internal
+        development and drafting workflows. These tools are not used with agency or
+        sensitive data, and all outputs are reviewed and validated by the team prior to
+        use.&rdquo;
+      </p>
+    </blockquote>
+  </div>
 </section>`;
 
 /**

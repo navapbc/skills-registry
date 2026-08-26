@@ -341,6 +341,29 @@ describe('renderContractDetail', () => {
       expect(not).toContain('Nava uses AI-assisted tools in a controlled manner');
       expect(classified).toContain('Nava uses AI-assisted tools in a controlled manner');
     });
+
+    // It reads as information to relay, not as a risk to weigh. The warning
+    // treatment stays with the posture panel, which is the part of this page that
+    // can tell a reader to stop.
+    it('reads as an informational alert rather than the old dark panel', () => {
+      const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
+      expect(html).toContain('bg-info-bg');
+      expect(html).toContain('text-info-text');
+      expect(html).toContain('border-info');
+      expect(html).not.toContain('bg-gray-900');
+      expect(html).not.toContain('nava-gold');
+    });
+
+    // Colour reinforces the classification; the words carry it. The left bar sits
+    // at 2.15:1 against its own fill, below the 3:1 non-text floor, so a reader
+    // who cannot resolve it has to still be told what this block is.
+    it('names the alert type in words, not only in colour', () => {
+      const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
+      expect(html).toContain('aria-label="If the client asks about AI use"');
+      // The bar is decoration once the label is present, and must not be
+      // announced as a second, empty item.
+      expect(html).toMatch(/<div class="w-1[^"]*"\s+aria-hidden="true"><\/div>/);
+    });
   });
 
   it('takes the posture colour from the record as an inline style', () => {
