@@ -189,10 +189,10 @@ describe('renderExposureBadge', () => {
     // source text at build time, so a runtime-assembled name emits no CSS and the
     // badge renders blank.
     for (const [value, expected] of [
-      ['Client', 'bg-plum-100'],
-      ['Internal', 'bg-gray-100'],
-      ['Infrastructure', 'bg-blue-100'],
-      ['Learning', 'bg-green-100'],
+      ['Client', 'bg-plum-50 text-plum-700'],
+      ['Internal', 'bg-gray-100 text-gray-700'],
+      ['Infrastructure', 'bg-blue-50 text-blue-700'],
+      ['Learning', 'bg-green-50 text-green-700'],
     ]) {
       const html = renderExposureBadge(value);
       expect(html).toContain(expected);
@@ -213,13 +213,13 @@ describe('renderExposureBadge', () => {
   it('colours `Infrastructure` and the older `infra` alike, rather than falling back', () => {
     // v1 said `infra`, v2 says `Infrastructure`. A gray badge for either would read
     // as a bug rather than as information.
-    expect(renderExposureBadge('Infrastructure')).toContain('bg-blue-100');
-    expect(renderExposureBadge('infra')).toContain('bg-blue-100');
+    expect(renderExposureBadge('Infrastructure')).toContain('bg-blue-50');
+    expect(renderExposureBadge('infra')).toContain('bg-blue-50');
   });
 
   it('folds case for the colour lookup while leaving the label alone', () => {
     const html = renderExposureBadge('cLiEnT');
-    expect(html).toContain('bg-plum-100');
+    expect(html).toContain('bg-plum-50');
     expect(html).toContain('>cLiEnT<');
   });
 
@@ -232,6 +232,19 @@ describe('renderExposureBadge', () => {
   it('says so when exposure is not recorded', () => {
     expect(renderExposureBadge('')).toContain('Exposure not recorded');
     expect(renderExposureBadge(undefined)).toContain('Exposure not recorded');
+  });
+
+  it('carries the Skills Marketplace size recipe, including on the empty state', () => {
+    // `px-1.5 py-0.5 rounded text-xs font-medium` is the shared tag recipe from
+    // src/lib/render.mjs. The badge used to sit at px-2, a half-step heavier than
+    // the same badge on the Marketplace. The empty state has to match too — it is
+    // the same badge, and a wider "Exposure not recorded" would reintroduce the
+    // drift on exactly the rows where two sizes appear side by side.
+    for (const value of ['Client', 'partner', '']) {
+      const html = renderExposureBadge(value);
+      expect(html).toContain('px-1.5 py-0.5 rounded text-xs font-medium');
+      expect(html).not.toContain('px-2 ');
+    }
   });
 
   it('never emits a class attribute containing an unresolved template value', () => {

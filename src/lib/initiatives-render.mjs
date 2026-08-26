@@ -157,16 +157,26 @@ export function describePopulationNotice(population) {
  * from Tailwind's defaults. Note that `navy` is NOT available: main.css defines
  * --navy-900 as a raw variable but never registers it under @theme, so
  * `bg-navy-100` would emit no CSS and render a blank badge.
+ *
+ * The pairing is the Skills Marketplace recipe — `bg-{hue}-50 / text-{hue}-700`
+ * (see src/lib/render.mjs) — so a badge here weighs the same as one there.
+ * Gray is the deliberate exception and stays on -100: gray-50 IS the page
+ * background (main.css sets `body { background-color: var(--gray-50) }`) and is
+ * 1.03:1 against a white card, so a gray-50 fill reads as no badge at all.
+ *
+ * Contrast against each own fill, WCAG 2.1 AA needing 4.5:1 for this text size:
+ * plum 7.34:1, blue 6.26:1, green 4.72:1, gray 9.37:1. Green has the thinnest
+ * margin of the four — do not lighten it further without recomputing.
  */
 const EXPOSURE_CLASSES = {
-  client: 'bg-plum-100 text-plum-800',
+  client: 'bg-plum-50 text-plum-700',
   internal: 'bg-gray-100 text-gray-700',
   // Both spellings. The v1 sheet said `infra` and v2 says `Infrastructure`; the
   // lookup folds case, so keeping the old key costs a line and stops a badge
   // silently falling back to gray if either spelling reappears.
-  infra: 'bg-blue-100 text-blue-800',
-  infrastructure: 'bg-blue-100 text-blue-800',
-  learning: 'bg-green-100 text-green-800',
+  infra: 'bg-blue-50 text-blue-700',
+  infrastructure: 'bg-blue-50 text-blue-700',
+  learning: 'bg-green-50 text-green-700',
 };
 const EXPOSURE_FALLBACK = 'bg-gray-100 text-gray-700';
 
@@ -186,12 +196,12 @@ const EXPOSURE_FALLBACK = 'bg-gray-100 text-gray-700';
 export function renderExposureBadge(exposure) {
   const value = String(exposure ?? '').trim();
   if (value === '') {
-    return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+    return `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
       Exposure not recorded
     </span>`;
   }
   const classes = EXPOSURE_CLASSES[lower(value)] ?? EXPOSURE_FALLBACK;
-  return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${classes}">${escapeHtml(value)}</span>`;
+  return `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${classes}">${escapeHtml(value)}</span>`;
 }
 
 const rowShell = (label, body) => `<div class="flex flex-col gap-0.5">
