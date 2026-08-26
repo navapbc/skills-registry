@@ -226,4 +226,29 @@ export function buildRecords({ archetypes, policy }) {
   return assertValid([...archetypesFromSource(archetypes), ...posturesFromSource(policy)]);
 }
 
+/**
+ * The posture colors alone, validated, for the `--update-colors` mode.
+ *
+ * That mode exists because the main seed writes create-if-absent — deliberately,
+ * so a re-run cannot revert an admin's edit — which means a changed value in
+ * POSTURE_COLORS can never reach a record that already exists. Restyling the
+ * Contract Explorer's posture badges otherwise requires editing four records by
+ * hand in every environment, and POSTURE_COLORS stops being the source of truth
+ * the moment that happens.
+ *
+ * It deliberately does NOT read the policy file. A color is not in that file —
+ * it is in this one — so requiring the operator to hold an out-of-repo policy
+ * export just to push a hex would be a check that proves nothing.
+ *
+ * Every color runs through the same legibility gate as a full seed. A color
+ * arriving by this path is written into the same inline style and read by the
+ * same hardcoded gray-800, so it cannot be held to a looser bar.
+ */
+export function postureColorUpdates() {
+  return Object.entries(POSTURE_COLORS).map(([id, color]) => {
+    assertLegibleColor(id, color);
+    return { entity_type: ENTITY_POSTURE, id, color };
+  });
+}
+
 export { ENTITY_ARCHETYPE, ENTITY_POSTURE };

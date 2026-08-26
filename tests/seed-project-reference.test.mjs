@@ -5,6 +5,7 @@ import {
   posturesFromSource,
   skippedPolicyFields,
   buildRecords,
+  postureColorUpdates,
   assertValid,
   ICON_MAP,
   POSTURE_COLORS,
@@ -285,6 +286,46 @@ describe('buildRecords', () => {
 //
 // Without that variable the checks skip rather than fail — no developer's local
 // directory layout is baked into the repo.
+describe('postureColorUpdates', () => {
+  it('carries every posture color and nothing else', () => {
+    const updates = postureColorUpdates();
+    expect(updates.map((u) => u.id).sort()).toEqual(Object.keys(POSTURE_COLORS).sort());
+    for (const u of updates) {
+      expect(u.color).toBe(POSTURE_COLORS[u.id]);
+      // Only the key and the one attribute being written. A label or a steps
+      // array reaching this path would mean the update could clobber an admin's
+      // edits, which is the thing the mode exists to avoid.
+      expect(Object.keys(u).sort()).toEqual(['color', 'entity_type', 'id']);
+      expect(u.entity_type).toBe('posture');
+    }
+  });
+
+  it('holds a color arriving this way to the same legibility bar as a full seed', () => {
+    // The looser path would be the dangerous one: a color pushed by --update-colors
+    // lands in the same inline style and is read by the same hardcoded gray-800.
+    const id = 'restricted';
+    const original = POSTURE_COLORS[id];
+    POSTURE_COLORS[id] = '#3d2f00';
+    try {
+      expect(() => postureColorUpdates()).toThrow(SeedError);
+      expect(() => postureColorUpdates()).toThrow(/under the 4.5:1 WCAG AA floor/);
+    } finally {
+      POSTURE_COLORS[id] = original;
+    }
+  });
+
+  it('rejects a malformed hex rather than writing a background that renders nothing', () => {
+    const id = 'silent';
+    const original = POSTURE_COLORS[id];
+    POSTURE_COLORS[id] = 'f3f4f6';
+    try {
+      expect(() => postureColorUpdates()).toThrow(/not a six-digit hex color/);
+    } finally {
+      POSTURE_COLORS[id] = original;
+    }
+  });
+});
+
 describe('against the real prototype sources, when available', () => {
   const SOURCE_DIR = process.env.PROJECT_REFERENCE_SOURCE_DIR;
   const read = (name) => {
