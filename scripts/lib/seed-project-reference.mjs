@@ -24,14 +24,38 @@ export const ICON_MAP = {
 
 /**
  * The source policy file carries no color: each guidance entry holds only a label
- * and its steps. These are the prototype's posture background tokens, resolved to
- * literals from its stylesheet. Without them every seeded posture fails validation.
+ * and its steps. Without a color here every seeded posture fails validation.
+ *
+ * These were one-off literals lifted from the prototype's stylesheet. They are now
+ * Nava's severity tokens instead, so the traffic-light reading is the token
+ * family's rather than this file's invention, and so a posture fill matches the
+ * --info alert on the contract detail page in construction:
+ *
+ *   allowed     --low-bg       #e7f1e0   go
+ *   restricted  --medium-bg    #fdf3d6   caution
+ *   prohibited  --critical-bg  #fcdcd6   stop
+ *   silent      gray-100       #f3f4f6   neutral — no severity to report
+ *
+ * `silent` is deliberately OFF the severity scale. It means the contract is silent
+ * on AI use, which is an absence of guidance, not a level of risk; the old plum
+ * tint read as a fourth severity and implied a ranking that does not exist.
+ *
+ * These are literals, not var() references, because they are seeded into the
+ * database and applied as inline styles — see `renderPostureBadge` in
+ * src/lib/contracts-render.mjs for why a class cannot carry a runtime color.
+ * Changing a value here needs a re-seed to reach existing records.
+ *
+ * Contrast against POSTURE_TEXT_COLOR, which every value below is validated
+ * against at seed time: 12.62, 13.26, 11.43, 13.34 — all clear of MIN_CONTRAST.
+ * The four fills are pale tints that differ in HUE, not lightness, so they read
+ * as ~1.05:1 against each other. That is why the badge spells out ALLOWED or
+ * RESTRICTED: the fill tints the message, it does not carry it.
  */
 export const POSTURE_COLORS = {
-  allowed: '#e0f5f0',
-  restricted: '#fff8e1',
-  silent: '#faf0f7',
-  prohibited: '#fce8e8',
+  allowed: '#e7f1e0',
+  restricted: '#fdf3d6',
+  silent: '#f3f4f6',
+  prohibited: '#fcdcd6',
 };
 
 /**

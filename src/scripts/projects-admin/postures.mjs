@@ -14,7 +14,8 @@ import { renderUsageCell, renderOrphanNotice, renderUsageUnavailableNotice } fro
 const ENDPOINT = '/project-reference/posture';
 
 // A posture's color is its badge *background*, not a hue to blend. The seeded
-// values are pale (#fff8e1 and friends), so the archetype treatment — which
+// values are pale severity tints (#fdf3d6 and friends — see POSTURE_COLORS in
+// scripts/lib/seed-project-reference.mjs), so the archetype treatment — which
 // alpha-blends a saturated color over white — would produce a near-white badge
 // with unreadable text. Pair the stored background with a fixed dark foreground.
 export const BADGE_FOREGROUND = '#1b1b1b';
@@ -86,7 +87,9 @@ export function renderPostureList(postures, usage) {
 }
 
 export function renderPostureForm(p = {}) {
-  const color = p.color ?? '#e0f5f0';
+  // Neutral, not a severity tint: a posture being added has no severity yet, and
+  // defaulting to the "allowed" green pre-answers that on the author's behalf.
+  const color = p.color ?? '#f3f4f6';
   return `
     <h3 class="text-sm font-semibold text-gray-700 mb-3">${p.id ? 'Edit Posture' : 'Add Posture'}</h3>
     <input type="hidden" id="posture-edit-id" value="${escapeHtml(p.id ?? '')}" />
