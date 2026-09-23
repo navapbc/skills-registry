@@ -148,7 +148,7 @@ describe('renderContractDetail', () => {
       expect(html).toContain('FEDCIV');
       expect(html).toContain('<h1');
       expect(html).toContain('SEC ENTERPRISE WEBSITES');
-      expect(html).toContain('Agency: SEC');
+      expect(html).toContain('Agency: <strong class="text-gray-900">SEC</strong>');
       expect(html).toContain('Crystal Cody');
     });
 
@@ -173,20 +173,47 @@ describe('renderContractDetail', () => {
   });
 
   describe('what the contract says about AI', () => {
-    it('renders free-text AI use terms exactly as written, unbadged', () => {
-      const html = sectionOf(renderContractDetail(contract(), null), 'What the contract says about AI');
+    const termsOf = (terms) => sectionOf(
+      renderContractDetail(contract({ ai_use_terms: terms }), null),
+      'What the contract says about AI',
+    );
+
+    it('highlights a leading ruling name and keeps the rest as written', () => {
+      const html = termsOf('Conditional, TO Silent, BPA Restricted');
       expect(html).toContain('AI use on this contract is:');
-      expect(html).toContain('Conditional, TO Silent, BPA Restricted');
+      expect(html).toContain('background-color: #80377d');
+      expect(html).toContain('>Conditional</span>, TO Silent, BPA Restricted');
+    });
+
+    it('highlights the word as the sheet spells it, whatever its case', () => {
+      const html = termsOf('silent on use terms');
+      expect(html).toContain('background-color: #0a0539');
+      expect(html).toContain('>silent</span> on use terms');
+    });
+
+    it('highlights a cell that is exactly a ruling name', () => {
+      const html = termsOf('Prohibited');
+      expect(html).toContain('background-color: #a12a34');
+      expect(html).toContain('>Prohibited</span>');
+    });
+
+    it('highlights nothing when the first word is not a ruling name', () => {
+      const html = termsOf('GSA restriction, TO Silent');
+      expect(html).toContain('GSA restriction, TO Silent');
       expect(html).not.toContain('background-color');
     });
 
-    it('badges AI use terms that are exactly a ruling name', () => {
-      const html = sectionOf(
-        renderContractDetail(contract({ ai_use_terms: 'Prohibited' }), null),
-        'What the contract says about AI',
-      );
-      expect(html).toContain('background-color: #a12a34');
-      expect(html).toContain('>Prohibited</span>');
+    it('highlights nothing when a ruling name only starts the first word', () => {
+      // "Silently" is not "Silent": the whole first word must match.
+      expect(termsOf('Silently accepted')).not.toContain('background-color');
+    });
+
+    it('escapes the text after the highlighted word', () => {
+      expect(termsOf('Allowed <img src=x onerror=1>')).not.toContain('<img src=x');
+    });
+
+    it('marks blank terms as unlisted', () => {
+      expect(termsOf('')).toContain('None listed');
     });
 
     it('links to the rulings list at the bottom of the page', () => {

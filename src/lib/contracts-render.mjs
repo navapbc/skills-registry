@@ -219,14 +219,19 @@ function renderSageLink(project) {
 /**
  * What the contract says about AI use, from column L.
  *
- * A cell that is exactly a ruling name renders as that ruling's badge. Any other
- * cell renders as its text, unstyled by any ruling, so a reader is never shown a
- * colour the contracts team did not record.
+ * The text renders exactly as written. When its first word is a ruling name
+ * ("Conditional, TO Silent, …"), that word is highlighted in the ruling's colour
+ * and the rest follows as plain text. The highlight marks a word the contracts
+ * team wrote; it does not replace or summarise the cell.
  */
 function renderAiUseTerms(contract) {
-  const ruling = rulingOf(contract);
-  if (ruling) return rulingBadge(ruling, contract.ai_use_terms.trim(), 'text-sm');
-  return `<p class="text-sm text-gray-900 m-0 whitespace-pre-line">${plain(contract.ai_use_terms)}</p>`;
+  const text = String(contract?.ai_use_terms ?? '').trim();
+  const word = text.match(/^[a-z]+/i)?.[0] ?? '';
+  const ruling = RULINGS.find((r) => r.id === word.toLowerCase());
+  const body = ruling
+    ? `${rulingBadge(ruling, word, 'text-sm')}${escapeHtml(text.slice(word.length))}`
+    : plain(text);
+  return `<p class="text-sm text-gray-900 m-0 whitespace-pre-line">${body}</p>`;
 }
 
 /**
@@ -363,7 +368,7 @@ export function renderContractDetail(contract, capturedAt) {
       <section aria-label="What the contract says about AI">
         ${sectionHeading('What the Contract says about AI')}
         <h3 class="text-base font-semibold text-gray-900 mt-6 mb-3">AI use on this contract is:</h3>
-        <div>${renderAiUseTerms(contract)}</div>
+        ${renderAiUseTerms(contract)}
         <p class="mt-4 mb-0">
           <a href="#ai-rulings" class="text-sm text-plum-700 underline">
             See all ${RULINGS.length} potential AI rulings and their definitions.
