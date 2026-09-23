@@ -17,7 +17,7 @@ const BLURB_LIMIT = 180;
  *
  * Authored copy, identical on every contract. The ids match AI_RULINGS in
  * functions/api/lib/contracts.mjs, and a test holds the two lists equal. Colours
- * are not authored here: colorRulings takes them from the posture records.
+ * are not authored here: rulingsFromPostures takes them from the posture records.
  */
 export const RULINGS = [
   {
@@ -53,21 +53,26 @@ export const RULINGS = [
 const BADGE_FOREGROUND = '#1b1b1b';
 
 /**
- * RULINGS, each carrying the colour of the posture record with the same id.
+ * RULINGS, each carrying the posture record with the same id and that record's
+ * colour as `fill`.
  *
- * The colours are edited on the Policy Guidance tab of /projects-admin, so a
- * colour change there reaches this page with no deploy. A ruling with no posture
- * record gets `fill: null` and renders as an outlined badge.
+ * The posture records are edited on the Policy Guidance tab of /projects-admin, so
+ * a change there reaches this page with no deploy. A ruling with no posture record
+ * gets `posture: null` and `fill: null`: its badge renders outlined and its
+ * guidance panel is left out.
  */
-export function colorRulings(postures) {
-  const colorById = new Map((postures ?? []).map((p) => [p.id, p.color]));
-  return RULINGS.map((r) => ({ ...r, fill: colorById.get(r.id) ?? null }));
+export function rulingsFromPostures(postures) {
+  const byId = new Map((postures ?? []).map((p) => [p.id, p]));
+  return RULINGS.map((r) => {
+    const posture = byId.get(r.id) ?? null;
+    return { ...r, posture, fill: posture?.color ?? null };
+  });
 }
 
-const UNCOLORED = colorRulings([]);
+const NO_POSTURES = rulingsFromPostures([]);
 
 /** The ruling named by the first word of `text`, or null. The whole word must match. */
-export function leadingRuling(text, rulings = UNCOLORED) {
+export function leadingRuling(text, rulings = NO_POSTURES) {
   const word = String(text ?? '').trim().match(/^[a-z]+/i)?.[0] ?? '';
   return rulings.find((r) => r.id === word.toLowerCase()) ?? null;
 }
@@ -168,7 +173,7 @@ export function formatCapturedAt(iso) {
  * read as duplicates. The blurb is the AI use terms, highlighted the same way as on
  * the detail page, so the card and the page never disagree about the ruling.
  */
-export function renderContractCard(contract, rulings = UNCOLORED) {
+export function renderContractCard(contract, rulings = NO_POSTURES) {
   const parent = contract.contract_num
     ? `<p class="text-xs text-gray-600 m-0 mt-1">
          Contract <code class="text-xs">${escapeHtml(contract.contract_num)}</code>
@@ -194,7 +199,7 @@ export function renderContractCard(contract, rulings = UNCOLORED) {
   </a>`;
 }
 
-export function renderContractGrid(contracts, rulings = UNCOLORED) {
+export function renderContractGrid(contracts, rulings = NO_POSTURES) {
   if (!contracts?.length) {
     return '<p class="text-sm text-gray-600 italic">No contracts matched.</p>';
   }
@@ -340,6 +345,27 @@ const PRE_USE_CHECKLIST = `<section aria-label="Pre-use checklist" class="rounde
   </div>
 </section>`;
 
+/**
+ * The guidance of the posture named by the first word of the AI use terms.
+ *
+ * The heading and the numbered steps come from the posture record, and the panel
+ * takes the record's colour. The steps are ordered, so `list-decimal` is required:
+ * Tailwind's preflight resets `ol` to list-style none. Returns '' when the first
+ * word names no ruling or the ruling has no posture record, because there is no
+ * guidance to show.
+ */
+function renderPostureGuidance(contract, rulings) {
+  const posture = leadingRuling(contract?.ai_use_terms, rulings)?.posture;
+  if (!posture) return '';
+  const steps = (posture.steps ?? [])
+    .map((step) => `<li class="text-sm text-gray-800">${escapeHtml(step)}</li>`).join('');
+  return `<section aria-label="AI posture guidance" class="rounded-lg p-4 border border-gray-200"
+    style="background-color: ${escapeHtml(posture.color)}">
+    <h3 class="text-sm font-semibold text-gray-900 m-0">${escapeHtml(posture.label)}</h3>
+    ${steps ? `<ol class="list-decimal mt-3 mb-0 pl-5 space-y-1.5 marker:text-gray-500">${steps}</ol>` : ''}
+  </section>`;
+}
+
 /** Every ruling with its definition — the target of the "See all" link. */
 function renderRulingsList(rulings) {
   const rows = rulings.map((r) => `<div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
@@ -356,7 +382,7 @@ function renderRulingsList(rulings) {
 
 const sectionHeading = (text) => `<h2 class="text-2xl font-bold text-gray-900 m-0">${escapeHtml(text)}</h2>`;
 
-export function renderContractDetail(contract, rulings = UNCOLORED, capturedAt = null) {
+export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt = null) {
   return `
     <a href="/contracts" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">&larr; All contracts</a>
 
@@ -417,6 +443,8 @@ export function renderContractDetail(contract, rulings = UNCOLORED, capturedAt =
           ${CLIENT_ASK_SCRIPT}
         </div>
       </section>
+
+      ${renderPostureGuidance(contract, rulings)}
 
       ${renderRulingsList(rulings)}
     </div>

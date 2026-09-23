@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   RULINGS,
-  colorRulings,
+  rulingsFromPostures,
   leadingRuling,
   filterContracts,
   portfoliosOf,
@@ -17,10 +17,10 @@ import {
 const POSTURES = [
   { id: 'allowed', color: '#e7f1e0' },
   { id: 'restricted', color: '#fdf3d6' },
-  { id: 'silent', color: '#f3f4f6' },
+  { id: 'silent', color: '#f3f4f6', label: 'AI SILENT — how to proceed', steps: ['Check the terms.', 'Ask your PM.'] },
   { id: 'prohibited', color: '#fcdcd6' },
 ];
-const rulings = colorRulings(POSTURES);
+const rulings = rulingsFromPostures(POSTURES);
 
 const contract = (over = {}) => ({
   contract_id: 'fedciv-sec-enterprise-websites',
@@ -57,7 +57,7 @@ describe('RULINGS', () => {
   });
 });
 
-describe('colorRulings', () => {
+describe('rulingsFromPostures', () => {
   it('takes each ruling colour from the posture record with the same id', () => {
     const byId = Object.fromEntries(rulings.map((r) => [r.id, r.fill]));
     expect(byId).toMatchObject({
@@ -67,16 +67,16 @@ describe('colorRulings', () => {
 
   it('leaves a ruling with no posture record uncoloured', () => {
     expect(rulings.find((r) => r.id === 'conditional').fill).toBeNull();
-    expect(colorRulings(undefined).every((r) => r.fill === null)).toBe(true);
+    expect(rulingsFromPostures(undefined).every((r) => r.fill === null)).toBe(true);
   });
 
   it('picks up a posture added later, with no code change', () => {
-    const later = colorRulings([...POSTURES, { id: 'conditional', color: '#ece3f5' }]);
+    const later = rulingsFromPostures([...POSTURES, { id: 'conditional', color: '#ece3f5' }]);
     expect(later.find((r) => r.id === 'conditional').fill).toBe('#ece3f5');
   });
 
   it('keeps the authored order, whatever order the records arrive in', () => {
-    expect(colorRulings([...POSTURES].reverse()).map((r) => r.id)).toEqual(RULINGS.map((r) => r.id));
+    expect(rulingsFromPostures([...POSTURES].reverse()).map((r) => r.id)).toEqual(RULINGS.map((r) => r.id));
   });
 });
 
@@ -372,6 +372,47 @@ describe('renderContractDetail', () => {
       const html = renderContractDetail(contract({ posture_id: 'allowed' }), rulings);
       expect(html).toContain('aria-label="Scripted responses to client questions about AI"');
       expect(html).toMatch(/<div class="w-1[^"]*"\s+aria-hidden="true"><\/div>/);
+    });
+  });
+
+  describe('the posture guidance', () => {
+    const guidanceOf = (terms, list = rulings) =>
+      renderContractDetail(contract({ ai_use_terms: terms }), list).match(
+        /<section aria-label="AI posture guidance"[\s\S]*?<\/section>/,
+      )?.[0] ?? null;
+
+    it('shows the posture named by the first word of the AI use terms', () => {
+      const html = guidanceOf('Silent on use terms, no explicit AI terms');
+      expect(html).toContain('AI SILENT — how to proceed');
+      expect(html).toContain('background-color: #f3f4f6');
+    });
+
+    it('numbers the steps in their stored order', () => {
+      const html = guidanceOf('silent');
+      expect(html).toContain('list-decimal');
+      expect(html.indexOf('Check the terms.')).toBeLessThan(html.indexOf('Ask your PM.'));
+    });
+
+    it('is left out when the first word names no ruling', () => {
+      expect(guidanceOf('no language regarding AI')).toBeNull();
+    });
+
+    it('is left out when the ruling has no posture record yet', () => {
+      expect(guidanceOf('Conditional, TO Silent')).toBeNull();
+    });
+
+    it('sits directly before the rulings list', () => {
+      const html = renderContractDetail(contract({ ai_use_terms: 'Silent' }), rulings);
+      const at = html.indexOf('aria-label="AI posture guidance"');
+      expect(html.indexOf('Scripted responses to client questions about AI')).toBeLessThan(at);
+      expect(at).toBeLessThan(html.indexOf('id="ai-rulings"'));
+    });
+
+    it('escapes the posture label and steps, which are stored records', () => {
+      const list = rulingsFromPostures([{ id: 'silent', color: '#f3f4f6', label: '<b>L</b>', steps: ['<i>s</i>'] }]);
+      const html = guidanceOf('Silent', list);
+      expect(html).not.toContain('<b>L</b>');
+      expect(html).not.toContain('<i>s</i>');
     });
   });
 

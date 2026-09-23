@@ -28,7 +28,7 @@ import Base from '../../layouts/Base.astro';
 import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
 import {
-  colorRulings,
+  rulingsFromPostures,
   filterContracts,
   portfoliosOf,
   describePopulationNotice,
@@ -80,8 +80,9 @@ try {
 if (data) {
   const contracts = data.contracts ?? [];
   const capturedAt = data.population?.captured_at ?? null;
-  // Badge colours come from the posture records on the Policy Guidance tab.
-  const rulings = colorRulings(data.postures);
+  // Badge colours and posture guidance come from the posture records on the
+  // Policy Guidance tab.
+  const rulings = rulingsFromPostures(data.postures);
 
   if (contractId) {
     // ── Detail view ──────────────────────────────────────────────────────
