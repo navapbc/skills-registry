@@ -387,10 +387,10 @@ export function renderContractDetail(contract, capturedAt) {
       <section aria-label="Practical guidance and more information">
         ${sectionHeading('Practical guidance and more information')}
         <p class="text-sm text-gray-600 mt-4 mb-0">
-          This section provides background and context on AI use and expectations for this
-          program or contract. The information below comes from an AI-use survey we asked
-          Program Managers to complete to help delivery teams understand a given client&rsquo;s
-          AI posture and confidently explore AI capabilities when possible.
+          This section provides context and expectations for AI use on this program or contract.
+          This information comes from a survey that Program Managers completed to help delivery teams understand their client's AI posture.
+          The goal is for Nava employees to feel confident when using and exploring AI possibilities.
+          Please reach out to your program manager with questions or discussion.
         </p>
         <div class="space-y-3 mt-5">
           ${GUIDANCE_QUESTIONS.map(([question, key]) => questionCard(question, contract[key])).join('')}
