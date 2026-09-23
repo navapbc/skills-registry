@@ -78,7 +78,7 @@ AI-posture policy guidance shown in the Contract Explorer.
 }
 ```
 
-`label`, `color`, `steps`, and `definition` are edited on the Policy Guidance tab of `/projects-admin`. The Contract Explorer reads all four, so an edit there reaches it with no deploy.
+`label`, `color`, `steps`, and `definition` are edited on the Policy Guidance tab of `/projects-admin`. The Contract Explorer reads all four, so an edit there reaches it with no deploy. The seed carries no definitions, so a newly seeded environment takes the edited postures from another one with `node scripts/copy-postures.mjs --from staging --to <env> --apply`.
 
 | `id` | `label` | `color` | `position` | `steps` |
 |---|---|---|---|---|
