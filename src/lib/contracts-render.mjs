@@ -353,7 +353,7 @@ export function renderContractDetail(contract, capturedAt) {
         <h1 class="text-xl font-bold text-gray-900 mt-3 mb-0">${escapeHtml(contract.project || contract.contract_id)}</h1>
       </div>
       <div class="text-sm sm:text-right">
-        <p class="text-gray-900 m-0">Agency: ${plain(contract.customer)}</p>
+        <p class="text-gray-900 m-0">Agency: <strong class="text-gray-900">${plain(contract.customer)}</strong></p>
         <p class="text-gray-600 mt-1 mb-0">Program manager: <strong class="text-gray-900">${plain(contract.nava_program_mgr)}</strong></p>
         ${renderSageLink(contract.resolved_project)}
       </div>
