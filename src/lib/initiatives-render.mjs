@@ -6,6 +6,7 @@
 // test.
 
 import { escapeHtml, truncate } from './render.mjs';
+import { renderIcon } from './icons.mjs';
 
 // The sheet's multi-value separator is `;`. Measured: `contacts` and `link` both
 // use it, and no cell uses a comma as a separator. A comma is accepted anyway
@@ -408,6 +409,41 @@ export function renderInitiativeGrid(initiatives) {
 }
 
 /**
+ * One archetype as a badge: its icon and label, in the archetype's color.
+ *
+ * The color is edited on the Archetypes tab of /projects-admin and arrives as a
+ * six-digit hex, so it is applied as an INLINE STYLE. An interpolated Tailwind
+ * class would emit no CSS.
+ *
+ * The text stays gray-900 and the color goes on the border, the icon, and a 10%
+ * tint behind the text (the `1a` alpha suffix). The seeded colors are saturated,
+ * and orange `#F37100` or teal `#08A588` as text on white measures under the
+ * 4.5:1 WCAG AA minimum. A 10% tint of any hex stays pale enough for gray-900 text.
+ *
+ * The markup holds no newlines because the details grid's `<dd>` sets
+ * `whitespace-pre-line`, which would turn each newline into a line break.
+ */
+function renderArchetypeBadge(archetype) {
+  const color = escapeHtml(archetype.color);
+  return `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-xs font-medium text-gray-900" style="background-color: ${color}1a; border-color: ${color}"><span class="inline-flex" style="color: ${color}">${renderIcon(archetype.icon, { size: 14 })}</span>${escapeHtml(archetype.label)}</span>`;
+}
+
+/**
+ * One archetype column: a badge per value that names an archetype record, and the
+ * sheet's text for a value that names none.
+ *
+ * Without `resolved_archetypes` (the archetype read failed or was not made), the
+ * column renders as the sheet's text, the same as a field with no record behind it.
+ */
+function renderArchetypes(project, column) {
+  const values = project.resolved_archetypes?.[column];
+  if (!values?.length) return plain(project[column]);
+  const items = values.map(({ value, archetype }) =>
+    archetype ? renderArchetypeBadge(archetype) : `<span>${escapeHtml(value)}</span>`);
+  return `<span class="flex flex-wrap items-center gap-1.5">${items.join('')}</span>`;
+}
+
+/**
  * The resolved project, when the initiative links to one.
  *
  * Two managers can appear here, so neither is labelled just "Program manager": the
@@ -461,8 +497,8 @@ export function renderProjectSection(initiative) {
       ${row('Agency', p.agency)}
       ${row('Project program manager', p.program_manager)}
       ${row('Contracts program manager', p.nava_contract_pp)}
-      ${row('Archetype', p.archetype_primary)}
-      ${row('Additional archetype', p.archetype_additional)}
+      ${row('Archetype', p, (project) => renderArchetypes(project, 'archetype_primary'))}
+      ${row('Additional archetype', p, (project) => renderArchetypes(project, 'archetype_additional'))}
     </dl>
   </section>`;
 }

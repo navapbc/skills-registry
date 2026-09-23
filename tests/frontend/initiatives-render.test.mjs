@@ -480,6 +480,65 @@ describe('renderProjectSection', () => {
   });
 });
 
+describe('renderProjectSection archetype badges', () => {
+  const PRODUCT = { id: 'product-team', label: 'Product Team', color: '#651A94', icon: 'users' };
+
+  const withArchetypes = (primary, additional = []) => initiative({
+    resolved_project: {
+      ...PROJECT,
+      resolved_archetypes: { archetype_primary: primary, archetype_additional: additional },
+    },
+  });
+
+  it('renders a matched archetype as a badge in its color, with its icon', () => {
+    const html = renderProjectSection(withArchetypes([{ value: 'product team', archetype: PRODUCT }]));
+    expect(html).toContain('background-color: #651A941a; border-color: #651A94');
+    expect(html).toContain('style="color: #651A94"><svg');
+    // The record's label, not the sheet's lowercase spelling.
+    expect(html).toContain('</span>Product Team</span>');
+    expect(html).not.toContain('product team');
+  });
+
+  it('keeps the badge text dark rather than in the archetype color', () => {
+    // Saturated colors such as #F37100 fall below 4.5:1 as text on white.
+    const orange = { ...PRODUCT, color: '#F37100' };
+    const html = renderProjectSection(withArchetypes([{ value: 'Product Team', archetype: orange }]));
+    expect(html).toMatch(/class="[^"]*text-gray-900[^"]*" style="background-color: #F371001a/);
+  });
+
+  it('renders a value naming no record as the sheet text beside the badges', () => {
+    const html = renderProjectSection(withArchetypes(
+      [{ value: 'Product Team', archetype: PRODUCT }],
+      [{ value: 'Nonsense Team', archetype: null }],
+    ));
+    expect(html).toContain('<span>Nonsense Team</span>');
+  });
+
+  it('renders the sheet text when the archetypes were not resolved', () => {
+    const html = renderProjectSection(initiative());
+    expect(html).toContain('Product Team');
+    expect(html).not.toContain('border-color:');
+  });
+
+  it('renders the placeholder for an empty archetype column', () => {
+    const html = renderProjectSection(withArchetypes([{ value: 'Product Team', archetype: PRODUCT }]));
+    expect(html).toContain('None listed');
+  });
+
+  it('emits badge markup with no newlines inside the whitespace-pre-line cell', () => {
+    const html = renderProjectSection(withArchetypes([{ value: 'Product Team', archetype: PRODUCT }]));
+    // The whole cell, from the wrapper to the closing </dd>, sits on one line.
+    expect(html).toMatch(/<dd[^>]*><span class="flex flex-wrap[^\n]*<\/span><\/dd>/);
+  });
+
+  it('escapes a color and a label containing markup', () => {
+    const hostile = { ...PRODUCT, color: '"><img src=x>', label: '<b>x</b>' };
+    const html = renderProjectSection(withArchetypes([{ value: 'x', archetype: hostile }]));
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('<b>');
+  });
+});
+
 describe('initiativesApiPath', () => {
   it('asks for no join on the grid view', () => {
     // R6: the grid must never make the API read the contracts partition.

@@ -592,6 +592,50 @@ components:
           type: string
         archetype_additional:
           type: string
+        resolved_archetypes:
+          type: object
+          description: >
+            Present ONLY on the record named by /api/initiatives?id=, and absent when
+            the project-reference table is unconfigured or the archetype read fails.
+            Each archetype column's values, paired with the archetype record each
+            value names.
+          properties:
+            archetype_primary:
+              type: array
+              items:
+                $ref: "#/components/schemas/ResolvedArchetypeValue"
+            archetype_additional:
+              type: array
+              items:
+                $ref: "#/components/schemas/ResolvedArchetypeValue"
+
+    ResolvedArchetypeValue:
+      type: object
+      properties:
+        value:
+          type: string
+          description: The sheet's own string.
+          example: Product Team
+        archetype:
+          description: >
+            The archetype record the value names, or null when it names none. The
+            match rule is the projects-admin drift check's.
+          oneOf:
+            - type: "null"
+            - type: object
+              properties:
+                id:
+                  type: string
+                  example: product-team
+                label:
+                  type: string
+                  example: Product Team
+                color:
+                  type: string
+                  example: "#651A94"
+                icon:
+                  type: string
+                  example: users
 
     InitiativeContract:
       type: object

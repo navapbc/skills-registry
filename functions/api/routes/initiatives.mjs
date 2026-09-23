@@ -1,6 +1,12 @@
 import { ddb, tables, GetCommand } from '../lib/dynamo.mjs';
 import { cachedQueryPartition } from '../lib/partition-cache.mjs';
-import { RECORD_PROJECT } from '../lib/projects.mjs';
+import { ENTITY_ARCHETYPE } from '../lib/project-reference.mjs';
+import {
+  RECORD_PROJECT,
+  ARCHETYPE_PRIMARY_SLUG,
+  ARCHETYPE_ADDITIONAL_SLUG,
+  resolveArchetypeValues,
+} from '../lib/projects.mjs';
 import { RECORD_CONTRACT, PROJECT_NAME_ATTR, PUBLISH_ATTR, isPublished } from '../lib/contracts.mjs';
 import {
   RECORD_INITIATIVE,
@@ -107,8 +113,8 @@ const PROJECT_FIELDS = [
  * records. Everything a reader needs here is enough to recognise which contract
  * they are about to open — the Contract Explorer answers the rest, including the
  * posture, which is why `ai_posture` is absent. Resolving a posture id to its
- * label needs the project-reference partition, which this route does not read,
- * and a bare id badge would be worse than no badge.
+ * label needs the posture partition of the project-reference table, which this
+ * route does not read, and a bare id badge would be worse than no badge.
  *
  * No audience is widened: /api/contracts is already open to every signed-in user
  * on the same basis as this route.
@@ -125,8 +131,30 @@ const RELATED_CONTRACT_FIELDS = [
   'agreement_type',
 ];
 
+/**
+ * Fields carried from an archetype record onto a resolved archetype value.
+ *
+ * The badge needs these four. The record also holds a description and two guidance
+ * lists, which no page outside /projects-admin renders yet, so they stay off this
+ * payload until one does.
+ */
+const ARCHETYPE_FIELDS = ['id', 'label', 'color', 'icon'];
+
 const project_summary = (project) =>
   Object.fromEntries(PROJECT_FIELDS.map((f) => [f, project[f] ?? '']));
+
+const archetype_summary = (archetype) =>
+  Object.fromEntries(ARCHETYPE_FIELDS.map((f) => [f, archetype[f] ?? '']));
+
+/** Each archetype column's values, paired with the record each one names or null. */
+const resolved_archetypes = (project, archetypes) =>
+  Object.fromEntries([ARCHETYPE_PRIMARY_SLUG, ARCHETYPE_ADDITIONAL_SLUG].map((column) => [
+    column,
+    resolveArchetypeValues(project[column], archetypes).map(({ value, archetype }) => ({
+      value,
+      archetype: archetype ? archetype_summary(archetype) : null,
+    })),
+  ]));
 
 const contract_summary = (contract) =>
   Object.fromEntries(RELATED_CONTRACT_FIELDS.map((f) => [f, contract[f] ?? '']));
@@ -279,8 +307,32 @@ async function serveInitiatives(c) {
     }
   }
 
+  // The archetype records, read ONLY for the named initiative, for the same reason
+  // as the contracts above: the grid renders no archetype badges. The read is
+  // unprojected so it shares a cache entry with /api/projects, which reads the
+  // same partition in full.
+  //
+  // Any failure leaves `archetypes` undefined and `resolved_archetypes` off the
+  // payload. The page then shows the sheet's archetype text, which is what it
+  // showed before badges existed, so a failed read hides nothing the reader had.
+  let archetypes;
+  if (targetProject) {
+    const referenceTable = tables.projectReference();
+    if (referenceTable) {
+      try {
+        archetypes = await cachedQueryPartition(referenceTable, 'entity_type', ENTITY_ARCHETYPE);
+      } catch (err) {
+        console.error('archetype read failed', err);
+      }
+    }
+  }
+
   const resolved = initiatives.map((initiative) => {
     const project = resolveProject(initiative, projects);
+    const summary = project ? project_summary(project) : null;
+    if (summary && archetypes && initiative === target) {
+      summary.resolved_archetypes = resolved_archetypes(project, archetypes);
+    }
     return {
       ...initiative_payload(initiative),
       // `!== undefined`, not truthiness: `null` and `[]` are both real answers here
@@ -293,7 +345,7 @@ async function serveInitiatives(c) {
       // resolved object over that key would replace a card's own string with an
       // object. contracts.mjs learned this the hard way; the sheet has now caught
       // up with the precaution.
-      resolved_project: project ? project_summary(project) : null,
+      resolved_project: summary,
     };
   });
 

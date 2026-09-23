@@ -835,3 +835,123 @@ describe('initiatives partition cache', () => {
     }
   });
 });
+
+// ── Archetype badges ──────────────────────────────────────────────────────
+// The detail page renders each archetype value as a badge in the archetype's
+// color, so a `?id=` request attaches the matched records. The grid renders no
+// badges, so a list request must not read the archetype partition at all.
+describe('initiatives archetypes', () => {
+  const ID = 'init-2';
+  const REFERENCE_TABLE = 'skills-hub-project-reference-staging';
+
+  const ARCHETYPE = {
+    entity_type: 'archetype',
+    id: 'product-team',
+    label: 'Product Team',
+    color: '#651A94',
+    icon: 'users',
+    status: 'active',
+    // Stored on the record, deliberately absent from the served projection.
+    description: 'Teams that build and run a product.',
+    characteristics: ['Owns a backlog'],
+    ai_opportunities: ['Drafting user stories'],
+  };
+
+  /** The id request's reads: meta, initiatives, projects, contracts, then archetypes. */
+  function queueDetailReads({ projects = [PROJECT], archetypes = [ARCHETYPE] } = {}) {
+    queueReads({ projects, contracts: [contract()] });
+    mockSend.mockResolvedValueOnce({ Items: archetypes });
+  }
+
+  let previousReferenceTable;
+  beforeEach(() => {
+    previousReferenceTable = process.env.PROJECT_REFERENCE_TABLE;
+    process.env.PROJECT_REFERENCE_TABLE = REFERENCE_TABLE;
+  });
+  afterEach(() => {
+    if (previousReferenceTable === undefined) delete process.env.PROJECT_REFERENCE_TABLE;
+    else process.env.PROJECT_REFERENCE_TABLE = previousReferenceTable;
+  });
+
+  it('attaches the matched archetype to each archetype value', async () => {
+    const headers = as('user');
+    queueDetailReads();
+    const res = await app.request(`/api/initiatives?id=${ID}`, { headers });
+    const [got] = (await res.json()).initiatives;
+
+    expect(got.resolved_project.resolved_archetypes).toEqual({
+      archetype_primary: [{
+        value: 'Product Team',
+        archetype: { id: 'product-team', label: 'Product Team', color: '#651A94', icon: 'users' },
+      }],
+      archetype_additional: [],
+    });
+    // The sheet strings stay, so the page can fall back to them.
+    expect(got.resolved_project.archetype_primary).toBe('Product Team');
+  });
+
+  it('serves null for a value that names no archetype record, keeping the sheet spelling', async () => {
+    const headers = as('user');
+    queueDetailReads({ projects: [{ ...PROJECT, archetype_additional: 'Nonsense Team' }] });
+    const res = await app.request(`/api/initiatives?id=${ID}`, { headers });
+    const [got] = (await res.json()).initiatives;
+
+    expect(got.resolved_project.resolved_archetypes.archetype_additional)
+      .toEqual([{ value: 'Nonsense Team', archetype: null }]);
+  });
+
+  it('reads the archetype partition from the project-reference table, unprojected', async () => {
+    // Unprojected so the read shares a cache entry with /api/projects.
+    const headers = as('user');
+    queueDetailReads();
+    await app.request(`/api/initiatives?id=${ID}`, { headers });
+
+    const query = mockSend.mock.calls
+      .map(([cmd]) => cmd)
+      .find((cmd) => cmd?.type === 'Query' && cmd.params.ExpressionAttributeValues[':t'] === 'archetype');
+    expect(query.params.TableName).toBe(REFERENCE_TABLE);
+    expect(query.params).not.toHaveProperty('ProjectionExpression');
+  });
+
+  it('does not read the archetype partition for a list request', async () => {
+    const headers = as('user');
+    queueReads();
+    const res = await app.request('/api/initiatives', { headers });
+    const [got] = (await res.json()).initiatives;
+
+    expect(queriedPartitions()).not.toContain('archetype');
+    expect(got.resolved_project).not.toHaveProperty('resolved_archetypes');
+  });
+
+  it('does not read the archetype partition when the initiative has no project', async () => {
+    const headers = as('user');
+    queueReads({ initiatives: [initiative({ project: '' })] });
+    await app.request(`/api/initiatives?id=${ID}`, { headers });
+
+    expect(queriedPartitions()).not.toContain('archetype');
+  });
+
+  it('omits resolved_archetypes and still serves the initiative when the read fails', async () => {
+    const headers = as('user');
+    queueReads({ contracts: [contract()] });
+    mockSend.mockRejectedValueOnce(new Error('dynamo exploded'));
+    const res = await app.request(`/api/initiatives?id=${ID}`, { headers });
+    const [got] = (await res.json()).initiatives;
+
+    expect(res.status).toBe(200);
+    expect(got.resolved_project.archetype_primary).toBe('Product Team');
+    expect(got.resolved_project).not.toHaveProperty('resolved_archetypes');
+    expect(got.related_contracts).toHaveLength(1);
+  });
+
+  it('omits resolved_archetypes when the project-reference table is unconfigured', async () => {
+    const headers = as('user');
+    delete process.env.PROJECT_REFERENCE_TABLE;
+    queueReads({ contracts: [contract()] });
+    const res = await app.request(`/api/initiatives?id=${ID}`, { headers });
+    const [got] = (await res.json()).initiatives;
+
+    expect(res.status).toBe(200);
+    expect(got.resolved_project).not.toHaveProperty('resolved_archetypes');
+  });
+});

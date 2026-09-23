@@ -8,6 +8,7 @@ import {
   splitArchetypeCell,
   findArchetypeIssues,
   collectArchetypeIssues,
+  resolveArchetypeValues,
 } from '../../../functions/api/lib/projects.mjs';
 
 const ARCHETYPES = [
@@ -142,5 +143,40 @@ describe('collectArchetypeIssues', () => {
     const { unresolved, missing } = collectArchetypeIssues(projects, ARCHETYPES);
     expect(unresolved.map((u) => u.project_code)).toEqual(['FH013']);
     expect(missing.map((m) => m.project_code)).toEqual(['ST099']);
+  });
+});
+
+describe('resolveArchetypeValues', () => {
+  it('pairs each value with the record it names, keeping the sheet spelling', () => {
+    const got = resolveArchetypeValues('product  team , Platform Team', ARCHETYPES);
+    expect(got).toEqual([
+      { value: 'product  team', archetype: ARCHETYPES[0] },
+      { value: 'Platform Team', archetype: ARCHETYPES[1] },
+    ]);
+  });
+
+  it('pairs a value naming no record with null', () => {
+    expect(resolveArchetypeValues('Nonsense Team', ARCHETYPES))
+      .toEqual([{ value: 'Nonsense Team', archetype: null }]);
+  });
+
+  it('returns no values for an empty cell', () => {
+    expect(resolveArchetypeValues('', ARCHETYPES)).toEqual([]);
+    expect(resolveArchetypeValues(undefined, ARCHETYPES)).toEqual([]);
+  });
+
+  it('resolves a deactivated record, matching the drift check', () => {
+    const records = [{ id: 'product-team', label: 'Product Team', status: 'inactive' }];
+    expect(resolveArchetypeValues('Product Team', records)[0].archetype).toBe(records[0]);
+  });
+
+  it('leaves null exactly where findArchetypeIssues reports unresolved', () => {
+    // The badge and the drift finding must never disagree about one value.
+    const cell = 'Product Team, Nonsense Team, platform team';
+    const nulls = resolveArchetypeValues(cell, ARCHETYPES)
+      .filter((v) => v.archetype === null).map((v) => v.value);
+    const unresolved = findArchetypeIssues(project({ [ARCHETYPE_ADDITIONAL_SLUG]: cell }), ARCHETYPES)
+      .unresolved.map((u) => u.raw_value);
+    expect(nulls).toEqual(unresolved);
   });
 });

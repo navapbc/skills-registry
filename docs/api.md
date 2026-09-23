@@ -383,7 +383,27 @@ Three things about this are load-bearing:
   `[]` is **not** evidence that the project has no contract. The join matches the contract's `PROJECT` value, which follows the projects table's names inconsistently: as of 2026-09-23, 20 of 104 published contracts resolve to a project. Unpublished contracts are never linked. Present the empty result as "no link recorded", not as "no contract exists".
 - **The join runs the contracts-side resolution rule**, which matches a project's `project_name` **or** its `contract_name`. The initiatives rule above matches the project's `project_name` alone; using it here would silently drop every contract named the other way, which is a substantial share of the survey. The rule is applied against a list holding only the target project, which asks "does this contract name this project?" rather than "which project does this contract resolve to first?" — the latter mis-assigns contracts whenever one project's `contract_name` collides with another's `project_name`.
 
-The projection is narrower than `/api/contracts` on purpose — these entries are links, not records, and the contract's own page answers the rest. The AI use terms are deliberately excluded: resolving a posture id to its display label needs the project-reference partition, which this route does not read, and a bare id badge would be worse than none.
+The named record's `resolved_project` also carries `resolved_archetypes`: each archetype column's values, paired with the archetype record each value names. The detail page renders a matched value as a badge in the archetype's color.
+
+```json
+"resolved_archetypes": {
+  "archetype_primary": [
+    {
+      "value": "Product Team",
+      "archetype": { "id": "product-team", "label": "Product Team", "color": "#651A94", "icon": "users" }
+    }
+  ],
+  "archetype_additional": [
+    { "value": "Nonsense Team", "archetype": null }
+  ]
+}
+```
+
+- **`value`** is the sheet's own string. **`archetype`** is `null` when the value names no archetype record. The match rule is the one the projects-admin drift check uses (`resolveArchetypeValues` in `functions/api/lib/projects.mjs`), so a `null` here is exactly a value the drift check reports as unresolved.
+- **The archetype projection** is four fields: `id`, `label`, `color`, `icon`. The record's description, characteristics, and AI opportunities stay off this payload.
+- **`resolved_archetypes` is absent** on every record of a list request, when `PROJECT_REFERENCE_TABLE` is unconfigured, and when the archetype read fails. A failed read does not fail the request. The page then shows `archetype_primary` and `archetype_additional` as text.
+
+The projection is narrower than `/api/contracts` on purpose — these entries are links, not records, and the contract's own page answers the rest. The AI use terms are deliberately excluded: resolving a posture id to its display label needs the posture partition of the project-reference table, which this route does not read, and a bare id badge would be worse than none.
 
 `population.state` is one of:
 

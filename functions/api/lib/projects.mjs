@@ -77,6 +77,26 @@ export function splitArchetypeCell(value) {
     .filter((part) => part !== '');
 }
 
+/** Archetype records keyed by normalized label, the key both callers below match on. */
+const archetypesByLabel = (archetypeRecords) =>
+  new Map(archetypeRecords.map((r) => [normalizeLabel(r.label), r]));
+
+/**
+ * Pair each value in an archetype cell with the archetype record it names.
+ *
+ * Returns `{ value, archetype }` per value, where `value` is the sheet's own string
+ * and `archetype` is the matched record or null. The match rule is the drift
+ * check's: a value that findArchetypeIssues reports as unresolved gets null here.
+ * Deactivated records still match, for the same reason they count as resolved there.
+ */
+export function resolveArchetypeValues(cell, archetypeRecords) {
+  const byLabel = archetypesByLabel(archetypeRecords);
+  return splitArchetypeCell(cell).map((value) => ({
+    value,
+    archetype: byLabel.get(normalizeLabel(value)) ?? null,
+  }));
+}
+
 /**
  * Compare one project's archetype columns against the known archetype records.
  *
@@ -97,7 +117,7 @@ export function splitArchetypeCell(value) {
  * no secondary archetype.
  */
 export function findArchetypeIssues(project, archetypeRecords) {
-  const known = new Set(archetypeRecords.map((r) => normalizeLabel(r.label)));
+  const known = archetypesByLabel(archetypeRecords);
   const unresolved = [];
   const missing = [];
 
