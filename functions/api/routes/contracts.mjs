@@ -9,6 +9,7 @@ import {
   SEED_IN_PROGRESS,
   SEED_COMPLETE,
   SEED_NEVER,
+  isPublished,
   resolvePosture,
   resolveProject,
 } from '../lib/contracts.mjs';
@@ -58,27 +59,20 @@ const CONTRACT_FIELDS = [
   'agreement_type',
   'contract_num',
   'vehicle',
-  'vehicle_fullname',
   'task_order',
   'customer',
   'nava_project_mgr',
   'nava_program_mgr',
   'subcontractors',
-  'ai_posture',
   'ai_use_terms',
   'ai_use_terms_language',
-  'terms_detail',
   'nava_policy',
   'tools',
-  'project_name',
 
   'client_policy',
-  'client_policy_summary',
-  'client_policy_link',
   'ai_used',
   'usage',
   'review_process',
-  'notes',
 
   'first_seen_at',
   'last_synced_at',
@@ -189,7 +183,10 @@ async function serveContracts(c) {
     const postures = await cachedQueryPartition(referenceTable, 'entity_type', ENTITY_POSTURE);
     const projects = await cachedQueryPartition(projectsTable, 'record_type', RECORD_PROJECT);
 
-    const resolved = contracts.map((contract) => {
+    // The publish flag is applied here rather than at population, so the table
+    // stays a copy of the sheet and a contract marked "No" never reaches a browser,
+    // including by its detail URL.
+    const resolved = contracts.filter(isPublished).map((contract) => {
       const posture = resolvePosture(contract, postures);
       const project = resolveProject(contract, projects);
       return {

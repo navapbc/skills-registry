@@ -122,12 +122,12 @@ function contract(overrides = {}) {
     record_type: RECORD_CONTRACT,
     contract_id: 'user-facing-ai',
     project: 'User-Facing AI',
-    project_name: 'User-Facing AI',
     contract_num: '47QRAA21D0064',
     vehicle: 'GSA MAS',
     customer: 'Nava Labs',
     agreement_type: 'Task order',
-    ai_posture: 'allowed',
+    ai_use_terms: 'Allowed',
+    publish: 'Yes',
     // Fields the initiative page must not publish.
     notes: 'internal contracting note',
     client_policy_summary: 'not this page’s business',
@@ -395,7 +395,21 @@ describe('initiatives related contracts', () => {
     queueReads({
       contracts: [
         contract({ contract_id: 'ufai-1' }),
-        contract({ contract_id: 'elsewhere', project_name: 'MD PBIF', project: 'MD PBIF' }),
+        contract({ contract_id: 'elsewhere', project: 'MD PBIF' }),
+      ],
+    });
+    const res = await app.request(`/api/initiatives?id=${ID}`, { headers });
+    const [got] = (await res.json()).initiatives;
+
+    expect(got.related_contracts.map((c) => c.contract_id)).toEqual(['ufai-1']);
+  });
+
+  it('leaves out a contract the contracts team did not publish', async () => {
+    const headers = as('user');
+    queueReads({
+      contracts: [
+        contract({ contract_id: 'ufai-1' }),
+        contract({ contract_id: 'ufai-hidden', publish: 'No' }),
       ],
     });
     const res = await app.request(`/api/initiatives?id=${ID}`, { headers });
@@ -405,12 +419,13 @@ describe('initiatives related contracts', () => {
   });
 
   it('includes a contract that resolves through the project’s contract_name', async () => {
-    // The contracts-side resolution rule matches project_name OR contract_name.
+    // The contracts-side resolution rule matches a project's project_name OR its
+    // contract_name.
     // Running the initiatives-side rule here instead would drop this row.
     const headers = as('user');
     queueReads({
       projects: [{ ...PROJECT, contract_name: 'UFAI WO-02' }],
-      contracts: [contract({ contract_id: 'by-contract-name', project_name: 'UFAI WO-02' })],
+      contracts: [contract({ contract_id: 'by-contract-name', project: 'UFAI WO-02' })],
     });
     const res = await app.request(`/api/initiatives?id=${ID}`, { headers });
     const [got] = (await res.json()).initiatives;
@@ -537,7 +552,7 @@ describe('initiatives related contracts', () => {
 
     expect(Object.values(contractQuery.params.ExpressionAttributeNames).sort()).toEqual([
       'agreement_type', 'contract_id', 'contract_num', 'customer', 'project',
-      'project_name', 'vehicle',
+      'publish', 'vehicle',
     ]);
     // Reserved words must be aliased, never spelled inline, or the query throws.
     expect(contractQuery.params.ProjectionExpression).not.toMatch(/\bproject\b/);
@@ -700,7 +715,7 @@ describe('initiatives partition cache', () => {
   const twoProjects = () => [PROJECT, { ...PROJECT, project_name: 'MD PBIF', project_code: 'MD01' }];
   const twoContracts = () => [
     contract({ contract_id: 'ufai-1' }),
-    contract({ contract_id: 'pbif-1', project_name: 'MD PBIF', project: 'MD PBIF' }),
+    contract({ contract_id: 'pbif-1', project: 'MD PBIF' }),
   ];
 
   /** The one read a cached request still makes: the uncached seed-meta GetItem. */
@@ -773,7 +788,7 @@ describe('initiatives partition cache', () => {
     // The projection held: the join arrived, the withheld columns did not.
     expect(related.contract_id).toBe('ufai-1');
     expect(related).not.toHaveProperty('notes');
-    expect(related).not.toHaveProperty('project_name');
+    expect(related).not.toHaveProperty('publish');
 
     const contractsQuery = mockSend.mock.calls
       .map(([c]) => c)

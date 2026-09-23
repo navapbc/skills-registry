@@ -291,61 +291,48 @@ Attribute names are snake_case, consistent with every other table here. Every at
   // --- Contract identifiers ---
   agreement_type:   string;  // PRIME CONTRACT | SUBCONTRACT | BPA | BOA | MAS | MSA
                              //   | STATEWIDE CONTRACT | JV variants | ""
-  contract_num:     string;  // absent on 60 records; one value spans 17
+  contract_num:     string;
   vehicle:          string;
-  vehicle_fullname: string;
   task_order:       string;
-  customer:         string;
+  customer:         string;  // shown as the agency on the detail page
 
   // --- People (named individuals) ---
   nava_project_mgr: string;
   nava_program_mgr: string;
   subcontractors:   string;
 
-  // --- AI posture and terms ---
-  ai_posture:            string;  // "" or a posture id — see Joins below
-  ai_use_terms:          string;  // free text, populated on every record
+  // --- AI terms (column L and column M) ---
+  ai_use_terms:          string;  // free text, as written — see Joins below
   ai_use_terms_language: string;  // verbatim contract clause text, multi-paragraph
-  terms_detail:          string;  // curated summary of the clause text
 
   // --- Policy ---
-  client_policy:         string;  // raw answer: is there a client AI-use policy?
-  client_policy_summary: string;  // curated summary of that answer
-  client_policy_link:    string;
-  nava_policy:           string;  // is there a Nava program-specific AI-use policy?
+  client_policy: string;  // is there a client AI-use policy? narrative
+  nava_policy:   string;  // is there a Nava program-specific AI-use policy?
 
   // --- AI use in performance ---
   ai_used:        string;  // Yes | No | narrative
   tools:          string;
   usage:          string;
-  review_process: string;
+  review_process: string;  // the sheet's "agency AI approval requirements"
 
-  // --- Other ---
-  project_name: string;  // the project this contract belongs to — see Joins below
-  notes:        string;
+  // --- Publishing ---
+  publish: string;  // Yes | No — the API serves only "Yes"
 }
 ```
 
-Two source columns are deliberately not stored: a contracts-team-member column holding a named individual, and a duplicate of `ai_posture` that was byte-identical to it on every record.
+The source is the "Compliance" tab of the Contract Performance AI Survey workbook. Every cell is stored as written, and nothing is derived from another column. Five source columns are deliberately not stored: "Contracts Team Member" (a named individual) and the four compliance-tracking columns ("Nava steps for compliance", "Nava Compliance Status", "Needed for compliance", "Notes"). The workbook is attorney-client privileged, so a header in neither the carried map nor the excluded list fails the population run.
+
+Every row is stored whatever its `publish` flag says. `GET /api/contracts`, the initiative related-contracts join, and the `projects-admin` drift findings all skip a contract whose `publish` is not `Yes`.
 
 ### Joins
 
 Both joins are free-text label matches with no write-time integrity, resolved on read — the same pattern as `archetype_primary` on the projects table.
 
-**`project_name` → `projects.project_name` / `projects.contract_name`**, case-folded and whitespace-collapsed. Only 37 records carry a `project_name` at all, and 23 of those resolve. Unresolved contracts are still stored and still shown, carrying their posture, with the missing link marked on the detail page and the name reported on the `projects-admin` surface.
+**`project` → `projects.project_name` / `projects.contract_name`**, case-folded and whitespace-collapsed. The survey's `PROJECT` values follow neither name consistently: as of 2026-09-23, 20 of 104 published contracts resolve. Unresolved contracts are still stored and still shown; they lack only the link to the project index on Sage.
 
 Note that `portfolio` here includes `BEAM`, which has no counterpart in the projects table (`FEDCIV`, `FEDHEALTH`, `STATES`, `LABS`, `Unbillable`), so BEAM contracts have no project to resolve to by construction.
 
-**`ai_posture` → `project_reference` posture `id`.** Values are already exact posture ids, so no mapping is applied:
-
-| Value | Records |
-|---|---|
-| `silent` | 31 |
-| `allowed` | 4 |
-| `restricted` | 2 |
-| `""` | 82 |
-
-No record carries `prohibited`. The 82 records without a posture still carry `ai_use_terms`, which the detail page shows in place of posture guidance. Posture labels, colors, ordering, and guidance steps are read from the posture record rather than copied here, so editing a posture changes the explorer with no deploy.
+**`ai_use_terms` → `project_reference` posture `id`.** A contract resolves to a posture only when the whole cell is a posture id ("Allowed"), matched case-folded. A cell carrying more ("Allowed, disclosure required") resolves to nothing, and the detail page shows it as written. As of 2026-09-23, 7 of 104 published contracts resolve. Posture labels and guidance steps are read from the posture record rather than copied here, so editing a posture changes the explorer with no deploy.
 
 ### `record_type: "seed_meta"` (one record, `contract_id: "current"`)
 

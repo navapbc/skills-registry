@@ -1,7 +1,7 @@
 import { ddb, tables, GetCommand } from '../lib/dynamo.mjs';
 import { cachedQueryPartition } from '../lib/partition-cache.mjs';
 import { RECORD_PROJECT } from '../lib/projects.mjs';
-import { RECORD_CONTRACT, PROJECT_NAME_ATTR } from '../lib/contracts.mjs';
+import { RECORD_CONTRACT, PROJECT_NAME_ATTR, PUBLISH_ATTR, isPublished } from '../lib/contracts.mjs';
 import {
   RECORD_INITIATIVE,
   RECORD_SEED_META,
@@ -237,8 +237,11 @@ async function serveInitiatives(c) {
       // table is missing costs the reader everything to report a partial outage.
       if (!contractsTable) throw new Error('CONTRACTS_TABLE is not configured');
 
-      // PROJECT_NAME_ATTR is read but never served: it is the join key, and leaving
-      // it out of the projection makes every contract resolve to nothing.
+      // PROJECT_NAME_ATTR is the join key, and leaving it out of the projection
+      // makes every contract resolve to nothing. PUBLISH_ATTR is read but never
+      // served: a contract the contracts team marked "No" is not linked from here
+      // either. The Set drops PROJECT_NAME_ATTR when RELATED_CONTRACT_FIELDS already
+      // names it, because DynamoDB rejects a projection naming one path twice.
       //
       // The projection narrows this to six of 30-odd survey columns — ~144KB across
       // 119 items unprojected — buying payload, Lambda memory, and deserialization
@@ -253,7 +256,7 @@ async function serveInitiatives(c) {
       // must: this one carries six columns and that one carries all of them.
       contracts = await cachedQueryPartition(
         contractsTable, 'record_type', RECORD_CONTRACT,
-        [...RELATED_CONTRACT_FIELDS, PROJECT_NAME_ATTR],
+        [...new Set([...RELATED_CONTRACT_FIELDS, PROJECT_NAME_ATTR, PUBLISH_ATTR])],
       );
     } catch (err) {
       // Deliberately NOT rethrown into the route's 500. This read decorates a page
@@ -271,7 +274,8 @@ async function serveInitiatives(c) {
     // Outside the catch on purpose: a throw here is a defect and should reach the
     // route's 500 rather than be dressed up as a load failure.
     if (contracts) {
-      relatedContracts = contractsForProject(targetProject, contracts).map(contract_summary);
+      relatedContracts = contractsForProject(targetProject, contracts.filter(isPublished))
+        .map(contract_summary);
     }
   }
 

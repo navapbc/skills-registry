@@ -405,8 +405,8 @@ describe('projects contract drift', () => {
       contract_id: 'fedciv-co-cobees',
       portfolio: 'FEDCIV',
       project: 'CO COBEES',
-      project_name: 'CO COBEES',
-      ai_posture: 'silent',
+      ai_use_terms: 'Silent',
+      publish: 'Yes',
       ...overrides,
     };
   }
@@ -440,10 +440,23 @@ describe('projects contract drift', () => {
     expect(body.contract_drift.missing_posture).toEqual([]);
   });
 
+  it('counts and reports only the contracts marked for publishing', async () => {
+    const headers = as('projects-admin');
+    queueReads();
+    queueContractReads({
+      contracts: [contract(), contract({ contract_id: 'hidden', project: 'MA PFML', publish: 'No' })],
+    });
+    const res = await app.request('/api/projects', { headers });
+    const body = await res.json();
+
+    expect(body.contract_drift.contract_count).toBe(1);
+    expect(body.contract_drift.unresolved_projects).toEqual([]);
+  });
+
   it('reports a project name matching no project, with the raw value', async () => {
     const headers = as('projects-admin');
     queueReads();
-    queueContractReads({ contracts: [contract({ project_name: 'MA PFML' })] });
+    queueContractReads({ contracts: [contract({ project: 'MA PFML' })] });
     const res = await app.request('/api/projects', { headers });
     const body = await res.json();
 
@@ -456,7 +469,7 @@ describe('projects contract drift', () => {
     const headers = as('projects-admin');
     queueReads();
     queueContractReads({
-      contracts: [contract({ project_name: 'MA PFML', ai_posture: '' })],
+      contracts: [contract({ project: 'MA PFML', ai_use_terms: '' })],
     });
     const res = await app.request('/api/projects', { headers });
     const body = await res.json();
@@ -465,22 +478,22 @@ describe('projects contract drift', () => {
     expect(body.contract_drift.unresolved_projects).toHaveLength(1);
   });
 
-  it('reports a posture value matching no posture record', async () => {
+  it('reports a ruling name matching no posture record', async () => {
     const headers = as('projects-admin');
     queueReads();
-    queueContractReads({ contracts: [contract({ ai_posture: 'prohibited' })] });
+    queueContractReads({ contracts: [contract({ ai_use_terms: 'Prohibited' })] });
     const res = await app.request('/api/projects', { headers });
     const body = await res.json();
 
     expect(body.contract_drift.unresolved_postures).toHaveLength(1);
-    expect(body.contract_drift.unresolved_postures[0].raw_value).toBe('prohibited');
+    expect(body.contract_drift.unresolved_postures[0].raw_value).toBe('Prohibited');
     expect(body.contract_drift.missing_posture).toHaveLength(0);
   });
 
   it('does not report a contract that names no project at all', async () => {
     const headers = as('projects-admin');
     queueReads();
-    queueContractReads({ contracts: [contract({ project_name: '' })] });
+    queueContractReads({ contracts: [contract({ project: '' })] });
     const res = await app.request('/api/projects', { headers });
     const body = await res.json();
 
@@ -547,8 +560,8 @@ describe('projects contract drift', () => {
     queueReads();
     queueContractReads({
       contracts: [contract({
-        project_name: 'MA PFML',
-        ai_posture: 'nonsense',
+        project: 'MA PFML',
+        ai_use_terms: 'Conditional',
         nava_project_mgr: 'A Named Person',
         nava_program_mgr: 'Another Named Person',
         customer: 'SEC',

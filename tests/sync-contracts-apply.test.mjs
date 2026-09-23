@@ -27,35 +27,41 @@ const DeleteCommand = function (params) { return { type: 'Delete', params }; };
 const GetCommand = function (params) { return { type: 'Get', params }; };
 const QueryCommand = function (params) { return { type: 'Query', params }; };
 
-const MACHINE_HEADERS = [
-  '', 'PORTFOLIO', 'PROJECT', 'agreementType', 'contractNum', 'aiUseTerms',
-  'projectName', 'aiPosture', 'terms', 'notes',
+const HEADERS = [
+  'Contracts Team Member', 'PORTFOLIO', 'PROJECT', 'AGREEMENT TYPE', 'CONTRACT NUMBER',
+  'Contract AI Use Terms (i.e., allowed, restricted, silent, prohibited)',
+  'AI Tools Used in Contract Performance (list tools)', 'Notes',
+  'Publish to Project Indices and Contract Explorer (Yes/No)?',
+];
+const ATTRIBUTES = [
+  '', 'portfolio', 'project', 'agreement_type', 'contract_num', 'ai_use_terms', 'tools',
+  'Notes', 'publish',
 ];
 
 function gridOf(...rows) {
-  return [[], [], MACHINE_HEADERS, ...rows];
+  return [[], HEADERS, ...rows];
 }
 
 function rowOf(values) {
-  return MACHINE_HEADERS.map((h, i) => (i === 0 ? '' : (values[h] ?? '')));
+  return ATTRIBUTES.map((a) => (a === '' ? '' : (values[a] ?? '')));
 }
 
-const AECF = { PORTFOLIO: 'LABS', PROJECT: 'AECF', aiUseTerms: 'Silent', notes: 'a' };
-const RIVERSIDE = { PORTFOLIO: 'LABS', PROJECT: 'Riverside', aiUseTerms: 'Allowed', notes: 'b' };
+const AECF = { portfolio: 'LABS', project: 'AECF', ai_use_terms: 'Silent', tools: 'a', publish: 'Yes' };
+const RIVERSIDE = { portfolio: 'LABS', project: 'Riverside', ai_use_terms: 'Allowed', tools: 'b', publish: 'Yes' };
 
 // Enough rows to clear the absolute floor of 90 in tests that should not trip it.
 // Same approach as tests/sync-projects.test.mjs, which clears its floor of 40.
 function manyRows(count, { from = 0 } = {}) {
   return Array.from({ length: count }, (_, i) =>
-    rowOf({ PORTFOLIO: 'LABS', PROJECT: `Filler ${from + i}`, notes: `n${from + i}` }));
+    rowOf({ portfolio: 'LABS', project: `Filler ${from + i}`, tools: `n${from + i}`, publish: 'Yes' }));
 }
 
 /** The stored form of manyRows, as the table would hold it after a run. */
 function manyStored(count, { from = 0, now = NOW } = {}) {
   return Array.from({ length: count }, (_, i) => ({
     contract_id: `labs-filler-${from + i}`,
-    portfolio: 'LABS', project: `Filler ${from + i}`, notes: `n${from + i}`,
-    agreement_type: '', contract_num: '', ai_use_terms: '', project_name: '', ai_posture: '',
+    portfolio: 'LABS', project: `Filler ${from + i}`, tools: `n${from + i}`, publish: 'Yes',
+    agreement_type: '', contract_num: '', ai_use_terms: '',
     first_seen_at: now, last_synced_at: now,
   }));
 }
@@ -177,7 +183,7 @@ describe('populateContracts', () => {
       contracts: [
         {
           contract_id: 'labs-aecf', portfolio: 'LABS', project: 'AECF',
-          ai_use_terms: 'Silent', notes: 'OLD', project_name: '', ai_posture: '',
+          ai_use_terms: 'Silent', tools: 'OLD', publish: 'Yes',
           agreement_type: '', contract_num: '',
           first_seen_at: EARLIER, last_synced_at: EARLIER,
         },
@@ -195,7 +201,7 @@ describe('populateContracts', () => {
   it('deletes contracts the sheet no longer lists', async () => {
     const ddb = fakeDdb({
       contracts: [
-        { contract_id: 'labs-aecf', portfolio: 'LABS', project: 'AECF', ai_use_terms: 'Silent', notes: 'a', project_name: '', ai_posture: '', agreement_type: '', contract_num: '' },
+        { contract_id: 'labs-aecf', portfolio: 'LABS', project: 'AECF', ai_use_terms: 'Silent', tools: 'a', publish: 'Yes', agreement_type: '', contract_num: '' },
         { contract_id: 'labs-gone', portfolio: 'LABS', project: 'Gone' },
       ],
     });
@@ -274,12 +280,12 @@ describe('populateContracts', () => {
     expect(ddb.metaWrites()).toHaveLength(0);
   });
 
-  it('drops the excluded posture duplicate before writing', async () => {
+  it('drops the excluded compliance notes before writing', async () => {
     const ddb = fakeDdb();
-    await run(ddb, gridOf(rowOf({ ...AECF, aiPosture: 'silent', terms: 'silent' })));
+    await run(ddb, gridOf(rowOf({ ...AECF, Notes: 'internal' })));
     const record = ddb.store.get(`${RECORD_CONTRACT}#labs-aecf`);
-    expect(record.ai_posture).toBe('silent');
-    expect(record.terms).toBeUndefined();
+    expect(record.tools).toBe('a');
+    expect(Object.values(record)).not.toContain('internal');
   });
 });
 
@@ -294,7 +300,7 @@ describe('checkContractDrift', () => {
     const drift = await checkContractDrift({
       ddb, projectsTable: PROJECTS_TABLE, referenceTable: REFERENCE_TABLE, QueryCommand,
       contracts: {
-        'labs-aecf': { contract_id: 'labs-aecf', project_name: 'MA PFML', ai_posture: '' },
+        'labs-aecf': { contract_id: 'labs-aecf', project: 'MA PFML', ai_use_terms: '', publish: 'Yes' },
       },
     });
 
@@ -312,8 +318,9 @@ describe('checkContractDrift', () => {
       contracts: {
         'st-md': {
           contract_id: 'st-md',
-          project_name: 'Maryland Statewide Agile Teams',
-          ai_posture: 'silent',
+          project: 'Maryland Statewide Agile Teams',
+          ai_use_terms: 'Silent',
+          publish: 'Yes',
         },
       },
     });
@@ -321,6 +328,19 @@ describe('checkContractDrift', () => {
     expect(drift.unresolvedProjects).toHaveLength(0);
     expect(drift.missingPosture).toHaveLength(0);
     expect(drift.unresolvedPostures).toHaveLength(0);
+  });
+
+  it('skips a contract marked for no publishing', async () => {
+    const ddb = fakeDdb({ projects, postures });
+    const drift = await checkContractDrift({
+      ddb, projectsTable: PROJECTS_TABLE, referenceTable: REFERENCE_TABLE, QueryCommand,
+      contracts: {
+        'labs-aecf': { contract_id: 'labs-aecf', project: 'MA PFML', ai_use_terms: '', publish: 'No' },
+      },
+    });
+
+    expect(drift.unresolvedProjects).toHaveLength(0);
+    expect(drift.missingPosture).toHaveLength(0);
   });
 
   it('reads postures from the reference table, not the projects table', async () => {

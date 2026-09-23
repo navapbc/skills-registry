@@ -58,12 +58,12 @@ describe('record type constants', () => {
     expect(DESCRIPTION_ATTR).toBe('description');
   });
 
-  it('does not name the initiatives project attribute the way contracts names its own', () => {
-    // routes/initiatives.mjs imports PROJECT_NAME_ATTR from contracts.mjs one line
-    // from this module's import. Same name, different value, in the file that joins
-    // the two datasets, is a trap — so the names are deliberately distinct.
-    expect(PROJECT_ATTR).not.toBe(CONTRACTS_PROJECT_NAME_ATTR);
-    expect(CONTRACTS_PROJECT_NAME_ATTR).toBe('project_name');
+  it('keeps its own project constant, whose value today equals the contracts join key', () => {
+    // routes/initiatives.mjs imports PROJECT_NAME_ATTR from contracts.mjs beside
+    // this module's PROJECT_ATTR. Both name a sheet's `project` column today, but
+    // they belong to different sheets and can change independently.
+    expect(PROJECT_ATTR).toBe('project');
+    expect(CONTRACTS_PROJECT_NAME_ATTR).toBe('project');
   });
 });
 
@@ -114,7 +114,7 @@ describe('resolveProject', () => {
 describe('contractsForProject', () => {
   const contract = (over = {}) => ({
     contract_id: 'c-default',
-    project_name: '',
+    project: '',
     ...over,
   });
 
@@ -122,8 +122,8 @@ describe('contractsForProject', () => {
   const ADEPT = PROJECTS.find((p) => p.project_code === 'ST029');
 
   it('keeps the contracts resolving to the project and drops the rest', () => {
-    const mine = contract({ contract_id: 'c-1', project_name: 'User-Facing AI' });
-    const theirs = contract({ contract_id: 'c-2', project_name: 'MD PBIF' });
+    const mine = contract({ contract_id: 'c-1', project: 'User-Facing AI' });
+    const theirs = contract({ contract_id: 'c-2', project: 'MD PBIF' });
 
     const found = contractsForProject(UFAI, [mine, theirs]);
     expect(found.map((c) => c.contract_id)).toEqual(['c-1']);
@@ -132,28 +132,28 @@ describe('contractsForProject', () => {
   it('keeps a contract that resolves through contract_name, not project_name', () => {
     // The whole reason this runs the contracts-side rule. The initiatives rule
     // matches project_name alone and would drop this row silently.
-    const byContractName = contract({ contract_id: 'c-3', project_name: 'MD ADEPT WO-04' });
+    const byContractName = contract({ contract_id: 'c-3', project: 'MD ADEPT WO-04' });
 
     const found = contractsForProject(ADEPT, [byContractName]);
     expect(found.map((c) => c.contract_id)).toEqual(['c-3']);
   });
 
   it('resolves through case and collapsed whitespace', () => {
-    const messy = contract({ contract_id: 'c-4', project_name: '  user-facing   ai ' });
+    const messy = contract({ contract_id: 'c-4', project: '  user-facing   ai ' });
     expect(contractsForProject(UFAI, [messy])).toHaveLength(1);
   });
 
   it('never matches a contract stating no project', () => {
-    expect(contractsForProject(UFAI, [contract({ project_name: '' })])).toEqual([]);
+    expect(contractsForProject(UFAI, [contract({ project: '' })])).toEqual([]);
   });
 
   it('returns nothing for a project that owns no contracts', () => {
-    const theirs = contract({ contract_id: 'c-5', project_name: 'MD PBIF' });
+    const theirs = contract({ contract_id: 'c-5', project: 'MD PBIF' });
     expect(contractsForProject(UFAI, [theirs])).toEqual([]);
   });
 
   it('returns nothing when there is no project to join on', () => {
-    expect(contractsForProject(null, [contract({ project_name: 'User-Facing AI' })])).toEqual([]);
+    expect(contractsForProject(null, [contract({ project: 'User-Facing AI' })])).toEqual([]);
   });
 
   it('finds a project’s contracts even when another project’s contract_name collides', () => {
@@ -162,7 +162,7 @@ describe('contractsForProject', () => {
     // against that answer returns nothing, and the page reports "No contracts on
     // file": a confident wrong answer. Asking the one-project question cannot.
     const decoy = { project_code: 'D', project_name: 'Something Else', contract_name: 'User-Facing AI' };
-    const onUfai = contract({ contract_id: 'c-6', project_name: 'User-Facing AI' });
+    const onUfai = contract({ contract_id: 'c-6', project: 'User-Facing AI' });
 
     expect(contractsForProject(UFAI, [onUfai]).map((c) => c.contract_id)).toEqual(['c-6']);
     // And the decoy legitimately claims it too — ambiguous data rendered honestly
@@ -175,7 +175,7 @@ describe('contractsForProject', () => {
     // match every code-less project to every other via `undefined === undefined`.
     const a = { project_name: 'Alpha', contract_name: '' };
     const b = { project_name: 'Beta', contract_name: '' };
-    const onB = contract({ contract_id: 'c-7', project_name: 'Beta' });
+    const onB = contract({ contract_id: 'c-7', project: 'Beta' });
 
     expect(contractsForProject(a, [onB])).toEqual([]);
     expect(contractsForProject(b, [onB]).map((c) => c.contract_id)).toEqual(['c-7']);

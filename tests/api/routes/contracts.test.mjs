@@ -95,9 +95,8 @@ function contract(overrides = {}) {
     contract_id: 'fedciv-co-cobees',
     portfolio: 'FEDCIV',
     project: 'CO COBEES',
-    project_name: 'CO COBEES',
-    ai_posture: 'silent',
-    ai_use_terms: 'Silent on AI use.',
+    ai_use_terms: 'Silent',
+    publish: 'Yes',
     ...overrides,
   };
 }
@@ -229,20 +228,40 @@ describe('contracts payload', () => {
 
   it('reports a contract with no posture as null rather than omitting it', async () => {
     const headers = as('user');
-    queueReads({ contracts: [contract({ ai_posture: '' })] });
+    queueReads({ contracts: [contract({ ai_use_terms: '' })] });
     const body = await (await app.request('/api/contracts', { headers })).json();
     expect(body.contracts[0].posture_id).toBeNull();
     // The grid's default filter depends on telling this apart from a resolved one.
     expect(body.contracts[0]).toHaveProperty('posture_id');
   });
 
-  it('reports a posture naming no record as null', async () => {
+  it('reports free-text terms as no posture, and serves the terms as written', async () => {
     const headers = as('user');
-    queueReads({ contracts: [contract({ ai_posture: 'nonsense' })] });
+    queueReads({ contracts: [contract({ ai_use_terms: 'Silent on use terms, no explicit AI terms.' })] });
     const body = await (await app.request('/api/contracts', { headers })).json();
     expect(body.contracts[0].posture_id).toBeNull();
     // The raw value survives so the detail page can show what the survey says.
-    expect(body.contracts[0].ai_posture).toBe('nonsense');
+    expect(body.contracts[0].ai_use_terms).toBe('Silent on use terms, no explicit AI terms.');
+  });
+
+  it('serves only the contracts marked for publishing', async () => {
+    const headers = as('user');
+    queueReads({
+      contracts: [
+        contract(),
+        contract({ contract_id: 'hidden-no', publish: 'No' }),
+        contract({ contract_id: 'hidden-blank', publish: '' }),
+      ],
+    });
+    const body = await (await app.request('/api/contracts', { headers })).json();
+    expect(body.contracts.map((c) => c.contract_id)).toEqual(['fedciv-co-cobees']);
+  });
+
+  it('does not serve the publish flag itself', async () => {
+    const headers = as('user');
+    queueReads();
+    const body = await (await app.request('/api/contracts', { headers })).json();
+    expect(body.contracts[0]).not.toHaveProperty('publish');
   });
 
   it('orders postures by authored position, not by id', async () => {
@@ -320,7 +339,7 @@ describe('project resolution', () => {
 
   it('attaches null when the name resolves to nothing', async () => {
     const headers = as('user');
-    queueReads({ contracts: [contract({ project_name: 'MA PFML' })] });
+    queueReads({ contracts: [contract({ project: 'MA PFML' })] });
     const body = await (await app.request('/api/contracts', { headers })).json();
     expect(body.contracts[0].resolved_project).toBeNull();
     // The contract is still served — the posture answer does not depend on the join.
@@ -329,7 +348,7 @@ describe('project resolution', () => {
 
   it('attaches null when the contract names no project at all', async () => {
     const headers = as('user');
-    queueReads({ contracts: [contract({ project_name: '' })] });
+    queueReads({ contracts: [contract({ project: '' })] });
     const body = await (await app.request('/api/contracts', { headers })).json();
     expect(body.contracts[0].resolved_project).toBeNull();
   });

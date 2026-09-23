@@ -29,15 +29,11 @@ import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
 import {
   indexPostures,
-  postureShortName,
   filterContracts,
-  countHiddenUnclassified,
   portfoliosOf,
   describePopulationNotice,
   renderContractGrid,
   renderContractDetail,
-  renderUnclassifiedToggle,
-  formatCapturedAt,
 } from '../../lib/contracts-render.mjs';
 
 const container = document.getElementById('contracts-content')!;
@@ -100,17 +96,9 @@ if (data) {
     // ── Grid view ────────────────────────────────────────────────────────
     document.title = 'Contract Explorer · Skills Hub';
 
-    let includeUnclassified = false;
-    let posture = 'all';
     let portfolio = 'all';
     let query = '';
 
-    // Short names, so an option reads as the same thing as the badge on the cards
-    // below it. The full label stays on the detail page, where it is the heading
-    // for that posture's guidance.
-    const postureOptions = (data.postures ?? [])
-      .map((p: any) => `<option value="${escapeHtml(p.id)}">${escapeHtml(postureShortName(p))}</option>`)
-      .join('');
     const portfolioOptions = portfoliosOf(contracts)
       .map((p) => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`)
       .join('');
@@ -136,44 +124,25 @@ if (data) {
         <select id="contracts-portfolio" aria-label="Filter by portfolio" class="${selectClass}">
           <option value="all">All portfolios</option>${portfolioOptions}
         </select>
-        <select id="contracts-posture" aria-label="Filter by AI posture" class="${selectClass}">
-          <option value="all">All AI postures</option>${postureOptions}
-        </select>
       </div>
 
-      <div class="flex flex-wrap items-center gap-3 mb-6">
-        <div id="contracts-unclassified"></div>
-        <p class="text-xs text-gray-600 m-0" id="contracts-count"></p>
-      </div>
+      <p class="text-xs text-gray-600 mt-0 mb-6" id="contracts-count"></p>
 
       <div id="contracts-grid"></div>`;
 
     const gridEl = document.getElementById('contracts-grid')!;
     const countEl = document.getElementById('contracts-count')!;
-    const toggleWrap = document.getElementById('contracts-unclassified')!;
 
     function render() {
-      const visible = filterContracts(contracts, { posture, portfolio, query, includeUnclassified });
-      const hidden = countHiddenUnclassified(contracts, { portfolio, query });
-
-      toggleWrap.innerHTML = renderUnclassifiedToggle(hidden, includeUnclassified, posture !== 'all');
+      const visible = filterContracts(contracts, { portfolio, query });
       countEl.textContent = `${visible.length} of ${contracts.length} record${contracts.length === 1 ? '' : 's'}`;
-      gridEl.innerHTML = renderContractGrid(visible, postureById);
-
-      document.getElementById('contracts-unclassified-toggle')?.addEventListener('click', () => {
-        includeUnclassified = !includeUnclassified;
-        render();
-      });
+      gridEl.innerHTML = renderContractGrid(visible);
     }
 
     render();
 
     document.getElementById('contracts-search')!.addEventListener('input', (e) => {
       query = (e.target as HTMLInputElement).value;
-      render();
-    });
-    document.getElementById('contracts-posture')!.addEventListener('change', (e) => {
-      posture = (e.target as HTMLSelectElement).value;
       render();
     });
     document.getElementById('contracts-portfolio')!.addEventListener('change', (e) => {

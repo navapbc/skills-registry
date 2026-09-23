@@ -1,6 +1,6 @@
 /**
- * Pure logic for the contracts population — shaping, key derivation, the
- * reconcile diff, and the safety gate.
+ * Pure logic for the contracts population — header mapping, shaping, key
+ * derivation, the reconcile diff, and the safety gate.
  *
  * Split from scripts/sync-contracts.mjs for the same reason sync-projects.mjs
  * was split: the entry point needs live Google and AWS credentials, and
@@ -11,11 +11,6 @@
  * Nothing in this file performs I/O.
  */
 
-// Imported rather than redeclared so the stored record types cannot drift from
-// what the API reads. The dependency direction is forced: the API Lambda zip is
-// built from functions/api/ alone, so nothing there may import from scripts/.
-import { RECORD_CONTRACT } from '../../functions/api/lib/contracts.mjs';
-
 export class SyncContractsError extends Error {
   constructor(message) {
     super(message);
@@ -24,62 +19,79 @@ export class SyncContractsError extends Error {
 }
 
 // 0-based grid index, NOT a sheet row number. Sheet row 1 holds banner labels
-// ("Contracts to Complete"), row 2 holds prose headers, row 3 holds the machine
-// names this shaping reads.
-//
-// Named explicitly rather than auto-detected: density detection picks row 2 on
-// this tab, and row 2's prose headers include seven placeholders literally named
-// "Column 21".."Column 27" over the columns that carry the posture and project.
-// A wrong pick there produces a plausible-looking result with the two most
-// important columns misnamed.
-export const HEADER_ROW = 2;
+// ("Contracts to Complete") and sheet row 2 holds the prose headers this shaping
+// reads. Data starts on sheet row 3.
+export const HEADER_ROW = 1;
 
-// Headers deliberately NOT carried into storage.
-//
-// An explicit denylist rather than an inclusion list, matching the projects
-// sync: the survey gains columns, and a new one should arrive automatically
-// rather than being silently dropped until someone edits code.
-//
-//  - The unnamed first column (row 2 calls it "Contracts Team Member") holds a
-//    named individual. It has no machine name, so it is excluded by position —
-//    see UNNAMED_COLUMN_INDEX.
-//  - `terms` was byte-identical to `aiPosture` on all 119 rows at the time of
-//    writing. Carrying both would create two sources of truth for the posture.
-export const EXCLUDED_HEADERS = ['terms'];
-export const UNNAMED_COLUMN_INDEX = 0;
+/**
+ * Collapse a header's whitespace, so a doubled space or a trailing newline typed
+ * into the sheet does not read as a different column.
+ */
+export const normalizeHeader = (header) => String(header ?? '').replace(/\s+/g, ' ').trim();
 
-// Attribute names the population writes itself. A survey column that slugs to one
-// of these would reach the stored item through the record spread and overwrite it.
+// The "Compliance" tab has prose headers only, so each carried column is mapped to
+// its stored attribute here. The attribute names match what the previous survey
+// tab stored, so the API and the renderer read the same names.
 //
-// `contract_id` and `record_type` are the primary key: a column named `contractId`
-// slugs to `contract_id`, wins over the key the writer sets, and sends the Put to a
-// phantom range key — the real record is never touched again and serves stale data
-// forever, with no delete for the gate to notice.
-export const RESERVED_ATTRIBUTES = [
-  'record_type',
-  'contract_id',
-  'first_seen_at',
-  'last_synced_at',
+// An inclusion map, unlike the projects sync's slug-every-column rule, for two
+// reasons. A prose header slugs to an unreadable attribute name. This workbook is
+// also attorney-client privileged and carries compliance-internal columns, so a
+// column must be carried on purpose. A header in neither this map nor
+// EXCLUDED_HEADERS fails the run.
+export const COLUMN_ATTRIBUTES = {
+  'PORTFOLIO': 'portfolio',
+  'PROJECT': 'project',
+  'AGREEMENT TYPE': 'agreement_type',
+  'CONTRACT NUMBER': 'contract_num',
+  'VEHICLE / OTHER (BPA/BOA/MSA)': 'vehicle',
+  'TASK ORDER': 'task_order',
+  'CUSTOMER': 'customer',
+  'PROJECT MANAGER (Nava)': 'nava_project_mgr',
+  'PROGRAM MANAGER (Nava)': 'nava_program_mgr',
+  'SUBCONTRACTORS': 'subcontractors',
+  'Contract AI Use Terms (i.e., allowed, restricted, silent, prohibited)': 'ai_use_terms',
+  'AI Use Terms Language': 'ai_use_terms_language',
+  'Is there a Client AI Use Policy (outside of the contract)? (Yes/No; if yes, provide brief narrative and link to policy)': 'client_policy',
+  'Is there a Nava Program-Specific AI Use Policy? (Yes/No; if yes, provide brief narrative and link to policy)': 'nava_policy',
+  'Is AI Used in Contract Performance? (Yes/No)': 'ai_used',
+  'AI Tools Used in Contract Performance (list tools)': 'tools',
+  'Description of How AI is Used in Contract Performance (brief narrative)': 'usage',
+  'agency AI approval requirements': 'review_process',
+  'Publish to Project Indices and Contract Explorer (Yes/No)?': 'publish',
+};
+
+// Headers read from the sheet and deliberately NOT stored.
+//
+//  - "Contracts Team Member" names an individual on the contracts team.
+//  - The remaining four are the contracts team's compliance tracking. The Contract
+//    Explorer serves every signed-in user, and these columns are not for them.
+export const EXCLUDED_HEADERS = [
+  'Contracts Team Member',
+  'Nava steps for compliance',
+  'Nava Compliance Status',
+  'Needed for compliance',
+  'Notes',
 ];
 
-// Machine names the shaping refuses to proceed without. Not the full column set
-// — new columns are carried automatically — but the ones whose absence means the
-// header row shifted or was reorganized, which otherwise yields a result that
-// looks valid and is not.
-export const REQUIRED_HEADERS = [
-  'PORTFOLIO',
-  'PROJECT',
-  'aiPosture',
-  'projectName',
-  'aiUseTerms',
-  'contractNum',
+// The contracts team's publish flag. It is stored like any other column, and the
+// API serves only the contracts whose flag reads "Yes".
+export const PUBLISH_ATTR = 'publish';
+
+// Attributes the shaping refuses to proceed without. Their absence means the
+// header row shifted or a header was reworded.
+export const REQUIRED_ATTRIBUTES = [
+  'portfolio',
+  'project',
+  'contract_num',
+  'ai_use_terms',
+  PUBLISH_ATTR,
 ];
 
-// The two columns the contract id is built from. Both are populated on every row
-// today, which is the property that makes the id stable: an id drawn from a
+// The two attributes the contract id is built from. Both are populated on every
+// row today, which is the property that makes the id stable: an id drawn from a
 // sparse column re-keys itself as the survey is filled in, and the reconcile
 // reads that as a delete plus a create.
-export const ID_COLUMNS = ['PORTFOLIO', 'PROJECT'];
+export const ID_ATTRIBUTES = ['portfolio', 'project'];
 
 // Tolerated deletes as a fraction of what is stored. Bounds the case a row count
 // alone cannot see — a shifted header row can produce a full delete-and-recreate
@@ -97,28 +109,10 @@ export const MAX_ROW_DROP_FRACTION = 0.1;
 // single run exceeding 10%. A per-run ceiling cannot see a compounding drain across
 // runs; only a floor terminates it.
 //
-// 119 contracts today. 90 is low enough not to block a real contraction of the
-// survey and high enough to stop the decay early. Revisit if the survey changes
-// materially — a hardcoded number goes stale silently.
+// 119 contracts today, published or not. 90 is low enough not to block a real
+// contraction of the survey and high enough to stop the decay early. Revisit if
+// the survey changes materially — a hardcoded number goes stale silently.
 export const ABSOLUTE_FLOOR = 90;
-
-/**
- * Derive a stored attribute name from a machine header.
- *
- * The survey mixes two conventions — SCREAMING for a few columns, camelCase for
- * the rest — and storage uses snake_case throughout, matching every other table
- * in this repo. One function owns the rule so the population and any reader
- * cannot disagree about what a column is called.
- */
-export function slugAttribute(header) {
-  return String(header ?? '')
-    .trim()
-    // Split camelCase before lowercasing, or the word boundaries are lost.
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
 
 /**
  * Build a contract id from the portfolio and project values.
@@ -140,88 +134,64 @@ export function slugContractId(...parts) {
  * Turn the raw cell grid into contracts keyed by contract id.
  *
  * Reads the header row from the grid directly rather than going through
- * rowsToObjects, which renames duplicate headers (`clientPolicy` ->
- * `clientPolicy_2`) and blank ones (`column_1`). Those renames would let a
- * reintroduced duplicate through as a new attribute instead of failing, and the
- * duplicate is exactly the defect this tab already had once.
+ * rowsToObjects, which renames duplicate headers (`Notes` -> `Notes_2`) and blank
+ * ones (`column_1`). Those renames would let a reintroduced duplicate through as
+ * a new attribute instead of failing.
  *
- * Every row is imported. This applies no validity judgement of its own — no
- * portfolio allowlist, no posture requirement. Rows the survey should not
- * contain are removed at the sheet.
+ * Every cell is stored as written. Nothing here derives a value from another
+ * column, and every row is stored whatever its publish flag says: the flag is
+ * the API's to apply, so the table stays a copy of the sheet.
  */
 export function shapeContracts(cells) {
-  const headerCells = cells?.[HEADER_ROW] ?? [];
-  const headers = headerCells.map((h) => String(h ?? '').trim());
+  const headers = (cells?.[HEADER_ROW] ?? []).map(normalizeHeader);
+  const attributeOf = Object.fromEntries(
+    Object.entries(COLUMN_ATTRIBUTES).map(([header, attribute]) => [normalizeHeader(header), attribute]),
+  );
+  const excluded = new Set(EXCLUDED_HEADERS.map(normalizeHeader));
 
-  const missing = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
-  if (missing.length > 0) {
-    throw new SyncContractsError(
-      `The header row is missing: ${missing.join(', ')}. ` +
-        `Expected machine names at grid index ${HEADER_ROW} (sheet row ${HEADER_ROW + 1}); ` +
-        `found: ${headers.filter((h) => h !== '').join(', ') || '(empty row)'}. ` +
-        'A shifted or reorganized header row otherwise produces a plausible-looking result, ' +
-        'so this is checked before any shaping.',
-    );
-  }
-
-  // Checked AFTER the required-header check, so a shifted or emptied header row
-  // gets the message that names the expected row rather than this narrower one.
-  //
-  // The unnamed column is excluded BY POSITION while every other header is
-  // validated BY NAME, and those two strategies disagree the moment a column is
-  // inserted or deleted to the left of the data. Deleting column A shifts
-  // everything left: PORTFOLIO lands at index 0 and is dropped, the required-header
-  // check still passes because the NAME is present, and the id still resolves via
-  // indexOf — so shaping succeeds and every record is written WITHOUT its
-  // portfolio. Put replaces items whole, so that erases the attribute from all 119
-  // stored contracts while reporting a clean run of updates, and there are no
-  // deletes for the gate to see.
-  if (headers[UNNAMED_COLUMN_INDEX] !== '') {
-    throw new SyncContractsError(
-      `Expected the header at column ${UNNAMED_COLUMN_INDEX + 1} to be unnamed, but found ` +
-        `"${headers[UNNAMED_COLUMN_INDEX]}". That column is excluded by position, so a column ` +
-        'inserted or deleted to its left silently drops a real column from every record ' +
-        'instead of failing. Restore the column order, or update UNNAMED_COLUMN_INDEX.',
-    );
-  }
-
-  // Column indices to carry, with their attribute names. Built by index rather
-  // than by name so the unnamed first column can be excluded by position.
+  const unknown = headers.filter((h) => h !== '' && !attributeOf[h] && !excluded.has(h));
   const carried = [];
   const byAttribute = new Map();
   headers.forEach((header, index) => {
-    if (index === UNNAMED_COLUMN_INDEX) return;
-    if (header === '') return;
-    if (EXCLUDED_HEADERS.includes(header)) return;
+    const attribute = attributeOf[header];
+    if (!attribute) return;
 
-    const attribute = slugAttribute(header);
-
-    // A column that slugs onto a name the writer sets would reach the item through
-    // the record spread and win. For the key attributes that means writing to a
-    // phantom range key: the real record is never updated again, and there is no
-    // delete for the gate to notice.
-    if (RESERVED_ATTRIBUTES.includes(attribute)) {
-      throw new SyncContractsError(
-        `Header "${header}" maps to the attribute "${attribute}", which the population ` +
-          'writes itself. Carrying it would overwrite a key or an audit timestamp on every ' +
-          `record. Rename the column in the sheet. Reserved: ${RESERVED_ATTRIBUTES.join(', ')}.`,
-      );
-    }
-
-    // Collisions are rejected rather than resolved: silently keeping the last
+    // Two columns with the same header would both map here. Keeping the last
     // writer would drop a whole column's data with no signal anywhere.
     if (byAttribute.has(attribute)) {
       throw new SyncContractsError(
-        `Headers "${byAttribute.get(attribute)}" and "${header}" both map to the attribute ` +
-          `"${attribute}". Rename one in the sheet — keeping both would silently drop one column.`,
+        `Two columns are headed "${header}". Rename one in the sheet — keeping both ` +
+          'would silently drop one column.',
       );
     }
     byAttribute.set(attribute, header);
     carried.push({ index, header, attribute });
   });
 
-  const idIndices = ID_COLUMNS.map((name) => headers.indexOf(name));
+  const missing = REQUIRED_ATTRIBUTES.filter((a) => !byAttribute.has(a));
+  if (missing.length > 0) {
+    const expected = missing.map((a) => Object.keys(COLUMN_ATTRIBUTES).find((h) => COLUMN_ATTRIBUTES[h] === a));
+    throw new SyncContractsError(
+      `The header row is missing: ${expected.map((h) => `"${h}"`).join(', ')}. ` +
+        `Expected prose headers at grid index ${HEADER_ROW} (sheet row ${HEADER_ROW + 1}); ` +
+        `found: ${headers.filter((h) => h !== '').join(' | ') || '(empty row)'}. ` +
+        'A shifted or reworded header row otherwise produces a plausible-looking result, ' +
+        'so this is checked before any shaping.',
+    );
+  }
+
+  // Checked after the required headers, so a shifted header row gets the message
+  // that names the expected row rather than a list of every header as unknown.
+  if (unknown.length > 0) {
+    throw new SyncContractsError(
+      `The header row has columns this sync does not know: ${unknown.map((h) => `"${h}"`).join(', ')}. ` +
+        'Add each to COLUMN_ATTRIBUTES to store it, or to EXCLUDED_HEADERS to leave it out.',
+    );
+  }
+
   const cellAt = (row, index) => String(row?.[index] ?? '').trim();
+  const indexOf = (attribute) => carried.find((c) => c.attribute === attribute).index;
+  const idIndices = ID_ATTRIBUTES.map(indexOf);
 
   const contracts = {};
   const seenAt = new Map();
@@ -241,7 +211,7 @@ export function shapeContracts(cells) {
     const id = slugContractId(...idIndices.map((index) => cellAt(row, index)));
     if (id === '') {
       throw new SyncContractsError(
-        `Sheet row ${sheetRow} carries data but has no ${ID_COLUMNS.join(' or ')}, ` +
+        `Sheet row ${sheetRow} carries data but has no ${ID_ATTRIBUTES.join(' or ')}, ` +
           'so it cannot be keyed and must not be silently dropped. ' +
           'Fill those columns in, or clear the row.',
       );
@@ -250,7 +220,7 @@ export function shapeContracts(cells) {
     if (seenAt.has(id)) {
       throw new SyncContractsError(
         `Contract id "${id}" is produced by both sheet row ${seenAt.get(id)} and row ${sheetRow}. ` +
-          `Ids come from ${ID_COLUMNS.join(' + ')}, so one row would silently overwrite the other. ` +
+          `Ids come from ${ID_ATTRIBUTES.join(' + ')}, so one row would silently overwrite the other. ` +
           'Distinguish the two in the sheet.',
       );
     }
@@ -268,7 +238,6 @@ export function shapeContracts(cells) {
   return {
     contracts,
     headers: [...headers],
-    columnHeaders: Object.fromEntries(carried.map(({ attribute, header }) => [attribute, header])),
     skippedBlankRows,
   };
 }

@@ -206,9 +206,10 @@ export async function populateContracts({
  * Compare the populated contracts against the projects and posture records.
  *
  * Everything here warns rather than fails, which is the opposite of the projects
- * sync's unresolved-archetype behaviour, and deliberately so. 82 of 119 rows
- * carry no posture and 14 named projects resolve to nothing — that is the
- * survey's current state, not a regression. Failing would make every run red and
+ * sync's unresolved-archetype behaviour, and deliberately so. Column L is free
+ * text, so 97 of 104 published contracts carry no bare ruling name, and 84 PROJECT
+ * values match no project — that is the survey's current state, not a
+ * regression. Failing would make every run red and
  * train the operator to ignore it.
  */
 export async function checkContractDrift({

@@ -1,71 +1,70 @@
 import { describe, it, expect } from 'vitest';
 import {
   HEADER_ROW,
+  COLUMN_ATTRIBUTES,
   EXCLUDED_HEADERS,
   MAX_DELETE_FRACTION,
   ABSOLUTE_FLOOR,
-  RESERVED_ATTRIBUTES,
   SyncContractsError,
-  slugAttribute,
+  normalizeHeader,
   slugContractId,
   shapeContracts,
   reconcile,
   safetyVerdict,
 } from '../scripts/lib/sync-contracts.mjs';
 
-// The real tab: row 1 banners, row 2 prose headers, row 3 machine names, data below.
-// Only the machine-name row and the data rows matter to shaping, but the grid is
-// built with all three so the tests exercise the same offsets the sheet has.
-const MACHINE_HEADERS = [
-  '', 'PORTFOLIO', 'PROJECT', 'agreementType', 'contractNum', 'vehicle', 'taskOrder',
-  'customer', 'navaProjectMgr', 'navaProgramMgr', 'SUBCONTRACTORS', 'aiUseTerms',
-  'aiUseTermsLanguage', 'clientPolicy', 'navaPolicy', 'aiUsed', 'tools', 'usage',
-  'reviewProcess', 'notes', 'projectName', 'aiPosture', 'terms', 'termsDetail',
-  'clientPolicySummary', 'clientPolicyLink', 'vehicleFullname',
+// The real "Compliance" tab: row 1 banners, row 2 prose headers, data below. The
+// headers are the tab's own, in its own column order.
+const HEADERS = [
+  'Contracts Team Member',
+  ...Object.keys(COLUMN_ATTRIBUTES).slice(0, 18),
+  'Nava steps for compliance',
+  'Nava Compliance Status',
+  'Needed for compliance',
+  'Notes',
+  'Publish to Project Indices and Contract Explorer (Yes/No)?',
 ];
+
+const header = (attribute) => Object.keys(COLUMN_ATTRIBUTES).find((h) => COLUMN_ATTRIBUTES[h] === attribute);
 
 function gridOf(...dataRows) {
   return [
     ['', '', '', '', '', '', '', '', '', '', '', 'Contracts to Complete'],
-    ['Contracts Team Member', 'PORTFOLIO', 'PROJECT'],
-    MACHINE_HEADERS,
+    HEADERS,
     ...dataRows,
   ];
 }
 
-/** A data row keyed by machine header name, padded to the grid's width. */
+/** A data row keyed by stored attribute or by excluded header, padded to the grid's width. */
 function rowOf(values) {
-  return MACHINE_HEADERS.map((h, i) => (i === 0 ? (values[''] ?? '') : (values[h] ?? '')));
+  return HEADERS.map((h) => values[COLUMN_ATTRIBUTES[h]] ?? values[h] ?? '');
 }
 
 const SEC = {
-  'PORTFOLIO': 'FEDCIV',
-  'PROJECT': 'SEC ENTERPRISE WEBSITES',
-  'agreementType': 'PRIME CONTRACTS',
-  'contractNum': '47QTCA18D008M',
-  'aiUseTerms': 'TO Silent, BPA Restricted',
-  'projectName': 'SEC Enterprise Websites',
-  'aiPosture': 'restricted',
-  'terms': 'restricted',
-  'navaProjectMgr': 'Someone Named',
+  portfolio: 'FEDCIV',
+  project: 'SEC ENTERPRISE WEBSITES',
+  agreement_type: 'PRIME CONTRACTS',
+  contract_num: '47QTCA18D008M',
+  ai_use_terms: 'Conditional, TO Silent, BPA Restricted',
+  nava_project_mgr: 'Someone Named',
+  publish: 'Yes',
+  'Contracts Team Member': 'Andrew',
+  'Nava Compliance Status': 'confirmed',
+  'Notes': 'internal note',
 };
 
-describe('slugAttribute', () => {
-  it('lowercases screaming headers', () => {
-    expect(slugAttribute('PORTFOLIO')).toBe('portfolio');
-    expect(slugAttribute('SUBCONTRACTORS')).toBe('subcontractors');
+describe('the header map', () => {
+  it('maps every carried header of the real tab, in its column order', () => {
+    expect(HEADERS).toHaveLength(24);
+    expect(HEADERS.at(-1)).toBe(header('publish'));
   });
 
-  it('converts camelCase to snake_case', () => {
-    expect(slugAttribute('agreementType')).toBe('agreement_type');
-    expect(slugAttribute('aiUseTermsLanguage')).toBe('ai_use_terms_language');
-    expect(slugAttribute('navaProjectMgr')).toBe('nava_project_mgr');
-    expect(slugAttribute('clientPolicySummary')).toBe('client_policy_summary');
+  it('reads the prose header row, sheet row 2', () => {
+    expect(HEADER_ROW).toBe(1);
   });
 
-  it('leaves already-flat names alone', () => {
-    expect(slugAttribute('notes')).toBe('notes');
-    expect(slugAttribute('tools')).toBe('tools');
+  it('collapses whitespace so a doubled space is the same header', () => {
+    expect(normalizeHeader('  agency  AI\napproval requirements ')).toBe('agency AI approval requirements');
   });
 });
 
@@ -93,35 +92,48 @@ describe('shapeContracts', () => {
     expect(Object.keys(contracts)).toEqual(['fedciv-sec-enterprise-websites']);
   });
 
+  it('stores the AI use terms exactly as written, deriving nothing from them', () => {
+    const record = shapeContracts(gridOf(rowOf(SEC))).contracts['fedciv-sec-enterprise-websites'];
+    expect(record.ai_use_terms).toBe('Conditional, TO Silent, BPA Restricted');
+    expect(record).not.toHaveProperty('ai_posture');
+  });
+
   it('carries every attribute as a string, empty when the cell is blank', () => {
-    const { contracts } = shapeContracts(gridOf(rowOf({
-      PORTFOLIO: 'LABS', PROJECT: 'AECF',
-    })));
+    const { contracts } = shapeContracts(gridOf(rowOf({ portfolio: 'LABS', project: 'AECF' })));
     const record = contracts['labs-aecf'];
     expect(record.contract_num).toBe('');
-    expect(record.notes).toBe('');
-    expect(record.ai_posture).toBe('');
+    expect(record.review_process).toBe('');
     for (const value of Object.values(record)) expect(typeof value).toBe('string');
   });
 
-  it('never omits an attribute, so absent and empty are not confusable', () => {
-    const { contracts } = shapeContracts(gridOf(rowOf({ PORTFOLIO: 'LABS', PROJECT: 'AECF' })));
-    // The property Plan 2's default filter depends on.
-    expect(Object.prototype.hasOwnProperty.call(contracts['labs-aecf'], 'ai_posture')).toBe(true);
+  it('stores the publish flag, and stores a row marked No', () => {
+    // The API applies the flag. The table stays a copy of the sheet.
+    const { contracts } = shapeContracts(gridOf(
+      rowOf(SEC),
+      rowOf({ portfolio: 'LABS', project: 'AECF', publish: 'No' }),
+    ));
+    expect(contracts['fedciv-sec-enterprise-websites'].publish).toBe('Yes');
+    expect(contracts['labs-aecf'].publish).toBe('No');
   });
 
-  it('drops the unnamed first column and the duplicate posture column', () => {
-    const { contracts } = shapeContracts(gridOf(rowOf(SEC)));
-    const record = contracts['fedciv-sec-enterprise-websites'];
-    expect(record.terms).toBeUndefined();
-    expect(Object.values(record)).not.toContain('Contracts Team Member');
-    // The posture itself is still carried — only its duplicate is dropped.
-    expect(record.ai_posture).toBe('restricted');
+  it('drops the team member and the compliance columns', () => {
+    const record = shapeContracts(gridOf(rowOf(SEC))).contracts['fedciv-sec-enterprise-websites'];
+    expect(Object.values(record)).not.toContain('Andrew');
+    expect(Object.values(record)).not.toContain('confirmed');
+    expect(Object.values(record)).not.toContain('internal note');
+    expect(record).not.toHaveProperty('notes');
+  });
+
+  it('excludes the four compliance columns and the team member by name', () => {
+    expect(EXCLUDED_HEADERS).toEqual(expect.arrayContaining([
+      'Contracts Team Member', 'Nava steps for compliance', 'Nava Compliance Status',
+      'Needed for compliance', 'Notes',
+    ]));
   });
 
   it('keeps a row whose only populated cells are the two key columns', () => {
     const { contracts, skippedBlankRows } = shapeContracts(
-      gridOf(rowOf({ PORTFOLIO: 'LABS', PROJECT: 'AECF' })),
+      gridOf(rowOf({ portfolio: 'LABS', project: 'AECF' })),
     );
     expect(Object.keys(contracts)).toHaveLength(1);
     expect(skippedBlankRows).toBe(0);
@@ -129,17 +141,23 @@ describe('shapeContracts', () => {
 
   it('skips and counts fully blank spacer rows', () => {
     const { contracts, skippedBlankRows } = shapeContracts(
-      gridOf(rowOf(SEC), [], rowOf({ PORTFOLIO: 'LABS', PROJECT: 'AECF' })),
+      gridOf(rowOf(SEC), [], rowOf({ portfolio: 'LABS', project: 'AECF' })),
     );
     expect(Object.keys(contracts)).toHaveLength(2);
     expect(skippedBlankRows).toBe(1);
   });
 
-  it('fails when an expected machine name is missing from the header row', () => {
+  it('counts a row holding only an excluded column as blank', () => {
+    const { contracts, skippedBlankRows } = shapeContracts(gridOf(rowOf({ Notes: 'stray' })));
+    expect(Object.keys(contracts)).toHaveLength(0);
+    expect(skippedBlankRows).toBe(1);
+  });
+
+  it('fails when a required header is missing, naming it', () => {
     const grid = gridOf(rowOf(SEC));
-    grid[HEADER_ROW] = grid[HEADER_ROW].map((h) => (h === 'aiPosture' ? 'somethingElse' : h));
+    grid[HEADER_ROW] = grid[HEADER_ROW].map((h) => (h === header('publish') ? '' : h));
     expect(() => shapeContracts(grid)).toThrow(SyncContractsError);
-    expect(() => shapeContracts(grid)).toThrow(/aiPosture/);
+    expect(() => shapeContracts(grid)).toThrow(/Publish to Project Indices/);
   });
 
   it('names the expected header row in the failure, since a shift looks plausible', () => {
@@ -148,27 +166,44 @@ describe('shapeContracts', () => {
     expect(() => shapeContracts(grid)).toThrow(new RegExp(`row ${HEADER_ROW + 1}`));
   });
 
-  it('fails on two headers slugging to the same attribute', () => {
+  it('fails on a header in neither the map nor the exclusions', () => {
+    // A new or reworded column is carried only once someone decides it should be.
     const grid = gridOf(rowOf(SEC));
-    grid[HEADER_ROW] = grid[HEADER_ROW].map((h) => (h === 'notes' ? 'clientPolicy' : h));
-    expect(() => shapeContracts(grid)).toThrow(/client_policy/);
+    grid[HEADER_ROW] = [...grid[HEADER_ROW], 'Something New'];
+    expect(() => shapeContracts(grid)).toThrow(/"Something New"/);
+  });
+
+  it('fails on two columns with the same header', () => {
+    const grid = gridOf(rowOf(SEC));
+    grid[HEADER_ROW] = [...grid[HEADER_ROW], header('tools')];
+    expect(() => shapeContracts(grid)).toThrow(/AI Tools Used/);
+  });
+
+  it('matches headers whatever their spacing', () => {
+    const grid = gridOf(rowOf(SEC));
+    grid[HEADER_ROW] = grid[HEADER_ROW].map((h) => h.replace(/ /g, '  '));
+    expect(Object.keys(shapeContracts(grid).contracts)).toEqual(['fedciv-sec-enterprise-websites']);
+  });
+
+  it('reads columns by header, so a moved column keeps its data', () => {
+    // Column A deleted from the sheet: every column shifts left one place.
+    const grid = gridOf(rowOf(SEC)).map((row) => row.slice(1));
+    const record = shapeContracts(grid).contracts['fedciv-sec-enterprise-websites'];
+    expect(record.portfolio).toBe('FEDCIV');
+    expect(record.contract_num).toBe('47QTCA18D008M');
   });
 
   it('fails on two rows producing the same contract id, naming both', () => {
     const grid = gridOf(
-      rowOf({ PORTFOLIO: 'LABS', PROJECT: 'AECF' }),
-      rowOf({ PORTFOLIO: 'labs', PROJECT: 'aecf' }),
+      rowOf({ portfolio: 'LABS', project: 'AECF' }),
+      rowOf({ portfolio: 'labs', project: 'aecf', publish: 'No' }),
     );
     expect(() => shapeContracts(grid)).toThrow(/labs-aecf/);
   });
 
   it('fails on a populated row with no portfolio or project rather than dropping it', () => {
-    const grid = gridOf(rowOf({ aiUseTerms: 'Silent', notes: 'orphan' }));
+    const grid = gridOf(rowOf({ ai_use_terms: 'Silent', tools: 'orphan' }));
     expect(() => shapeContracts(grid)).toThrow(SyncContractsError);
-  });
-
-  it('reports the excluded headers it applied', () => {
-    expect(EXCLUDED_HEADERS).toContain('terms');
   });
 });
 
@@ -267,55 +302,6 @@ describe('safetyVerdict', () => {
 
   it('does not apply the delete ceiling to a first run against an empty table', () => {
     expect(safetyVerdict({ incoming: 119, storedCount: 0, deletes: 0 })).toBeNull();
-  });
-});
-
-// The unnamed column is excluded by POSITION while everything else is validated by
-// NAME. When those disagree, shaping succeeds and silently writes records missing a
-// real column — and because Put replaces items whole, that erases the attribute
-// from every stored contract with zero deletes for the gate to see.
-describe('shapeContracts column-shift protection', () => {
-  it('fails when column A is no longer unnamed', () => {
-    // Column A deleted from the sheet: everything shifts left, PORTFOLIO lands at 0.
-    const headers = ['PORTFOLIO', 'PROJECT', 'contractNum', 'aiUseTerms', 'projectName', 'aiPosture'];
-    const grid = [[], [], headers, ['LABS', 'AECF', 'C-1', 'Silent', 'AECF', 'silent']];
-    expect(() => shapeContracts(grid)).toThrow(SyncContractsError);
-    expect(() => shapeContracts(grid)).toThrow(/unnamed/i);
-  });
-
-  it('names the offending header so the operator can see the shift', () => {
-    const headers = ['PORTFOLIO', 'PROJECT', 'contractNum', 'aiUseTerms', 'projectName', 'aiPosture'];
-    const grid = [[], [], headers, ['LABS', 'AECF', 'C-1', 'Silent', 'AECF', 'silent']];
-    expect(() => shapeContracts(grid)).toThrow(/PORTFOLIO/);
-  });
-
-  it('would otherwise have dropped portfolio from every record', () => {
-    // Guards the regression directly: without the check, this shape produced records
-    // with no `portfolio` key and no error.
-    const headers = ['PORTFOLIO', 'PROJECT', 'contractNum', 'aiUseTerms', 'projectName', 'aiPosture'];
-    const grid = [[], [], headers, ['LABS', 'AECF', 'C-1', 'Silent', 'AECF', 'silent']];
-    let record;
-    try { record = Object.values(shapeContracts(grid).contracts)[0]; } catch { record = null; }
-    expect(record).toBeNull();
-  });
-});
-
-describe('shapeContracts reserved attributes', () => {
-  it.each(RESERVED_ATTRIBUTES)('rejects a column that maps to %s', (reserved) => {
-    // e.g. a survey column named `contractId` slugs to `contract_id`, wins over the
-    // key the writer sets via the record spread, and sends the Put to a phantom
-    // range key — the real record is never updated again and there is no delete.
-    const camel = reserved.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-    const headers = ['', 'PORTFOLIO', 'PROJECT', 'contractNum', 'aiUseTerms', 'projectName', 'aiPosture', camel];
-    const grid = [[], [], headers, ['', 'LABS', 'AECF', '', 'Silent', '', '', 'x']];
-    expect(() => shapeContracts(grid)).toThrow(SyncContractsError);
-    expect(() => shapeContracts(grid)).toThrow(new RegExp(reserved));
-  });
-
-  it('still carries ordinary columns', () => {
-    const headers = ['', 'PORTFOLIO', 'PROJECT', 'contractNum', 'aiUseTerms', 'projectName', 'aiPosture', 'somethingNew'];
-    const grid = [[], [], headers, ['', 'LABS', 'AECF', '', 'Silent', '', '', 'x']];
-    expect(shapeContracts(grid).contracts['labs-aecf'].something_new).toBe('x');
   });
 });
 

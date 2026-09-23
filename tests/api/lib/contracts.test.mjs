@@ -3,10 +3,13 @@ import {
   RECORD_CONTRACT,
   RECORD_SEED_META,
   SEED_META_KEY,
+  AI_RULINGS,
+  isPublished,
   resolvePosture,
   resolveProject,
   collectContractIssues,
 } from '../../../functions/api/lib/contracts.mjs';
+import { RULINGS } from '../../../src/lib/contracts-render.mjs';
 
 const POSTURES = [
   { id: 'allowed', label: 'AI ALLOWED — how to proceed', status: 'active' },
@@ -20,8 +23,8 @@ const PROJECTS = [
 ];
 
 const contract = (over = {}) => ({
-  contract_id: 'labs-aecf', portfolio: 'LABS', project: 'AECF',
-  ai_posture: '', project_name: '', ...over,
+  contract_id: 'labs-aecf', portfolio: 'LABS', project: '',
+  ai_use_terms: '', publish: 'Yes', ...over,
 });
 
 describe('record type constants', () => {
@@ -31,93 +34,120 @@ describe('record type constants', () => {
   });
 });
 
+describe('AI_RULINGS', () => {
+  it('names the same rulings, in the same order, as the renderer', () => {
+    expect(AI_RULINGS).toEqual(RULINGS.map((r) => r.id));
+  });
+});
+
+describe('isPublished', () => {
+  it('publishes only an explicit Yes, whatever its case and spacing', () => {
+    expect(isPublished(contract({ publish: 'Yes' }))).toBe(true);
+    expect(isPublished(contract({ publish: ' yes ' }))).toBe(true);
+    expect(isPublished(contract({ publish: 'No' }))).toBe(false);
+    expect(isPublished(contract({ publish: '' }))).toBe(false);
+    expect(isPublished({ contract_id: 'x' })).toBe(false);
+  });
+});
+
 describe('resolvePosture', () => {
-  it('matches a posture by id', () => {
-    expect(resolvePosture(contract({ ai_posture: 'restricted' }), POSTURES).id).toBe('restricted');
+  it('matches a posture when the AI use terms are exactly its id', () => {
+    expect(resolvePosture(contract({ ai_use_terms: 'Restricted' }), POSTURES).id).toBe('restricted');
   });
 
   it('is case- and whitespace-insensitive', () => {
-    expect(resolvePosture(contract({ ai_posture: '  Restricted ' }), POSTURES).id).toBe('restricted');
+    expect(resolvePosture(contract({ ai_use_terms: '  restricted ' }), POSTURES).id).toBe('restricted');
   });
 
-  it('returns null when no posture is recorded', () => {
+  it('matches nothing when the terms carry more than the ruling name', () => {
+    // Nothing derives a ruling from free text.
+    expect(resolvePosture(contract({ ai_use_terms: 'Allowed, disclosure required' }), POSTURES)).toBeNull();
+  });
+
+  it('returns null when no terms are recorded', () => {
     expect(resolvePosture(contract(), POSTURES)).toBeNull();
   });
 
   it('returns null when the value matches no posture record', () => {
-    expect(resolvePosture(contract({ ai_posture: 'prohibited' }), POSTURES)).toBeNull();
+    expect(resolvePosture(contract({ ai_use_terms: 'Prohibited' }), POSTURES)).toBeNull();
   });
 
   it('resolves a deactivated posture rather than reporting it as drift', () => {
-    expect(resolvePosture(contract({ ai_posture: 'silent' }), POSTURES).id).toBe('silent');
+    expect(resolvePosture(contract({ ai_use_terms: 'Silent' }), POSTURES).id).toBe('silent');
   });
 });
 
 describe('resolveProject', () => {
-  it('matches on project name', () => {
-    const found = resolveProject(contract({ project_name: 'Maryland Statewide Agile Teams' }), PROJECTS);
+  it('matches the PROJECT value on project name', () => {
+    const found = resolveProject(contract({ project: 'Maryland Statewide Agile Teams' }), PROJECTS);
     expect(found.project_code).toBe('ST033');
   });
 
   it('matches on contract name when the project name does not match', () => {
-    expect(resolveProject(contract({ project_name: 'DOJ CRT' }), PROJECTS).project_code).toBe('FC001');
+    expect(resolveProject(contract({ project: 'DOJ CRT' }), PROJECTS).project_code).toBe('FC001');
   });
 
   it('folds case and collapses internal whitespace', () => {
-    const found = resolveProject(contract({ project_name: 'maryland  statewide agile TEAMS' }), PROJECTS);
+    const found = resolveProject(contract({ project: 'MARYLAND  STATEWIDE AGILE TEAMS' }), PROJECTS);
     expect(found.project_code).toBe('ST033');
   });
 
   it('returns null when nothing matches', () => {
-    expect(resolveProject(contract({ project_name: 'MA PFML' }), PROJECTS)).toBeNull();
+    expect(resolveProject(contract({ project: 'MA PFML' }), PROJECTS)).toBeNull();
   });
 
-  it('returns null when no project name is recorded', () => {
+  it('returns null when no project is recorded', () => {
     expect(resolveProject(contract(), PROJECTS)).toBeNull();
   });
 });
 
 describe('collectContractIssues', () => {
-  it('reports a present-but-unmatched project name with the raw sheet value', () => {
+  it('reports a present-but-unmatched project with the raw sheet value', () => {
     const { unresolvedProjects } = collectContractIssues(
-      [contract({ project_name: 'MA PFML', ai_posture: 'allowed' })], PROJECTS, POSTURES,
+      [contract({ project: 'MA PFML', ai_use_terms: 'Allowed' })], PROJECTS, POSTURES,
     );
     expect(unresolvedProjects).toHaveLength(1);
     expect(unresolvedProjects[0].raw_value).toBe('MA PFML');
     expect(unresolvedProjects[0].contract_id).toBe('labs-aecf');
   });
 
-  it('does not report a contract with no project name at all', () => {
-    // 82 of 119 rows have not been through the normalization pass; reporting them
-    // would bury the entries someone can act on.
+  it('does not report a contract with no project at all', () => {
     const { unresolvedProjects } = collectContractIssues([contract()], PROJECTS, POSTURES);
     expect(unresolvedProjects).toHaveLength(0);
   });
 
-  it('counts a contract with no posture separately from an unresolvable project', () => {
-    const { missingPosture, unresolvedProjects } = collectContractIssues(
-      [contract({ project_name: 'MA PFML' })], PROJECTS, POSTURES,
+  it('counts free-text terms as no posture, separately from an unresolvable project', () => {
+    const { missingPosture, unresolvedProjects, unresolvedPostures } = collectContractIssues(
+      [contract({ project: 'MA PFML', ai_use_terms: 'no language regarding AI' })], PROJECTS, POSTURES,
     );
     expect(missingPosture).toHaveLength(1);
+    expect(unresolvedPostures).toHaveLength(0);
     expect(unresolvedProjects).toHaveLength(1);
   });
 
-  it('reports a posture value that matches no record', () => {
+  it('reports a ruling name that matches no posture record', () => {
     const { unresolvedPostures, missingPosture } = collectContractIssues(
-      [contract({ ai_posture: 'prohibited' })], PROJECTS, POSTURES,
+      [contract({ ai_use_terms: 'Conditional' })], PROJECTS, POSTURES,
     );
     expect(unresolvedPostures).toHaveLength(1);
-    expect(unresolvedPostures[0].raw_value).toBe('prohibited');
+    expect(unresolvedPostures[0].raw_value).toBe('Conditional');
     expect(missingPosture).toHaveLength(0);
   });
 
   it('reports nothing for a fully resolved contract', () => {
     const issues = collectContractIssues(
-      [contract({ project_name: 'DOJ CRT', ai_posture: 'allowed' })], PROJECTS, POSTURES,
+      [contract({ project: 'DOJ CRT', ai_use_terms: 'Allowed' })], PROJECTS, POSTURES,
     );
     expect(issues.unresolvedProjects).toHaveLength(0);
     expect(issues.missingPosture).toHaveLength(0);
     expect(issues.unresolvedPostures).toHaveLength(0);
+  });
+
+  it('skips a contract the contracts team did not publish', () => {
+    const issues = collectContractIssues(
+      [contract({ project: 'MA PFML', ai_use_terms: 'Conditional', publish: 'No' })], PROJECTS, POSTURES,
+    );
+    expect(issues).toEqual({ unresolvedProjects: [], missingPosture: [], unresolvedPostures: [] });
   });
 
   it('returns empty findings for an empty contract set', () => {
@@ -125,9 +155,9 @@ describe('collectContractIssues', () => {
     expect(issues).toEqual({ unresolvedProjects: [], missingPosture: [], unresolvedPostures: [] });
   });
 
-  it('reports every contract as posture-missing when no posture records exist', () => {
+  it('reports a ruling name as unresolved when no posture records exist', () => {
     const { unresolvedPostures } = collectContractIssues(
-      [contract({ ai_posture: 'allowed' })], PROJECTS, [],
+      [contract({ ai_use_terms: 'Allowed' })], PROJECTS, [],
     );
     expect(unresolvedPostures).toHaveLength(1);
   });

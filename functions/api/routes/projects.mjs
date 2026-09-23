@@ -2,7 +2,7 @@ import { ddb, tables, GetCommand } from '../lib/dynamo.mjs';
 import { cachedQueryPartition } from '../lib/partition-cache.mjs';
 import { can } from '../lib/permissions.mjs';
 import { ENTITY_ARCHETYPE, ENTITY_POSTURE } from '../lib/project-reference.mjs';
-import { RECORD_CONTRACT, collectContractIssues } from '../lib/contracts.mjs';
+import { RECORD_CONTRACT, collectContractIssues, isPublished } from '../lib/contracts.mjs';
 import {
   RECORD_PROJECT,
   RECORD_SYNC_META,
@@ -118,7 +118,9 @@ async function readContractDrift(projects) {
     const issues = collectContractIssues(contracts, projects, postures);
 
     return {
-      contract_count: contracts.length,
+      // Published contracts only, matching the findings: the admin tab states
+      // "N of this count", and an unpublished contract is in neither.
+      contract_count: contracts.filter(isPublished).length,
       unresolved_projects: issues.unresolvedProjects,
       missing_posture: issues.missingPosture,
       unresolved_postures: issues.unresolvedPostures,

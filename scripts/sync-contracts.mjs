@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Reconcile the `contracts` DynamoDB table against the "AI Survey (Contracts and
- * Delivery Completes)" tab
+ * Reconcile the `contracts` DynamoDB table against the "Compliance" tab of the
+ * Contract Performance AI Survey workbook
  * (docs/plans/2026-08-07-001-feat-contracts-table-and-population-plan.md, U3).
  *
  * Population is operator-run, NOT scheduled — unlike scripts/sync-projects.mjs.
@@ -12,10 +12,10 @@
  *
  * The sheet is authoritative: a contract it no longer lists is deleted here.
  *
- * Every row is imported. This makes no validity judgement of its own — no
- * portfolio allowlist, no posture requirement. 82 of 119 rows carry no posture
- * and that is the survey's current state, not an error. Rows the survey should
- * not contain get removed at the sheet.
+ * Every row is imported, with every cell stored as written. This makes no
+ * validity judgement of its own — no portfolio allowlist, no posture
+ * requirement, no publish filter. The publish flag (column X) is stored and the
+ * API applies it, so a row marked "No" is stored and never served.
  *
  * Usage:
  *
@@ -69,8 +69,8 @@ import { SEED_IN_PROGRESS, SEED_NEVER } from '../functions/api/lib/contracts.mjs
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const DEFAULT_SPREADSHEET_ID = '1GdeIJI92Rb6LipM3l6FhWte7BYXCXe-zPKgJvvmu8G4';
-const TAB_TITLE = 'AI Survey (Contracts and Delivery Completes)';
+const DEFAULT_SPREADSHEET_ID = '131YXGeEd8piUq8UCqEdMUfveZmk9qOs7pJySGsblGhY';
+const TAB_TITLE = 'Compliance';
 const PROJECT = 'skills-registry';
 
 const USAGE =
@@ -151,10 +151,10 @@ function parseArgs(argv) {
 
 function logDrift(drift) {
   for (const u of drift.unresolvedProjects) {
-    console.log(`  no such project   ${u.contract_id}  project_name = "${u.raw_value}"`);
+    console.log(`  no such project   ${u.contract_id}  project = "${u.raw_value}"`);
   }
   for (const u of drift.unresolvedPostures) {
-    console.error(`  UNKNOWN POSTURE   ${u.contract_id}  ai_posture = "${u.raw_value}"`);
+    console.error(`  UNKNOWN POSTURE   ${u.contract_id}  ai_use_terms = "${u.raw_value}"`);
   }
 }
 
@@ -236,9 +236,9 @@ async function main() {
 
   console.log(
     `\n  Resolution against ${drift.projectCount} projects and ${drift.postureCount} postures:` +
-      `\n  ${String(drift.missingPosture.length).padStart(4)} contracts with no posture recorded` +
+      `\n  ${String(drift.missingPosture.length).padStart(4)} published contracts whose AI use terms are not a ruling name` +
       `\n  ${String(drift.unresolvedProjects.length).padStart(4)} project names matching no project` +
-      `\n  ${String(drift.unresolvedPostures.length).padStart(4)} posture values matching no posture record`,
+      `\n  ${String(drift.unresolvedPostures.length).padStart(4)} ruling names matching no posture record`,
   );
   logDrift(drift);
 

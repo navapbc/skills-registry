@@ -37,15 +37,36 @@ export const SEED_NEVER = 'never_populated';
 
 // Stored attribute names the resolution rules read. Defined here rather than
 // spelled inline at each call site so a rename is one edit rather than a hunt.
-export const POSTURE_ATTR = 'ai_posture';
-export const PROJECT_NAME_ATTR = 'project_name';
+//
+// The posture is read from the survey's own AI use terms (column L), exactly as
+// written. A contract resolves to a posture only when that whole cell is a posture
+// id ("Allowed"); a cell carrying more ("Allowed, disclosure required") resolves to
+// nothing, because nothing here derives a ruling from free text.
+export const POSTURE_ATTR = 'ai_use_terms';
+export const PROJECT_NAME_ATTR = 'project';
+
+// The five AI rulings the Contract Explorer defines, in its display order. The
+// renderer's RULINGS list in src/lib/contracts-render.mjs carries their names and
+// definitions, and a test holds the two id lists equal.
+export const AI_RULINGS = ['allowed', 'restricted', 'silent', 'prohibited', 'conditional'];
+
+// The survey's publish flag. Only a contract whose flag reads "Yes" is served.
+export const PUBLISH_ATTR = 'publish';
+
+/**
+ * Whether the contracts team marked a contract for the Contract Explorer.
+ *
+ * Only an explicit "Yes" publishes. A blank flag hides the contract, because the
+ * workbook is attorney-client privileged and the team decides what is shown.
+ */
+export const isPublished = (contract) =>
+  String(contract?.[PUBLISH_ATTR] ?? '').trim().toLowerCase() === 'yes';
 
 /**
  * Find the posture record a contract names, or null.
  *
- * Values in the survey are already exact posture ids, so this is an id lookup
- * rather than a label match — unlike the archetype join, which matches on
- * display labels. Comparison is still normalized, because the survey is
+ * An id lookup rather than a label match — unlike the archetype join, which
+ * matches on display labels. Comparison is normalized, because the survey is
  * hand-maintained and nothing enforces casing at write time.
  *
  * Deactivated postures still resolve: a deactivated record is a real record, and
@@ -61,10 +82,9 @@ export function resolvePosture(contract, postureRecords) {
 /**
  * Find the project a contract belongs to, or null.
  *
- * Matches the contract's project name against both the project's own name and
+ * Matches the contract's PROJECT value against both the project's own name and
  * its contract name, case-folded and whitespace-collapsed. Two fields rather
- * than one because the survey's naming follows neither consistently — measured
- * at 23 of 37 resolving across the pair.
+ * than one because the survey's naming follows neither consistently.
  */
 export function resolveProject(contract, projectRecords) {
   const value = normalizeLabel(contract?.[PROJECT_NAME_ATTR]);
@@ -77,25 +97,27 @@ export function resolveProject(contract, projectRecords) {
 }
 
 /**
- * Aggregate the two findings a reader can act on, kept separate because they
+ * Aggregate the three findings a reader can act on, kept separate because they
  * have different fixes and different owners.
  *
  *   - `unresolvedProjects` — a project name is present and matches nothing. Fixed
  *     in the sheet, or by the project appearing in the projects table.
- *   - `missingPosture` — no posture recorded. Fixed by the survey being filled
- *     in, which is not this repo's to do. It carries no raw value because there
- *     is nothing to reproduce.
+ *   - `missingPosture` — the AI use terms are not one of AI_RULINGS on their own.
+ *     Column L is free text ("Allowed, disclosure required"), so this is the
+ *     survey's usual state rather than a defect.
+ *   - `unresolvedPostures` — the AI use terms are exactly a ruling, but no posture
+ *     record carries that id (eg: "Conditional" before its posture is added).
+ *     Fixed on the Policy Guidance tab.
  *
- * A contract with no project name at all is not a finding: most of the survey
- * has not been through the normalization pass, and reporting all of it as drift
- * would bury the entries someone can actually act on.
+ * Unpublished contracts are skipped: the Contract Explorer never shows them, so a
+ * finding about one is nothing a reader can see.
  */
 export function collectContractIssues(contracts, projectRecords, postureRecords) {
   const unresolvedProjects = [];
   const missingPosture = [];
   const unresolvedPostures = [];
 
-  for (const contract of contracts) {
+  for (const contract of contracts.filter(isPublished)) {
     const locate = () => ({
       contract_id: contract.contract_id,
       project: contract.project ?? '',
@@ -110,7 +132,7 @@ export function collectContractIssues(contracts, projectRecords, postureRecords)
     }
 
     const postureValue = String(contract[POSTURE_ATTR] ?? '').trim();
-    if (postureValue === '') {
+    if (!AI_RULINGS.includes(normalizeLabel(postureValue))) {
       missingPosture.push(locate());
     } else if (resolvePosture(contract, postureRecords) === null) {
       unresolvedPostures.push({ ...locate(), raw_value: postureValue });

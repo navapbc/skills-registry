@@ -53,9 +53,9 @@ export const SEED_NEVER = 'never_populated';
 // constant's name.
 //
 // PROJECT_ATTR is deliberately NOT called PROJECT_NAME_ATTR. contracts.mjs exports
-// a constant by that name whose value is still `project_name`, and
-// routes/initiatives.mjs imports both — one line apart, in the file that joins the
-// two datasets. Same name with a different value there would be a trap.
+// a constant by that name, and routes/initiatives.mjs imports both in the file that
+// joins the two datasets. The two values are both `project` today, but they name
+// different sheets' columns and can change independently.
 export const TITLE_ATTR = 'title';
 export const PROJECT_ATTR = 'project';
 export const USE_CASE_ATTR = 'use_case';
@@ -98,8 +98,7 @@ export function resolveProject(initiative, projectRecords) {
  * The join deliberately runs the CONTRACTS-side resolution rule
  * (`resolveProject` from ./contracts.mjs), not the one above. The two differ:
  * contracts match a project's `project_name` OR its `contract_name`, because the
- * survey's naming follows neither consistently — measured at 23 of 37 resolving
- * only across the pair. Running the initiatives rule here instead would silently
+ * survey's naming follows neither consistently. Running the initiatives rule here instead would silently
  * drop every contract that resolves via `contract_name`.
  *
  * The rule is applied against a list holding ONLY this project, which is what makes
