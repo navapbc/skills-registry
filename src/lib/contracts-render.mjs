@@ -16,63 +16,76 @@ const BLURB_LIMIT = 180;
  * The five AI rulings, in the order the rulings list shows them.
  *
  * Authored copy, identical on every contract. The ids match AI_RULINGS in
- * functions/api/lib/contracts.mjs, and a test holds the two lists equal.
- *
- * The fills are Nava brand colours where one exists (`nava-gold` for restricted,
- * `navy-900` for silent) and the design's own values otherwise. They are applied as
- * INLINE STYLES, not interpolated Tailwind classes: those are generated at build
- * time from source text, so a class name assembled at runtime emits no CSS.
- * Contrast of `text` on `fill` is at least 7:1 for every ruling.
+ * functions/api/lib/contracts.mjs, and a test holds the two lists equal. Colours
+ * are not authored here: colorRulings takes them from the posture records.
  */
 export const RULINGS = [
   {
     id: 'allowed',
     name: 'Allowed',
     definition: 'This means the contract allows us to use AI. See below for more information and practical guidance.',
-    fill: '#17412d',
-    text: '#ffffff',
   },
   {
     id: 'restricted',
     name: 'Restricted',
     definition: 'This means the contract allows us to use AI, but the contract or client has stated restrictions the team must observe.',
-    fill: '#f8b712',
-    text: '#111827',
   },
   {
     id: 'silent',
     name: 'Silent',
     definition: "This means the contract doesn't give any guidance on how we use AI. See below for how.",
-    fill: '#0a0539',
-    text: '#ffffff',
   },
   {
     id: 'prohibited',
     name: 'Prohibited',
     definition: 'You cannot use AI on this contract.',
-    fill: '#a12a34',
-    text: '#ffffff',
   },
   {
     id: 'conditional',
     name: 'Conditional',
     definition: 'This means permission to use AI likely depends on the contract vehicle or clause within the contract, such as the relevant task order.',
-    fill: '#80377d',
-    text: '#ffffff',
   },
 ];
 
-/** The ruling named by the first word of `text`, or null. The whole word must match. */
-export function leadingRuling(text) {
-  const word = String(text ?? '').trim().match(/^[a-z]+/i)?.[0] ?? '';
-  return RULINGS.find((r) => r.id === word.toLowerCase()) ?? null;
+// The badge text colour the Policy Guidance tab previews every posture colour
+// against (BADGE_FOREGROUND in src/scripts/projects-admin/postures.mjs). The tab
+// tells editors to pick a light colour for that reason.
+const BADGE_FOREGROUND = '#1b1b1b';
+
+/**
+ * RULINGS, each carrying the colour of the posture record with the same id.
+ *
+ * The colours are edited on the Policy Guidance tab of /projects-admin, so a
+ * colour change there reaches this page with no deploy. A ruling with no posture
+ * record gets `fill: null` and renders as an outlined badge.
+ */
+export function colorRulings(postures) {
+  const colorById = new Map((postures ?? []).map((p) => [p.id, p.color]));
+  return RULINGS.map((r) => ({ ...r, fill: colorById.get(r.id) ?? null }));
 }
 
-/** A coloured ruling badge carrying `label`, which is the sheet's text where one exists. */
+const UNCOLORED = colorRulings([]);
+
+/** The ruling named by the first word of `text`, or null. The whole word must match. */
+export function leadingRuling(text, rulings = UNCOLORED) {
+  const word = String(text ?? '').trim().match(/^[a-z]+/i)?.[0] ?? '';
+  return rulings.find((r) => r.id === word.toLowerCase()) ?? null;
+}
+
+/**
+ * A ruling badge carrying `label`, which is the sheet's text where one exists.
+ *
+ * The fill is applied as an INLINE STYLE, not an interpolated Tailwind class: those
+ * are generated at build time from source text, so a class name assembled at
+ * runtime emits no CSS.
+ */
 function rulingBadge(ruling, label, size = 'text-xs') {
-  return `<span
-    class="inline-flex items-center px-2 py-0.5 rounded ${size} font-medium"
-    style="background-color: ${ruling.fill}; color: ${ruling.text}"
+  const base = `inline-flex items-center px-2 py-0.5 rounded ${size} font-medium`;
+  if (!ruling.fill) {
+    return `<span class="${base} border border-gray-300 bg-white text-gray-900">${escapeHtml(label)}</span>`;
+  }
+  return `<span class="${base}"
+    style="background-color: ${escapeHtml(ruling.fill)}; color: ${BADGE_FOREGROUND}"
   >${escapeHtml(label)}</span>`;
 }
 
@@ -84,9 +97,9 @@ function rulingBadge(ruling, label, size = 'text-xs') {
  * marks a word the contracts team wrote; it does not replace or summarise the cell.
  * The word keeps the sheet's own spelling and case.
  */
-function highlightTerms(text, size) {
+function highlightTerms(text, size, rulings) {
   const value = String(text ?? '').trim();
-  const ruling = leadingRuling(value);
+  const ruling = leadingRuling(value, rulings);
   if (!ruling) return escapeHtml(value);
   const word = value.slice(0, ruling.id.length);
   return `${rulingBadge(ruling, word, size)}${escapeHtml(value.slice(word.length))}`;
@@ -155,7 +168,7 @@ export function formatCapturedAt(iso) {
  * read as duplicates. The blurb is the AI use terms, highlighted the same way as on
  * the detail page, so the card and the page never disagree about the ruling.
  */
-export function renderContractCard(contract) {
+export function renderContractCard(contract, rulings = UNCOLORED) {
   const parent = contract.contract_num
     ? `<p class="text-xs text-gray-600 m-0 mt-1">
          Contract <code class="text-xs">${escapeHtml(contract.contract_num)}</code>
@@ -176,17 +189,17 @@ export function renderContractCard(contract) {
     </h3>
     ${parent}
     <p class="text-xs text-gray-600 mt-2 mb-0 line-clamp-3 flex-1">
-      ${highlightTerms(truncate(String(contract.ai_use_terms ?? '').trim(), BLURB_LIMIT), 'text-xs')}
+      ${highlightTerms(truncate(String(contract.ai_use_terms ?? '').trim(), BLURB_LIMIT), 'text-xs', rulings)}
     </p>
   </a>`;
 }
 
-export function renderContractGrid(contracts) {
+export function renderContractGrid(contracts, rulings = UNCOLORED) {
   if (!contracts?.length) {
     return '<p class="text-sm text-gray-600 italic">No contracts matched.</p>';
   }
   return `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-    ${contracts.map((c) => `<div class="h-full">${renderContractCard(c)}</div>`).join('')}
+    ${contracts.map((c) => `<div class="h-full">${renderContractCard(c, rulings)}</div>`).join('')}
   </div>`;
 }
 
@@ -223,10 +236,10 @@ function renderSageLink(project) {
 }
 
 /** What the contract says about AI use, from column L, or "None listed" when blank. */
-function renderAiUseTerms(contract) {
+function renderAiUseTerms(contract, rulings) {
   const body = isBlank(contract?.ai_use_terms)
     ? NONE_LISTED
-    : highlightTerms(contract.ai_use_terms, 'text-sm');
+    : highlightTerms(contract.ai_use_terms, 'text-sm', rulings);
   return `<p class="text-sm text-gray-900 m-0 whitespace-pre-line">${body}</p>`;
 }
 
@@ -328,14 +341,14 @@ const PRE_USE_CHECKLIST = `<section aria-label="Pre-use checklist" class="rounde
 </section>`;
 
 /** Every ruling with its definition — the target of the "See all" link. */
-function renderRulingsList() {
-  const rows = RULINGS.map((r) => `<div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+function renderRulingsList(rulings) {
+  const rows = rulings.map((r) => `<div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
       <dt class="shrink-0 sm:w-28">${rulingBadge(r, r.name, 'text-sm')}</dt>
       <dd class="text-sm text-gray-800 m-0">${escapeHtml(r.definition)}</dd>
     </div>`).join('');
   return `<section id="ai-rulings" aria-labelledby="ai-rulings-heading" class="scroll-mt-6">
     <h2 id="ai-rulings-heading" class="text-base font-semibold text-gray-900 m-0">
-      ${RULINGS.length} AI Rulings and Definitions
+      ${rulings.length} AI Rulings and Definitions
     </h2>
     <dl class="mt-3 mb-0 rounded-lg border border-gray-200 bg-white p-5 space-y-4">${rows}</dl>
   </section>`;
@@ -343,7 +356,7 @@ function renderRulingsList() {
 
 const sectionHeading = (text) => `<h2 class="text-2xl font-bold text-gray-900 m-0">${escapeHtml(text)}</h2>`;
 
-export function renderContractDetail(contract, capturedAt) {
+export function renderContractDetail(contract, rulings = UNCOLORED, capturedAt = null) {
   return `
     <a href="/contracts" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">&larr; All contracts</a>
 
@@ -364,10 +377,10 @@ export function renderContractDetail(contract, capturedAt) {
       <section aria-label="What the contract says about AI">
         ${sectionHeading('What the Contract says about AI')}
         <h3 class="text-base font-semibold text-gray-900 mt-6 mb-3">AI use on this contract is:</h3>
-        ${renderAiUseTerms(contract)}
+        ${renderAiUseTerms(contract, rulings)}
         <p class="mt-4 mb-0">
           <a href="#ai-rulings" class="text-sm text-plum-700 underline">
-            See all ${RULINGS.length} potential AI rulings and their definitions.
+            See all ${rulings.length} potential AI rulings and their definitions.
           </a>
         </p>
 
@@ -405,7 +418,7 @@ export function renderContractDetail(contract, capturedAt) {
         </div>
       </section>
 
-      ${renderRulingsList()}
+      ${renderRulingsList(rulings)}
     </div>
 
     <p class="text-xs text-gray-600 mt-10 m-0">

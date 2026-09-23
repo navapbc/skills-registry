@@ -28,6 +28,7 @@ import Base from '../../layouts/Base.astro';
 import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
 import {
+  colorRulings,
   filterContracts,
   portfoliosOf,
   describePopulationNotice,
@@ -79,6 +80,8 @@ try {
 if (data) {
   const contracts = data.contracts ?? [];
   const capturedAt = data.population?.captured_at ?? null;
+  // Badge colours come from the posture records on the Policy Guidance tab.
+  const rulings = colorRulings(data.postures);
 
   if (contractId) {
     // ── Detail view ──────────────────────────────────────────────────────
@@ -88,7 +91,7 @@ if (data) {
       container.innerHTML = notFoundHtml();
     } else {
       document.title = `${contract.project || contract.contract_id} · Contract Explorer`;
-      container.innerHTML = renderContractDetail(contract, capturedAt);
+      container.innerHTML = renderContractDetail(contract, rulings, capturedAt);
     }
   } else {
     // ── Grid view ────────────────────────────────────────────────────────
@@ -134,7 +137,7 @@ if (data) {
     function render() {
       const visible = filterContracts(contracts, { portfolio, query });
       countEl.textContent = `${visible.length} of ${contracts.length} record${contracts.length === 1 ? '' : 's'}`;
-      gridEl.innerHTML = renderContractGrid(visible);
+      gridEl.innerHTML = renderContractGrid(visible, rulings);
     }
 
     render();
