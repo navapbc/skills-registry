@@ -69,7 +69,7 @@ import { SEED_IN_PROGRESS, SEED_NEVER } from '../functions/api/lib/contracts.mjs
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const DEFAULT_SPREADSHEET_ID = '131YXGeEd8piUq8UCqEdMUfveZmk9qOs7pJySGsblGhY';
+const DEFAULT_SPREADSHEET_ID = '1ggCv7lMO9hjEeh9gFccvrgC-V2FmCblyTrwzOhtRJzk';
 const TAB_TITLE = 'Compliance';
 const PROJECT = 'skills-registry';
 
