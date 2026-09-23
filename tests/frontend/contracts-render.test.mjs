@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   RULINGS,
-  rulingOf,
+  leadingRuling,
   filterContracts,
   portfoliosOf,
   formatCapturedAt,
@@ -48,16 +48,19 @@ describe('RULINGS', () => {
   });
 });
 
-describe('rulingOf', () => {
-  it('matches a cell that is exactly a ruling name, whatever its case', () => {
-    expect(rulingOf(contract({ ai_use_terms: 'Allowed' })).id).toBe('allowed');
-    expect(rulingOf(contract({ ai_use_terms: '  silent ' })).id).toBe('silent');
+describe('leadingRuling', () => {
+  it('names the ruling the first word spells, whatever its case', () => {
+    expect(leadingRuling('Allowed').id).toBe('allowed');
+    expect(leadingRuling('  silent on use terms').id).toBe('silent');
+    expect(leadingRuling('Conditional, TO Silent').id).toBe('conditional');
   });
 
-  it('matches nothing when the cell carries more than a ruling name', () => {
-    expect(rulingOf(contract({ ai_use_terms: 'Allowed, disclosure required' }))).toBeNull();
-    expect(rulingOf(contract({ ai_use_terms: 'no language regarding AI' }))).toBeNull();
-    expect(rulingOf(contract({ ai_use_terms: '' }))).toBeNull();
+  it('names nothing when the first word is not a ruling name', () => {
+    expect(leadingRuling('no language regarding AI')).toBeNull();
+    expect(leadingRuling('GSA restriction')).toBeNull();
+    expect(leadingRuling('Silently accepted')).toBeNull();
+    expect(leadingRuling('')).toBeNull();
+    expect(leadingRuling(undefined)).toBeNull();
   });
 });
 
@@ -107,16 +110,34 @@ describe('renderContractCard', () => {
     expect(renderContractCard(contract())).toContain('href="/contracts/fedciv-sec-enterprise-websites"');
   });
 
-  it('shows the AI use terms as written when they are not a ruling name', () => {
-    const html = renderContractCard(contract());
-    expect(html).toContain('Conditional, TO Silent, BPA Restricted');
+  it('shows the AI use terms as written when they do not start with a ruling name', () => {
+    const html = renderContractCard(contract({ ai_use_terms: 'GSA restriction, TO Silent' }));
+    expect(html).toContain('GSA restriction, TO Silent');
     expect(html).not.toContain('background-color');
   });
 
-  it('badges a bare ruling name in its colour, carrying the sheet text', () => {
+  it('highlights a leading ruling word the same way the detail page does', () => {
+    const html = renderContractCard(contract());
+    expect(html).toContain('background-color: #80377d');
+    expect(html).toContain('>Conditional</span>, TO Silent, BPA Restricted');
+  });
+
+  it('highlights a cell that is exactly a ruling name, once', () => {
     const html = renderContractCard(contract({ ai_use_terms: 'Allowed' }));
     expect(html).toContain('background-color: #17412d');
-    expect(html).toContain('>Allowed</span>');
+    expect(html.match(/>Allowed<\/span>/g)).toHaveLength(1);
+  });
+
+  it('shortens long terms after the highlighted word', () => {
+    const html = renderContractCard(contract({ ai_use_terms: `Silent ${'x '.repeat(200)}` }));
+    expect(html).toContain('>Silent</span>');
+    expect(html).toContain('...');
+  });
+
+  it('leaves the blurb empty when the terms are blank', () => {
+    const html = renderContractCard(contract({ ai_use_terms: '' }));
+    expect(html).not.toContain('None listed');
+    expect(html).not.toContain('background-color');
   });
 
   it('shows the contract number as the parent', () => {

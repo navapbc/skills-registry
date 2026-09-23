@@ -62,18 +62,10 @@ export const RULINGS = [
   },
 ];
 
-const normalize = (value) => String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
-
-/**
- * The ruling a contract's AI use terms (column L) name, or null.
- *
- * Only a cell that is exactly a ruling name ("Allowed") matches. A cell carrying
- * more ("Allowed, disclosure required") matches nothing and renders as the text it
- * is, because reading a ruling out of free text is a guess this page must not make.
- */
-export function rulingOf(contract) {
-  const value = normalize(contract?.ai_use_terms);
-  return RULINGS.find((r) => r.id === value) ?? null;
+/** The ruling named by the first word of `text`, or null. The whole word must match. */
+export function leadingRuling(text) {
+  const word = String(text ?? '').trim().match(/^[a-z]+/i)?.[0] ?? '';
+  return RULINGS.find((r) => r.id === word.toLowerCase()) ?? null;
 }
 
 /** A coloured ruling badge carrying `label`, which is the sheet's text where one exists. */
@@ -82,6 +74,22 @@ function rulingBadge(ruling, label, size = 'text-xs') {
     class="inline-flex items-center px-2 py-0.5 rounded ${size} font-medium"
     style="background-color: ${ruling.fill}; color: ${ruling.text}"
   >${escapeHtml(label)}</span>`;
+}
+
+/**
+ * The AI use terms (column L) as written, with a leading ruling word highlighted.
+ *
+ * When the first word is a ruling name ("Conditional, TO Silent, …"), that word
+ * renders in the ruling's colour and the rest follows as plain text. The highlight
+ * marks a word the contracts team wrote; it does not replace or summarise the cell.
+ * The word keeps the sheet's own spelling and case.
+ */
+function highlightTerms(text, size) {
+  const value = String(text ?? '').trim();
+  const ruling = leadingRuling(value);
+  if (!ruling) return escapeHtml(value);
+  const word = value.slice(0, ruling.id.length);
+  return `${rulingBadge(ruling, word, size)}${escapeHtml(value.slice(word.length))}`;
 }
 
 /**
@@ -144,11 +152,10 @@ export function formatCapturedAt(iso) {
  *
  * The card shows its contract number as a parent where one exists. One contract
  * number spans many rows in the current data — without the number visible, those
- * read as duplicates. The blurb is the AI use terms as written, so the card states
- * what the contract says about AI even when the cell is not a bare ruling name.
+ * read as duplicates. The blurb is the AI use terms, highlighted the same way as on
+ * the detail page, so the card and the page never disagree about the ruling.
  */
 export function renderContractCard(contract) {
-  const ruling = rulingOf(contract);
   const parent = contract.contract_num
     ? `<p class="text-xs text-gray-600 m-0 mt-1">
          Contract <code class="text-xs">${escapeHtml(contract.contract_num)}</code>
@@ -159,18 +166,17 @@ export function renderContractCard(contract) {
     href="/contracts/${encodeURIComponent(contract.contract_id)}"
     class="contract-card flex flex-col h-full bg-white border border-gray-200 rounded-lg p-4 no-underline hover:border-plum-300 transition-colors"
   >
-    <div class="flex items-start justify-between gap-2 mb-2">
+    <div class="mb-2">
       <span class="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
         ${escapeHtml(contract.portfolio ?? '')}
       </span>
-      ${ruling ? rulingBadge(ruling, contract.ai_use_terms.trim()) : ''}
     </div>
     <h3 class="text-sm font-semibold text-gray-900 m-0 leading-snug">
       ${escapeHtml(contract.project || contract.contract_id)}
     </h3>
     ${parent}
     <p class="text-xs text-gray-600 mt-2 mb-0 line-clamp-3 flex-1">
-      ${ruling ? '' : escapeHtml(truncate(contract.ai_use_terms, BLURB_LIMIT))}
+      ${highlightTerms(truncate(String(contract.ai_use_terms ?? '').trim(), BLURB_LIMIT), 'text-xs')}
     </p>
   </a>`;
 }
@@ -216,21 +222,11 @@ function renderSageLink(project) {
     class="block mt-2 text-xs font-semibold text-plum-700 underline">For full program details, check out the project index on Sage.</a>`;
 }
 
-/**
- * What the contract says about AI use, from column L.
- *
- * The text renders exactly as written. When its first word is a ruling name
- * ("Conditional, TO Silent, …"), that word is highlighted in the ruling's colour
- * and the rest follows as plain text. The highlight marks a word the contracts
- * team wrote; it does not replace or summarise the cell.
- */
+/** What the contract says about AI use, from column L, or "None listed" when blank. */
 function renderAiUseTerms(contract) {
-  const text = String(contract?.ai_use_terms ?? '').trim();
-  const word = text.match(/^[a-z]+/i)?.[0] ?? '';
-  const ruling = RULINGS.find((r) => r.id === word.toLowerCase());
-  const body = ruling
-    ? `${rulingBadge(ruling, word, 'text-sm')}${escapeHtml(text.slice(word.length))}`
-    : plain(text);
+  const body = isBlank(contract?.ai_use_terms)
+    ? NONE_LISTED
+    : highlightTerms(contract.ai_use_terms, 'text-sm');
   return `<p class="text-sm text-gray-900 m-0 whitespace-pre-line">${body}</p>`;
 }
 
