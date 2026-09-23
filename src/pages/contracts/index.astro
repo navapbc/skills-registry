@@ -28,7 +28,6 @@ import Base from '../../layouts/Base.astro';
 import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
 import {
-  indexPostures,
   filterContracts,
   portfoliosOf,
   describePopulationNotice,
@@ -79,7 +78,6 @@ try {
 
 if (data) {
   const contracts = data.contracts ?? [];
-  const postureById = indexPostures(data.postures);
   const capturedAt = data.population?.captured_at ?? null;
 
   if (contractId) {
@@ -90,7 +88,7 @@ if (data) {
       container.innerHTML = notFoundHtml();
     } else {
       document.title = `${contract.project || contract.contract_id} · Contract Explorer`;
-      container.innerHTML = renderContractDetail(contract, postureById, capturedAt);
+      container.innerHTML = renderContractDetail(contract, capturedAt);
     }
   } else {
     // ── Grid view ────────────────────────────────────────────────────────

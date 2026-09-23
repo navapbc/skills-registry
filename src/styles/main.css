@@ -57,7 +57,7 @@
    *   --info bar on --info-bg    2.15:1  BELOW the 3:1 non-text floor
    *
    * The bar is deliberately allowed to fail 3:1. It is a reinforcing accent, not
-   * the signal: the alert states "If the client asks about AI use" in words, so
+   * the signal: the alert's heading names it in words, so
    * a reader who cannot resolve the bar loses nothing. This is the same division
    * USWDS and the CMS Design System make in their own alert components. It does
    * mean the bar must never become the only thing marking the panel.

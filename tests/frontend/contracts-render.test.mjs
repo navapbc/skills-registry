@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   RULINGS,
   rulingOf,
-  indexPostures,
   filterContracts,
   portfoliosOf,
   formatCapturedAt,
@@ -11,12 +10,6 @@ import {
   renderContractDetail,
   describePopulationNotice,
 } from '../../src/lib/contracts-render.mjs';
-
-const POSTURES = [
-  { id: 'allowed', label: 'AI ALLOWED — how to proceed', color: '#e7f1e0', position: 1, steps: ['Step one.', 'Step two.'] },
-  { id: 'silent', label: 'AI SILENT — how to proceed', color: '#f3f4f6', position: 3, steps: ['Check the terms.'] },
-];
-const byId = indexPostures(POSTURES);
 
 const contract = (over = {}) => ({
   contract_id: 'fedciv-sec-enterprise-websites',
@@ -150,7 +143,7 @@ describe('renderContractGrid', () => {
 describe('renderContractDetail', () => {
   describe('the header', () => {
     it('names the portfolio, the contract, the agency, and the program manager', () => {
-      const html = renderContractDetail(contract(), byId, null);
+      const html = renderContractDetail(contract(), null);
       expect(html).toMatch(/contract details/i);
       expect(html).toContain('FEDCIV');
       expect(html).toContain('<h1');
@@ -161,28 +154,27 @@ describe('renderContractDetail', () => {
 
     it('links the project index on Sage when the project has a space key', () => {
       const html = renderContractDetail(
-        contract({ resolved_project: { project_index_code: 'SECWEB' } }), byId, null,
-      );
+        contract({ resolved_project: { project_index_code: 'SECWEB' } }), null);
       expect(html).toContain('href="https://navasage.atlassian.net/wiki/spaces/SECWEB"');
       expect(html).toContain('check out the project index on Sage');
     });
 
     it('leaves the Sage link out rather than pointing it at no space', () => {
-      const unresolved = renderContractDetail(contract(), byId, null);
-      const keyless = renderContractDetail(contract({ resolved_project: { project_index_code: '' } }), byId, null);
+      const unresolved = renderContractDetail(contract(), null);
+      const keyless = renderContractDetail(contract({ resolved_project: { project_index_code: '' } }), null);
       expect(unresolved).not.toContain('wiki/spaces/');
       expect(keyless).not.toContain('wiki/spaces/');
     });
 
     it('marks a blank agency or program manager as unlisted', () => {
-      const html = renderContractDetail(contract({ customer: '', nava_program_mgr: '' }), byId, null);
+      const html = renderContractDetail(contract({ customer: '', nava_program_mgr: '' }), null);
       expect(html.match(/None listed/g).length).toBeGreaterThanOrEqual(2);
     });
   });
 
   describe('what the contract says about AI', () => {
     it('renders free-text AI use terms exactly as written, unbadged', () => {
-      const html = sectionOf(renderContractDetail(contract(), byId, null), 'What the contract says about AI');
+      const html = sectionOf(renderContractDetail(contract(), null), 'What the contract says about AI');
       expect(html).toContain('AI use on this contract is:');
       expect(html).toContain('Conditional, TO Silent, BPA Restricted');
       expect(html).not.toContain('background-color');
@@ -190,7 +182,7 @@ describe('renderContractDetail', () => {
 
     it('badges AI use terms that are exactly a ruling name', () => {
       const html = sectionOf(
-        renderContractDetail(contract({ ai_use_terms: 'Prohibited' }), byId, null),
+        renderContractDetail(contract({ ai_use_terms: 'Prohibited' }), null),
         'What the contract says about AI',
       );
       expect(html).toContain('background-color: #a12a34');
@@ -198,27 +190,27 @@ describe('renderContractDetail', () => {
     });
 
     it('links to the rulings list at the bottom of the page', () => {
-      const html = renderContractDetail(contract(), byId, null);
+      const html = renderContractDetail(contract(), null);
       expect(html).toContain('href="#ai-rulings"');
       expect(html).toContain('See all 5 potential AI rulings and their definitions.');
       expect(html).toContain('id="ai-rulings"');
     });
 
     it('shows the contract language as written', () => {
-      const html = renderContractDetail(contract(), byId, null);
+      const html = renderContractDetail(contract(), null);
       expect(html).toContain('Contract language');
       expect(html).toContain('SEC BPA modification 4 incorporates AI-related clauses.');
     });
 
     it('escapes the contract language, which is free text', () => {
-      const html = renderContractDetail(contract({ ai_use_terms_language: '<img src=x onerror=1>' }), byId, null);
+      const html = renderContractDetail(contract({ ai_use_terms_language: '<img src=x onerror=1>' }), null);
       expect(html).not.toContain('<img src=x');
     });
   });
 
   describe('practical guidance', () => {
     it('asks each survey question with its answer as written', () => {
-      const html = sectionOf(renderContractDetail(contract(), byId, null), 'Practical guidance and more information');
+      const html = sectionOf(renderContractDetail(contract(), null), 'Practical guidance and more information');
       expect(html).toContain('Does this client have an AI policy');
       expect(html).toContain('Yes. SEC requests training features be turned off.');
       expect(html).toContain('Is AI in use on this contract?');
@@ -231,78 +223,80 @@ describe('renderContractDetail', () => {
 
     it('keeps every question when the survey answered none of them', () => {
       const html = renderContractDetail(
-        contract({ client_policy: '', ai_used: '', tools: '', usage: '', review_process: '' }), byId, null,
-      );
+        contract({ client_policy: '', ai_used: '', tools: '', usage: '', review_process: '' }), null);
       const section = sectionOf(html, 'Practical guidance and more information');
       expect(section.match(/None listed/g)).toHaveLength(5);
     });
   });
 
   describe('the pre-use checklist', () => {
-    it('lists the posture guidance when the contract resolves to a posture', () => {
-      const html = sectionOf(
-        renderContractDetail(contract({ ai_use_terms: 'Allowed', posture_id: 'allowed' }), byId, null),
-        'Pre-use checklist',
-      );
-      expect(html).toContain('AI ALLOWED — how to proceed');
-      expect(html).toContain('Step one.');
-      expect(html).toContain('Step two.');
+    const ITEMS = [
+      "Check whether a client AI policy exists for this contract (see 'client policy' field). If yes, you must follow it in addition to Nava's playbook.",
+      'All AI outputs must be reviewed, validated, and owned by a team member before inclusion in any deliverable.',
+      'If you want to expand AI use or introduce a new tool, check with your Program Manager first. Some clients (MN, MA, AK) have formal approval processes that must be followed.',
+      'If asked by the client whether you use AI: do not assume silence means you can answer without flagging it internally first. Ask your Program Manager how to respond.',
+    ];
+    const itemsOf = (html) => [...sectionOf(html, 'Pre-use checklist').matchAll(/<li[^>]*>([^<]*)<\/li>/g)]
+      .map((m) => m[1]);
+
+    it('lists exactly the four authored items, in order', () => {
+      expect(itemsOf(renderContractDetail(contract(), null))).toEqual(ITEMS);
     });
 
-    it('lists the authored checklist when no posture resolves', () => {
-      const html = sectionOf(renderContractDetail(contract(), byId, null), 'Pre-use checklist');
-      expect(html).toContain('Always confirm that AI use is allowed on your project.');
-      expect(html).toContain('No client or sensitive data');
-    });
-
-    it('escapes posture steps, which are stored records', () => {
-      const postures = indexPostures([{ id: 'silent', label: 'S', steps: ['<b>bold</b>'] }]);
-      const html = renderContractDetail(contract({ posture_id: 'silent' }), postures, null);
-      expect(html).not.toContain('<b>bold</b>');
+    it('lists the same items whatever posture the contract resolves to', () => {
+      const html = renderContractDetail(contract({ ai_use_terms: 'Allowed', posture_id: 'allowed' }), null);
+      expect(itemsOf(html)).toEqual(ITEMS);
     });
   });
 
   describe('the client-facing script', () => {
+    it('introduces the talking points under their heading', () => {
+      const html = sectionOf(renderContractDetail(contract(), null), 'Scripted responses to client questions about AI');
+      expect(html).toContain('<h3');
+      expect(html).toContain('If a client asks about Nava&rsquo;s AI use, use these pre-approved talking points');
+      expect(html).not.toContain('If the client asks about AI use');
+      expect(html).not.toContain('word for word');
+    });
+
     it('gives the reader words to say, directly after the pre-use checklist', () => {
-      const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
-      expect(html).toContain('If the client asks about AI use');
+      const html = renderContractDetail(contract({ posture_id: 'allowed' }), null);
+      expect(html).toContain('Scripted responses to client questions about AI');
       expect(html).toContain('all outputs are reviewed and validated by the team');
       expect(html.indexOf('aria-label="Pre-use checklist"'))
-        .toBeLessThan(html.indexOf('If the client asks about AI use'));
+        .toBeLessThan(html.indexOf('Scripted responses to client questions about AI'));
     });
 
     // Authored copy, not a surveyed field: it must not vary by record or vanish on
     // a contract with no posture.
     it('says the same thing on every record, with a posture or not', () => {
-      const withPosture = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
-      const without = renderContractDetail(contract(), byId, null);
+      const withPosture = renderContractDetail(contract({ posture_id: 'allowed' }), null);
+      const without = renderContractDetail(contract(), null);
       expect(without).toContain('Nava uses AI-assisted tools in a controlled manner');
       expect(withPosture).toContain('Nava uses AI-assisted tools in a controlled manner');
     });
 
     it('reads as an informational alert', () => {
-      const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
+      const html = renderContractDetail(contract({ posture_id: 'allowed' }), null);
       expect(html).toContain('bg-info-bg');
-      expect(html).toContain('text-info-text');
       expect(html).toContain('border-info');
     });
 
     // Colour reinforces the classification; the words carry it.
     it('names the alert type in words, not only in colour', () => {
-      const html = renderContractDetail(contract({ posture_id: 'allowed' }), byId, null);
-      expect(html).toContain('aria-label="If the client asks about AI use"');
+      const html = renderContractDetail(contract({ posture_id: 'allowed' }), null);
+      expect(html).toContain('aria-label="Scripted responses to client questions about AI"');
       expect(html).toMatch(/<div class="w-1[^"]*"\s+aria-hidden="true"><\/div>/);
     });
   });
 
   describe('the rulings list', () => {
     it('comes last, after the resources', () => {
-      const html = renderContractDetail(contract(), byId, null);
-      expect(html.indexOf('If the client asks about AI use')).toBeLessThan(html.indexOf('id="ai-rulings"'));
+      const html = renderContractDetail(contract(), null);
+      expect(html.indexOf('Scripted responses to client questions about AI')).toBeLessThan(html.indexOf('id="ai-rulings"'));
     });
 
     it('lists every ruling with its colour and definition', () => {
-      const html = renderContractDetail(contract(), byId, null);
+      const html = renderContractDetail(contract(), null);
       const list = html.slice(html.indexOf('id="ai-rulings"'));
       expect(list).toContain('5 AI Rulings and Definitions');
       for (const r of RULINGS) {
@@ -315,13 +309,13 @@ describe('renderContractDetail', () => {
   });
 
   it('orders the sections as the design does', () => {
-    const html = renderContractDetail(contract(), byId, null);
+    const html = renderContractDetail(contract(), null);
     const order = [
       'What the Contract says about AI',
       'Practical guidance and more information',
       'Resources',
       'Pre-use checklist',
-      'If the client asks about AI use',
+      'Scripted responses to client questions about AI',
       'AI Rulings and Definitions',
     ].map((text) => html.indexOf(text));
     expect(order.every((at) => at >= 0)).toBe(true);
@@ -355,7 +349,7 @@ describe('empty-string project fallback', () => {
   });
 
   it('falls back to the id on the detail heading', () => {
-    const html = renderContractDetail(contract({ project: '', contract_id: 'labs-blank' }), byId, null);
+    const html = renderContractDetail(contract({ project: '', contract_id: 'labs-blank' }), null);
     expect(html).toContain('labs-blank');
   });
 });

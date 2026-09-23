@@ -84,11 +84,6 @@ function rulingBadge(ruling, label, size = 'text-xs') {
   >${escapeHtml(label)}</span>`;
 }
 
-/** Index postures by id so callers resolve without rescanning the list. */
-export function indexPostures(postures) {
-  return new Map((postures ?? []).map((p) => [p.id, p]));
-}
-
 /**
  * Narrow a contract set by portfolio and free-text search.
  *
@@ -261,29 +256,28 @@ const questionCard = (question, value) => `<div class="rounded-lg border border-
  * on a client call needs a sentence they can say, not a policy to interpret.
  *
  * Styled as an INFORMATIONAL alert, following the structure USWDS and the CMS
- * Design System use: a solid left bar, a pale fill, and a short uppercase label
- * naming the alert type in words. Info rather than warning because this content
- * is reassurance to relay, not a risk to weigh — the yellow warning treatment is
- * reserved for the posture panel, which is the part of this page that can tell a
- * reader to stop.
+ * Design System use: a solid left bar, a pale fill, and a heading naming the
+ * block in words. Info rather than warning because this content is reassurance
+ * to relay, not a risk to weigh.
  *
  * This replaced a solid gray-900 panel. The dark fill separated the block from the
  * surveyed fields around it, which is worth keeping, so the separation now comes
  * from the tinted fill and the bar instead — same job, at the weight the rest of
- * the page is built at. The label is what actually classifies the block; colour
+ * the page is built at. The heading is what actually classifies the block; colour
  * only reinforces it, which is why the bar is allowed to sit below 3:1 (see the
  * --info trio in src/styles/main.css).
  */
-const CLIENT_ASK_SCRIPT = `<section aria-label="If the client asks about AI use"
+const CLIENT_ASK_SCRIPT = `<section aria-label="Scripted responses to client questions about AI"
   class="rounded-lg p-6 bg-info-bg flex gap-4">
   <div class="w-1 rounded shrink-0 bg-info" aria-hidden="true"></div>
   <div class="flex-1 min-w-0">
-    <p class="text-xs font-semibold uppercase tracking-widest text-info-text m-0">
-      If the client asks about AI use
-    </p>
-    <h3 class="text-xl font-bold text-gray-900 mt-3 mb-4">
-      Say this &mdash; word for word if it helps:
+    <h3 class="text-xl font-bold text-gray-900 m-0">
+      Scripted responses to client questions about AI
     </h3>
+    <p class="text-sm text-gray-800 mt-2 mb-4">
+      If a client asks about Nava&rsquo;s AI use, use these pre-approved talking points to
+      respond confidently and consistently.
+    </p>
     <blockquote class="border-l-2 border-info pl-4 m-0">
       <p class="text-lg text-gray-900 leading-relaxed m-0">
         &ldquo;Yes, Nava uses AI-assisted tools in a controlled manner to support internal
@@ -298,50 +292,39 @@ const CLIENT_ASK_SCRIPT = `<section aria-label="If the client asks about AI use"
 /**
  * What to confirm before opening an AI tool on this contract.
  *
- * The steps are the guidance of the posture the contract resolves to, which
- * happens only when column L is exactly a posture id. Every other contract gets
- * the authored checklist below, identical on every record.
+ * Authored copy, identical on every record, like CLIENT_ASK_SCRIPT.
  *
  * Rendered as a plain list rather than checkboxes. Real checkboxes would invite a
  * reader to tick them, and nothing here persists — a checklist that forgets what you
  * confirmed is worse than one that never claimed to remember.
  */
 const PRE_USE_CHECKLIST_ITEMS = [
-  'Always confirm that AI use is allowed on your project. Every item below assumes it is.',
-  'No client or sensitive data (PII, PHI, FTI, or regulated data) is included in my prompt.',
-  'The tool I&rsquo;m using is approved or not restricted by the contract or client policy.',
-  'My output will be reviewed and validated by a human before use in a deliverable.',
-  'I can clearly explain my AI use if asked by the client or a colleague.',
-  'I am not skipping any disclosure requirement that applies to this contract.',
-  'If this contract has a formal approval process, I have followed it (or will before '
-    + 'expanding use).',
+  "Check whether a client AI policy exists for this contract (see 'client policy' field). "
+    + "If yes, you must follow it in addition to Nava's playbook.",
+  'All AI outputs must be reviewed, validated, and owned by a team member before inclusion '
+    + 'in any deliverable.',
+  'If you want to expand AI use or introduce a new tool, check with your Program Manager '
+    + 'first. Some clients (MN, MA, AK) have formal approval processes that must be followed.',
+  'If asked by the client whether you use AI: do not assume silence means you can answer '
+    + 'without flagging it internally first. Ask your Program Manager how to respond.',
 ];
 
-function renderPreUseChecklist(posture) {
-  const heading = posture ? escapeHtml(posture.label) : 'Pre-use checklist';
-  // Posture steps come from stored records, so they are escaped. The authored
-  // items above carry HTML entities, so they are not.
-  const items = posture
-    ? (posture.steps ?? []).map(escapeHtml)
-    : PRE_USE_CHECKLIST_ITEMS;
-
-  return `<section aria-label="Pre-use checklist" class="rounded-lg border border-gray-200 bg-white p-5">
-    <h3 class="text-sm font-semibold text-gray-900 m-0">Pre-use checklist</h3>
-    <p class="text-sm text-gray-800 mt-3 mb-0">
-      Before using AI on this contract, review this checklist to ensure you&rsquo;re
-      following the right steps and meeting any applicable requirements.
-    </p>
-    <div class="flex gap-4 mt-5">
-      <div class="w-1 rounded shrink-0 bg-info-bg" aria-hidden="true"></div>
-      <div class="flex-1 min-w-0">
-        <h4 class="text-lg font-semibold text-gray-900 m-0">${heading}</h4>
-        <ul class="list-disc mt-2 mb-0 pl-5 space-y-1.5 marker:text-gray-500">
-          ${items.map((item) => `<li class="text-sm text-gray-800">${item}</li>`).join('')}
-        </ul>
-      </div>
+const PRE_USE_CHECKLIST = `<section aria-label="Pre-use checklist" class="rounded-lg border border-gray-200 bg-white p-5">
+  <h3 class="text-sm font-semibold text-gray-900 m-0">Pre-use checklist</h3>
+  <p class="text-sm text-gray-800 mt-3 mb-0">
+    Before using AI on this contract, review this checklist to ensure you&rsquo;re
+    following the right steps and meeting any applicable requirements.
+  </p>
+  <div class="flex gap-4 mt-5">
+    <div class="w-1 rounded shrink-0 bg-info-bg" aria-hidden="true"></div>
+    <div class="flex-1 min-w-0">
+      <h4 class="text-lg font-semibold text-gray-900 m-0">Pre-use checklist</h4>
+      <ul class="list-disc mt-2 mb-0 pl-5 space-y-1.5 marker:text-gray-500">
+        ${PRE_USE_CHECKLIST_ITEMS.map((item) => `<li class="text-sm text-gray-800">${item}</li>`).join('')}
+      </ul>
     </div>
-  </section>`;
-}
+  </div>
+</section>`;
 
 /** Every ruling with its definition — the target of the "See all" link. */
 function renderRulingsList() {
@@ -359,9 +342,7 @@ function renderRulingsList() {
 
 const sectionHeading = (text) => `<h2 class="text-2xl font-bold text-gray-900 m-0">${escapeHtml(text)}</h2>`;
 
-export function renderContractDetail(contract, postureById, capturedAt) {
-  const posture = postureById?.get(contract.posture_id) ?? null;
-
+export function renderContractDetail(contract, capturedAt) {
   return `
     <a href="/contracts" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">&larr; All contracts</a>
 
@@ -418,7 +399,7 @@ export function renderContractDetail(contract, postureById, capturedAt) {
       <section aria-label="Resources">
         ${sectionHeading('Resources')}
         <div class="space-y-4 mt-5">
-          ${renderPreUseChecklist(posture)}
+          ${PRE_USE_CHECKLIST}
           ${CLIENT_ASK_SCRIPT}
         </div>
       </section>
