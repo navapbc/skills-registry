@@ -6,7 +6,7 @@ Three DynamoDB tables back the Contract Explorer and the admin **Projects** tab.
 |---|---|---|---|
 | `skills-registry-project-reference-{env}` | [`aws_dynamodb_table.project_reference`](../terraform/dynamodb.tf) | Admin-authored via the API (seeded once) | prod only |
 | `skills-registry-projects-{env}` | [`aws_dynamodb_table.projects`](../terraform/dynamodb.tf) | Mirrored from the Nava projects Google Sheet by a scheduled sync | none — fully re-derivable |
-| `skills-registry-contracts-{env}` | [`aws_dynamodb_table.contracts`](../terraform/dynamodb.tf) | Mirrored from the AI Survey tab by an operator-run script | prod only |
+| `skills-registry-contracts-{env}` | [`aws_dynamodb_table.contracts`](../terraform/dynamodb.tf) | Mirrored weekly from the Compliance tab of the AI Survey workbook | prod only |
 
 All three are `PAY_PER_REQUEST` with point-in-time recovery, and none has a GSI: every read is a single `Query` on one partition. Table names reach the Lambda as `PROJECT_REFERENCE_TABLE`, `PROJECTS_TABLE`, and `CONTRACTS_TABLE` ([`terraform/lambda.tf`](../terraform/lambda.tf)), resolved through the `tables.*()` accessors in [`functions/api/lib/dynamo.mjs`](../functions/api/lib/dynamo.mjs).
 
@@ -266,7 +266,7 @@ A contract associates a `project` with a **posture** indirectly, and carries the
 
 Neither `project_code` nor `contract_num` is a safe key. `contract_num` is absent on 60 records and shared by 17 others, and a project may have multiple contracts, so the project reference is many-to-one and never unique.
 
-**Admission rule:** its own table rather than a partition of an existing one. `projects` admits only record types re-creatable by a scheduled sync, and the deploy role holds `DeleteItem` over it. `project_reference` admits only entity types governed by `manage:project-reference`, which is `projects-admin`-only; contracts are readable by every signed-in user.
+**Admission rule:** its own table rather than a partition of an existing one. `projects` admits only records from the projects sheet, and contracts come from a different, attorney-client privileged workbook. `project_reference` admits only entity types governed by `manage:project-reference`, which is `projects-admin`-only; contracts are readable by every signed-in user.
 
 **Write surface:** the population script only. No create, update, or delete route.
 
@@ -349,7 +349,7 @@ Note that `portfolio` here includes `BEAM`, which has no counterpart in the proj
 }
 ```
 
-Population is operator-run against staging and prod by [`scripts/sync-contracts.mjs`](../scripts/sync-contracts.mjs), written to reconcile rather than insert so a refresh is one command. As with `sync_meta` on the projects table, absent metadata is a distinct third state from `in_progress` and `complete`, so a populated table cannot read as never-populated.
+Population runs weekly against staging and prod through [`sync-contracts.yml`](../.github/workflows/sync-contracts.yml), which calls [`scripts/sync-contracts.mjs`](../scripts/sync-contracts.mjs). The script reconciles rather than inserts, so an operator can also refresh with one command. As with `sync_meta` on the projects table, absent metadata is a distinct third state from `in_progress` and `complete`, so a populated table cannot read as never-populated.
 
 There is no workflow calling this and the GitHub deploy role has no access to the table — unlike the projects sync, nothing exercises the workbook share on a schedule. A refresh depends on that share still being in place.
 

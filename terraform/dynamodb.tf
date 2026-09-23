@@ -142,8 +142,8 @@ resource "aws_dynamodb_table" "projects" {
   }
 }
 
-# Contracts mirrored from the "AI Survey (Contracts and Delivery Completes)" tab,
-# plus one metadata record describing the last population run. A contract exists
+# Contracts mirrored from the "Compliance" tab of the Contract Performance AI
+# Survey workbook, plus one metadata record describing the last population run. A contract exists
 # to associate a project with an AI posture indirectly and to carry the
 # contract-level AI-use terms behind that posture.
 #
@@ -160,13 +160,13 @@ resource "aws_dynamodb_table" "projects" {
 # ADMISSION RULE: this table is READABLE BY EVERY SIGNED-IN USER, which is why it
 # is its own table rather than a partition of either neighbour. project_reference
 # admits only entity types governed by manage:project-reference, and this audience
-# is far wider. projects admits only record types re-creatable by a scheduled
-# sync, and this is operator-populated. Do not move records between the three.
+# is far wider. projects admits only records from the projects sheet, and these
+# come from a different, attorney-client privileged workbook. Do not move records
+# between the three.
 #
 # Deletion protection in prod: the data is re-derivable by re-running the
 # population script, but only while its workbook stays shared with the service
-# account — a weaker guarantee than the projects sync, which exercises its share
-# on a schedule. Nothing here exercises this one.
+# account. The weekly sync-contracts workflow exercises that share.
 resource "aws_dynamodb_table" "contracts" {
   name         = "${var.project_name}-contracts-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"
@@ -214,8 +214,9 @@ resource "aws_dynamodb_table" "contracts" {
 # re-creatable by re-running the sync may live here, because the GitHub deploy
 # role holds DeleteItem on this table — the same rule the projects table carries,
 # and for the same reason. It is not a partition of `contracts` (that table is
-# operator-populated, with no CI access at all) and not a partition of `projects`
-# (different key, different workbook). Do not move records between the three.
+# readable by every signed-in user and comes from a privileged workbook) and not a
+# partition of `projects` (different key, different workbook). Do not move records
+# between the three.
 #
 # Deletion protection in prod, matching contracts: the data is re-derivable by
 # re-running the sync, but only while the workbook stays shared with the service

@@ -237,7 +237,7 @@ Attribute names are slugs derived from the sheet headers; `column_headers` maps 
 
 Contract records mirrored from the "Compliance" tab of the Contract Performance AI Survey workbook by `scripts/sync-contracts.mjs`. The survey is authoritative and is the only write surface. Only contracts whose `publish` column reads `Yes` are served, and the `publish` flag itself is not served.
 
-Population is **operator-run, not scheduled** — unlike Projects and Initiatives there is no workflow, and the GitHub deploy role has no access to the table. A refresh is `node scripts/sync-contracts.mjs --env <staging|prod>`, run per environment.
+Population runs **weekly** in `.github/workflows/sync-contracts.yml`, Mondays at 09:00 UTC, an hour after the projects sync. The workflow passes `--summary-only`, so its public logs print counts and never a contract id or sheet value. An operator can also run `node scripts/sync-contracts.mjs --env <staging|prod>` by hand.
 
 Requires only a session — **not** capability-gated, on the same reasoning as Initiatives: the Contract Explorer exists so any delivery team member can answer "may I use AI on my contract?", and a capability role would be assigned to nobody.
 

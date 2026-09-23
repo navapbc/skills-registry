@@ -155,8 +155,9 @@ data "aws_iam_policy_document" "github_deploy_projects" {
     resources = [aws_dynamodb_table.projects.arn]
   }
 
-  # The sync's post-apply drift check reads the archetype partition of the
-  # reference table to decide whether the sheet names archetypes that exist.
+  # The projects sync's post-apply drift check reads the archetype partition of
+  # the reference table to decide whether the sheet names archetypes that exist.
+  # The contracts sync's drift check reads the posture partition the same way.
   #
   # READ ONLY, and it must stay that way. The preceding plan deliberately kept the
   # deploy role off this table entirely because its records are admin-authored and
@@ -174,10 +175,6 @@ data "aws_iam_policy_document" "github_deploy_projects" {
   # its own table, matching DynamoDBProjectsSync above and admitted on the same
   # basis: every record is wholly derived from the workbook and re-creatable by
   # re-running the sync, so CI holding DeleteItem loses nothing unrecoverable.
-  #
-  # Note this is the deliberate opposite of the CONTRACTS table, which CI cannot
-  # touch at all — that data is operator-populated. Do not add the contracts ARN
-  # here on the reasoning that the two are similar. They are not.
   statement {
     sid    = "DynamoDBInitiativesSync"
     effect = "Allow"
@@ -188,6 +185,27 @@ data "aws_iam_policy_document" "github_deploy_projects" {
       "dynamodb:DeleteItem",
     ]
     resources = [aws_dynamodb_table.initiatives.arn]
+  }
+
+  # The contracts sync, which runs in CI weekly after the projects sync
+  # (.github/workflows/sync-contracts.yml). Admitted on the same basis as the two
+  # syncs above: every record is copied from the Compliance tab and re-creatable
+  # by re-running the sync. The sync's safety gate (delete ceiling, row-count
+  # drop, absolute floor) bounds what one run can delete.
+  #
+  # Its drift check needs no further statement: DynamoDBProjectsSync grants Query
+  # on the projects table and DynamoDBArchetypeRead grants Query on the reference
+  # table.
+  statement {
+    sid    = "DynamoDBContractsSync"
+    effect = "Allow"
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:GetItem",
+      "dynamodb:Query",
+      "dynamodb:DeleteItem",
+    ]
+    resources = [aws_dynamodb_table.contracts.arn]
   }
 
   # No statement is needed for the initiatives sync's post-apply resolution check,

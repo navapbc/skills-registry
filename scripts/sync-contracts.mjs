@@ -4,11 +4,8 @@
  * Contract Performance AI Survey workbook
  * (docs/plans/2026-08-07-001-feat-contracts-table-and-population-plan.md, U3).
  *
- * Population is operator-run, NOT scheduled — unlike scripts/sync-projects.mjs.
- * There is no workflow calling this, and the GitHub deploy role has no access to
- * the table. The origin document treats population as a one-time event; this is
- * written to reconcile anyway, so the certain future refresh is one command
- * rather than a rewrite.
+ * .github/workflows/sync-contracts.yml runs this weekly, after the projects sync,
+ * with --summary-only. An operator can also run it by hand.
  *
  * The sheet is authoritative: a contract it no longer lists is deleted here.
  *
@@ -32,6 +29,12 @@
  *   --reference-table <n>  PROJECT_REFERENCE_TABLE   default skills-registry-project-reference-<env>
  *   --dry-run              report the diff and the gate verdict, write nothing
  *   --force                waive the gate's overridable conditions
+ *   --summary-only         print counts only, never a contract id or sheet value
+ *
+ * --summary-only exists for CI. The repository is public, so its Actions logs
+ * are public, and the workbook is attorney-client privileged. Without the flag
+ * the run prints contract ids and PROJECT values. Run without it locally to see
+ * which contracts a count refers to.
  *
  * --force never waives the zero-row refusal. A zero-row read means the tab, its
  * share, or its shape changed — not that every contract was retired.
@@ -48,8 +51,9 @@
  * is always red is a run nobody reads.
  *
  * Prerequisites: a Google service-account key with read access to the workbook,
- * and operator AWS credentials with read/write on the contracts table. CI does
- * not have them, deliberately.
+ * and AWS credentials with read/write on the contracts table and Query on the
+ * projects and project-reference tables. The GitHub deploy role holds these
+ * through DynamoDBContractsSync in terraform/iam.tf.
  */
 
 import { createRequire } from 'module';
@@ -74,7 +78,7 @@ const TAB_TITLE = 'Compliance';
 const PROJECT = 'skills-registry';
 
 const USAGE =
-  'Usage: node scripts/sync-contracts.mjs --env <staging|prod> [--dry-run] [--force]\n' +
+  'Usage: node scripts/sync-contracts.mjs --env <staging|prod> [--dry-run] [--force] [--summary-only]\n' +
   '                                       [--credentials <path>] [--spreadsheet <url-or-id>]\n' +
   '                                       [--table <name>] [--projects-table <name>]\n' +
   '                                       [--reference-table <name>]';
@@ -85,7 +89,7 @@ function fail(message) {
 }
 
 function parseArgs(argv) {
-  const opts = { dryRun: false, force: false };
+  const opts = { dryRun: false, force: false, summaryOnly: false };
 
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
@@ -109,6 +113,7 @@ function parseArgs(argv) {
     switch (flag) {
       case '--dry-run': opts.dryRun = true; break;
       case '--force': opts.force = true; break;
+      case '--summary-only': opts.summaryOnly = true; break;
       case '--env': opts.env = requireValue(); i++; break;
       case '--credentials': opts.credentials = requireValue(); i++; break;
       case '--spreadsheet': opts.spreadsheet = requireValue(); i++; break;
@@ -137,6 +142,7 @@ function parseArgs(argv) {
     env: opts.env,
     dryRun: opts.dryRun,
     force: opts.force,
+    summaryOnly: opts.summaryOnly,
     credentialsPath: resolve(
       opts.credentials ?? process.env.GOOGLE_APPLICATION_CREDENTIALS ?? 'credentials.json',
     ),
@@ -158,9 +164,7 @@ function logDrift(drift) {
   }
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-
+async function main(args) {
   const auth = await authorize(loadServiceAccountKey(args.credentialsPath));
   console.log(`Authenticated as ${auth.clientEmail}`);
 
@@ -215,7 +219,7 @@ async function main() {
       (report.skippedBlankRows ? `\n  ${String(report.skippedBlankRows).padStart(4)} blank rows skipped` : ''),
   );
 
-  if (report.deletedIds.length > 0) {
+  if (report.deletedIds.length > 0 && !args.summaryOnly) {
     console.log(`\n  deleting: ${report.deletedIds.join(', ')}`);
   }
 
@@ -240,7 +244,7 @@ async function main() {
       `\n  ${String(drift.unresolvedProjects.length).padStart(4)} project names matching no project` +
       `\n  ${String(drift.unresolvedPostures.length).padStart(4)} ruling names matching no posture record`,
   );
-  logDrift(drift);
+  if (!args.summaryOnly) logDrift(drift);
 
   if (drift.unresolvedPostures.length > 0) {
     console.error(
@@ -252,7 +256,17 @@ async function main() {
   console.log(`\nDone. ${report.incoming} contracts in ${args.table}.\n`);
 }
 
-main().catch((err) => {
+const args = parseArgs(process.argv.slice(2));
+
+main(args).catch((err) => {
+  // A shaping error can name a contract id, which is a slug of the PROJECT value.
+  // Sheets errors name only the workbook id and the service account.
+  if (err instanceof SyncContractsError && args.summaryOnly) {
+    fail(
+      'Shaping the sheet failed. The reason can name a contract, so --summary-only withholds it.\n' +
+        '  Run `node scripts/sync-contracts.mjs --env <env> --dry-run` locally to see it.',
+    );
+  }
   if (err instanceof SyncContractsError || err instanceof SheetsError) fail(err.message);
 
   // The likeliest operator mistake is running this before the table exists —
@@ -268,8 +282,9 @@ main().catch((err) => {
 
   if (err?.name === 'AccessDeniedException') {
     fail(
-      'AWS denied the request. Population runs as an OPERATOR, not as CI — the GitHub deploy\n' +
-        '  role deliberately has no access to the contracts table.\n' +
+      'AWS denied the request. The credentials need read/write on the contracts table and\n' +
+        '  Query on the projects and project-reference tables (DynamoDBContractsSync in\n' +
+        '  terraform/iam.tf grants these to the GitHub deploy role).\n' +
         `  Original error: ${err.message}`,
     );
   }

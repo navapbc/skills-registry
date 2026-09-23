@@ -1,0 +1,142 @@
+name: Sync Contracts
+
+# Mirrors the "Compliance" tab of the Contract Performance AI Survey workbook into
+# the contracts DynamoDB table, then checks every contract's PROJECT value and AI
+# use terms against the project and posture records.
+#
+# Weekly, an hour after sync-projects.yml (Mondays 08:00 UTC, which starts around
+# 08:14 and takes about a minute). The drift check reads the projects table, so it
+# runs against that morning's projects. Manual dispatch covers "I just edited the
+# sheet".
+#
+# EVERY RUN PASSES --summary-only. This repository is public, so these logs are
+# public, and the workbook is attorney-client privileged. Without the flag the
+# sync prints contract ids and PROJECT values. Run the script locally without it
+# to see which contracts a count refers to.
+#
+# The drift check WARNS; it does not fail the run. Most AI use terms are free text
+# rather than a bare ruling name, and most PROJECT values match no project record.
+# That is the survey's current state, not a regression.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Mondays, 09:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report the diff and the safety verdict without writing'
+        required: false
+        type: boolean
+        default: false
+      force:
+        description: 'Waive the safety gate (row-count drop, delete ceiling, absolute floor). Never waives the zero-row refusal.'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  sync-staging:
+    name: Sync to staging
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write   # required for OIDC role assumption
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install API Lambda dependencies
+        run: cd functions/api && pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      # Written outside the workspace so nothing that archives the checkout can
+      # pick it up, and via a redirect rather than `echo` so the key never
+      # appears in an argument list.
+      - name: Write Google service-account key
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        run: |
+          umask 077
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/google-credentials.json"
+
+      - name: Sync contracts (staging)
+        env:
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry-run' || '' }}
+          FORCE_FLAG: ${{ inputs.force && '--force' || '' }}
+        run: |
+          node scripts/sync-contracts.mjs --env staging --summary-only \
+            --credentials "$RUNNER_TEMP/google-credentials.json" \
+            $DRY_RUN_FLAG $FORCE_FLAG
+
+      - name: Remove credential
+        if: always()
+        run: rm -f "$RUNNER_TEMP/google-credentials.json"
+
+  # Gated on staging: a sheet that fails shaping or the safety gate there never
+  # reaches prod.
+  sync-prod:
+    name: Sync to prod
+    runs-on: ubuntu-latest
+    environment: production
+    needs: sync-staging
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install API Lambda dependencies
+        run: cd functions/api && pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Write Google service-account key
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        run: |
+          umask 077
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/google-credentials.json"
+
+      - name: Sync contracts (prod)
+        env:
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry-run' || '' }}
+          FORCE_FLAG: ${{ inputs.force && '--force' || '' }}
+        run: |
+          node scripts/sync-contracts.mjs --env prod --summary-only \
+            --credentials "$RUNNER_TEMP/google-credentials.json" \
+            $DRY_RUN_FLAG $FORCE_FLAG
+
+      - name: Remove credential
+        if: always()
+        run: rm -f "$RUNNER_TEMP/google-credentials.json"
