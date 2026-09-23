@@ -1,26 +1,24 @@
 import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
 import { renderIcon, ARCHETYPE_ICON_NAMES } from '../../lib/icons.mjs';
+import { renderArchetypeBadge } from '../../lib/archetype-badge.mjs';
 import { apiPost, apiPut } from '../admin/api.mjs';
 import { renderListEditor, readListEditor, bindListEditor, compact } from './list-editor.mjs';
 import { renderUsageCell, renderOrphanNotice, renderUsageUnavailableNotice } from './usage.mjs';
 
 const ENDPOINT = '/project-reference/archetype';
 
-// Colors are applied as inline styles throughout. Interpolated utility classes
-// emit no CSS, so a `bg-${color}` would silently render unstyled.
-const swatch = (color) =>
-  `<span class="inline-block w-4 h-4 rounded border border-gray-200 align-middle" style="background:${escapeHtml(color)}"></span>`;
+// The label placeholder the form's preview badge shows before a label is typed.
+const PREVIEW_LABEL = 'Archetype label';
 
 /** One table row. Actions are Edit only — no delete endpoint exists. */
 export function renderArchetypeRow(a, usage) {
   const inactive = a.status === 'inactive';
   return `
     <tr class="border-b border-gray-100 ${inactive ? 'opacity-60' : ''}" data-id="${escapeHtml(a.id)}">
-      <td class="py-2 w-6 text-gray-500">${renderIcon(a.icon, { size: 18 })}</td>
-      <td class="py-2 font-medium text-gray-900">${escapeHtml(a.label)}</td>
+      <td class="py-2">${renderArchetypeBadge(a)}</td>
       <td class="py-2 text-gray-500 font-mono text-xs">${escapeHtml(a.id)}</td>
-      <td class="py-2">${swatch(a.color)} <span class="text-xs text-gray-400 font-mono">${escapeHtml(a.color)}</span></td>
+      <td class="py-2 text-xs text-gray-400 font-mono">${escapeHtml(a.color)}</td>
       <td class="py-2 text-xs text-gray-500">${(a.characteristics ?? []).length} / ${(a.ai_opportunities ?? []).length}</td>
       <td class="py-2">${renderUsageCell(usage, a.id)}</td>
       <td class="py-2 text-xs">${inactive ? '<span class="text-gray-500">inactive</span>' : '<span class="text-green-700">active</span>'}</td>
@@ -38,8 +36,7 @@ export function renderArchetypeTable(archetypes, usage) {
     ${renderUsageUnavailableNotice(usage)}
     <table class="admin-table w-full text-sm border-collapse">
       <thead><tr class="text-left text-xs text-gray-500 border-b border-gray-200">
-        <th class="pb-2 font-medium"></th>
-        <th class="pb-2 font-medium">Label</th>
+        <th class="pb-2 font-medium" title="The badge as the Initiatives detail page renders it">Badge</th>
         <th class="pb-2 font-medium">Id</th>
         <th class="pb-2 font-medium">Color</th>
         <th class="pb-2 font-medium" title="Characteristics / AI opportunities">Lists</th>
@@ -76,6 +73,7 @@ export function renderIconPicker(selected) {
 }
 
 export function renderArchetypeForm(a = {}) {
+  const color = a.color ?? '#651A94';
   return `
     <h3 class="text-sm font-semibold text-gray-700 mb-3" id="arch-form-title">
       ${a.id ? 'Edit Archetype' : 'Add Archetype'}
@@ -103,10 +101,15 @@ export function renderArchetypeForm(a = {}) {
       <div>
         <label class="text-xs text-gray-600 block mb-1">Color *</label>
         <div class="flex items-center gap-2">
-          <input id="arch-color" type="color" value="${escapeHtml(a.color ?? '#651A94')}"
+          <input id="arch-color" type="color" value="${escapeHtml(color)}"
             class="h-8 w-12 border border-gray-200 rounded p-0.5" />
-          <span id="arch-color-preview" class="text-xs font-mono text-gray-500">${escapeHtml(a.color ?? '#651A94')}</span>
+          <span id="arch-color-value" class="text-xs font-mono text-gray-500">${escapeHtml(color)}</span>
+          <span class="text-xs text-gray-400">Preview:</span>
+          <span id="arch-badge-preview">${renderArchetypeBadge({ ...a, color, label: a.label || PREVIEW_LABEL })}</span>
         </div>
+        <p class="text-xs text-gray-400 mt-1">
+          The badge uses this color for its border and icon, with a pale tint of it behind dark text.
+        </p>
       </div>
       ${renderIconPicker(a.icon)}
     </div>
@@ -186,10 +189,19 @@ export async function load(panel, ctx) {
       });
     }
 
+    // The preview follows every field the badge shows: color, label, and icon.
     const color = formEl.querySelector('#arch-color');
-    color?.addEventListener('input', () => {
-      formEl.querySelector('#arch-color-preview').textContent = color.value;
-    });
+    const updatePreview = () => {
+      formEl.querySelector('#arch-color-value').textContent = color.value;
+      formEl.querySelector('#arch-badge-preview').innerHTML = renderArchetypeBadge({
+        color: color.value,
+        label: formEl.querySelector('#arch-label').value || PREVIEW_LABEL,
+        icon: formEl.querySelector('input[name="arch-icon"]:checked')?.value ?? '',
+      });
+    };
+    color?.addEventListener('input', updatePreview);
+    formEl.querySelector('#arch-label')?.addEventListener('input', updatePreview);
+    formEl.querySelector('#arch-icon-picker')?.addEventListener('change', updatePreview);
 
     formEl.querySelector('#arch-cancel')?.addEventListener('click', closeForm);
     formEl.querySelector('#arch-save')?.addEventListener('click', save);

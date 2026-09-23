@@ -6,7 +6,7 @@
 // test.
 
 import { escapeHtml, truncate } from './render.mjs';
-import { renderIcon } from './icons.mjs';
+import { renderArchetypeBadge } from './archetype-badge.mjs';
 
 // The sheet's multi-value separator is `;`. Measured: `contacts` and `link` both
 // use it, and no cell uses a comma as a separator. A comma is accepted anyway
@@ -406,26 +406,6 @@ export function renderInitiativeGrid(initiatives) {
   return `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     ${initiatives.map((i) => `<div class="h-full">${renderInitiativeCard(i)}</div>`).join('')}
   </div>`;
-}
-
-/**
- * One archetype as a badge: its icon and label, in the archetype's color.
- *
- * The color is edited on the Archetypes tab of /projects-admin and arrives as a
- * six-digit hex, so it is applied as an INLINE STYLE. An interpolated Tailwind
- * class would emit no CSS.
- *
- * The text stays gray-900 and the color goes on the border, the icon, and a 10%
- * tint behind the text (the `1a` alpha suffix). The seeded colors are saturated,
- * and orange `#F37100` or teal `#08A588` as text on white measures under the
- * 4.5:1 WCAG AA minimum. A 10% tint of any hex stays pale enough for gray-900 text.
- *
- * The markup holds no newlines because the details grid's `<dd>` sets
- * `whitespace-pre-line`, which would turn each newline into a line break.
- */
-function renderArchetypeBadge(archetype) {
-  const color = escapeHtml(archetype.color);
-  return `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-xs font-medium text-gray-900" style="background-color: ${color}1a; border-color: ${color}"><span class="inline-flex" style="color: ${color}">${renderIcon(archetype.icon, { size: 14 })}</span>${escapeHtml(archetype.label)}</span>`;
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   renderArchetypeForm,
 } from '../../src/scripts/projects-admin/archetypes.mjs';
 import { ARCHETYPE_ICON_NAMES } from '../../src/lib/icons.mjs';
+import { renderArchetypeBadge } from '../../src/lib/archetype-badge.mjs';
 
 const ARCHETYPE = {
   id: 'product-team',
@@ -24,7 +25,15 @@ describe('renderArchetypeTable', () => {
     expect(html.match(/<tr class="border-b/g)).toHaveLength(2);
     expect(html).toContain('Product Team');
     expect(html).toContain('platform-team');
-    expect(html).toContain('background:#651A94');
+    expect(html).toContain('#651A94');
+  });
+
+  it('shows each archetype as the badge the Initiatives detail page renders', () => {
+    // One renderer for both pages, so the tab cannot show a color readers never see.
+    const html = renderArchetypeTable([ARCHETYPE]);
+    expect(html).toContain(renderArchetypeBadge(ARCHETYPE));
+    // The solid swatch is gone: it showed the full color where readers see a tint.
+    expect(html).not.toContain('background:#651A94');
   });
 
   it('renders the icon as markup, not as its name', () => {
@@ -123,6 +132,16 @@ describe('renderArchetypeForm', () => {
 
   it('offers reactivation for an inactive record', () => {
     expect(renderArchetypeForm({ ...ARCHETYPE, status: 'inactive' })).toContain('Reactivate');
+  });
+
+  it('previews the badge for the record being edited', () => {
+    const html = renderArchetypeForm(ARCHETYPE);
+    expect(html).toContain(`<span id="arch-badge-preview">${renderArchetypeBadge(ARCHETYPE)}</span>`);
+  });
+
+  it('previews a placeholder label and the default color for a new archetype', () => {
+    const html = renderArchetypeForm();
+    expect(html).toMatch(/id="arch-badge-preview">.*border-color: #651A94.*Archetype label<\/span><\/span>/);
   });
 
   it('renders both list editors, starting empty rather than with a blank row', () => {
