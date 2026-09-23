@@ -15,10 +15,10 @@ import {
 // The posture records as staging and prod hold them. No record carries
 // `conditional` yet, so that ruling renders uncoloured.
 const POSTURES = [
-  { id: 'allowed', color: '#e7f1e0' },
+  { id: 'allowed', color: '#e7f1e0', definition: 'This means the contract allows us to use AI.' },
   { id: 'restricted', color: '#fdf3d6' },
   { id: 'silent', color: '#f3f4f6', label: 'AI SILENT — how to proceed', steps: ['Check the terms.', 'Ask your PM.'] },
-  { id: 'prohibited', color: '#fcdcd6' },
+  { id: 'prohibited', color: '#fcdcd6', definition: 'You cannot use AI on this contract.' },
 ];
 const rulings = rulingsFromPostures(POSTURES);
 
@@ -50,10 +50,6 @@ const sectionOf = (html, label) =>
 describe('RULINGS', () => {
   it('defines the five rulings in the design order', () => {
     expect(RULINGS.map((r) => r.name)).toEqual(['Allowed', 'Restricted', 'Silent', 'Prohibited', 'Conditional']);
-  });
-
-  it('gives every ruling a definition', () => {
-    for (const r of RULINGS) expect(r.definition.length).toBeGreaterThan(0);
   });
 });
 
@@ -432,7 +428,22 @@ describe('renderContractDetail', () => {
       }
       expect(list).toContain('border border-gray-300 bg-white text-gray-900">Conditional</span>');
       expect(list).toContain('You cannot use AI on this contract.');
-      expect(list).toContain('such as the relevant task order.');
+      expect(list).toContain('This means the contract allows us to use AI.');
+    });
+
+    it('takes each definition from its posture record, and says when there is none', () => {
+      const html = renderContractDetail(contract(), rulings);
+      const list = html.slice(html.indexOf('id="ai-rulings"'));
+      const rowOf = (name) => list.slice(list.indexOf(`>${name}</span>`)).split('</div>')[0];
+      expect(rowOf('Prohibited')).toContain('You cannot use AI on this contract.');
+      // A record with no definition, and a ruling with no record at all.
+      expect(rowOf('Restricted')).toContain('None listed');
+      expect(rowOf('Conditional')).toContain('None listed');
+    });
+
+    it('escapes a definition, which an admin typed', () => {
+      const list = rulingsFromPostures([{ id: 'allowed', color: '#e7f1e0', definition: '<img src=x>' }]);
+      expect(renderContractDetail(contract(), list)).not.toContain('<img src=x>');
     });
   });
 

@@ -66,6 +66,9 @@ export function renderPostureRow(posture, index, total, usage) {
         ${inactive ? '<span class="text-xs text-gray-500">inactive</span>' : ''}
         <button class="edit-posture-btn ml-auto text-xs text-plum-600 hover:text-plum-700">Edit</button>
       </div>
+      <p class="text-sm px-3 pb-2 m-0 ${posture.definition ? 'text-gray-700' : 'text-gray-400'}">
+        ${posture.definition ? escapeHtml(posture.definition) : 'No definition yet.'}
+      </p>
       <ol class="text-sm text-gray-700 px-3 pb-3 pl-10 m-0">
         ${steps.map((s) => `<li class="py-0.5">${escapeHtml(s)}</li>`).join('')
           || '<li class="py-0.5 text-gray-400 list-none">No steps yet.</li>'}
@@ -118,6 +121,15 @@ export function renderPostureForm(p = {}) {
       </div>
       <p class="text-xs text-gray-400 mt-1">
         This is the badge background. Text is always dark, so pick a light color.
+      </p>
+    </div>
+    <div class="mb-3">
+      <label for="posture-definition" class="text-xs text-gray-600 block mb-1">Definition</label>
+      <textarea id="posture-definition" rows="2"
+        placeholder="This means the contract allows us to use AI."
+        class="w-full text-sm border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-plum-300">${escapeHtml(p.definition ?? '')}</textarea>
+      <p class="text-xs text-gray-400 mt-1">
+        Shown beside this posture's badge in the Contract Explorer's list of AI rulings.
       </p>
     </div>
     <div class="mb-3">
@@ -255,6 +267,7 @@ export async function load(panel, ctx) {
       id,
       label: formEl.querySelector('#posture-label').value,
       color: formEl.querySelector('#posture-color').value,
+      definition: formEl.querySelector('#posture-definition').value,
       steps: compact(readListEditor(formEl.querySelector('[data-le-root="steps"]'))),
       // A new posture goes last; existing records keep the position they have.
       position: draft.position ?? postures.length + 1,

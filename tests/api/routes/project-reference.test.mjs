@@ -243,6 +243,36 @@ describe('POST /api/project-reference/:entityType', () => {
     expect((await res.json()).error).toMatch(/step/i);
   });
 
+  it('stores a posture definition, trimmed', async () => {
+    const headers = as('projects-admin');
+    mockSend.mockResolvedValueOnce({}).mockResolvedValueOnce({});
+    const res = await app.request('/api/project-reference/posture', {
+      method: 'POST', headers,
+      body: JSON.stringify({ ...POSTURE, definition: '  You cannot use AI on this contract. ' }),
+    });
+    expect(res.status).toBe(201);
+    expect((await res.json()).definition).toBe('You cannot use AI on this contract.');
+  });
+
+  it('stores an absent posture definition as an empty string', async () => {
+    const headers = as('projects-admin');
+    mockSend.mockResolvedValueOnce({}).mockResolvedValueOnce({});
+    const res = await app.request('/api/project-reference/posture', {
+      method: 'POST', headers, body: JSON.stringify(POSTURE),
+    });
+    expect((await res.json()).definition).toBe('');
+  });
+
+  it('rejects a posture definition that is not a string', async () => {
+    const res = await app.request('/api/project-reference/posture', {
+      method: 'POST',
+      headers: as('projects-admin'),
+      body: JSON.stringify({ ...POSTURE, definition: ['a list'] }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/definition/i);
+  });
+
   it('rejects a posture with no steps at all', async () => {
     const res = await app.request('/api/project-reference/posture', {
       method: 'POST',
@@ -314,6 +344,19 @@ describe('PUT /api/project-reference/:entityType/:id', () => {
     });
     expect(res.status).toBe(200);
     expect((await res.json()).steps).toEqual(reordered);
+  });
+
+  it('persists an edited posture definition', async () => {
+    const headers = as('projects-admin');
+    mockSend
+      .mockResolvedValueOnce({ Item: { ...POSTURE, entity_type: 'posture', status: 'active', definition: 'Old.' } })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({});
+    const res = await app.request('/api/project-reference/posture/restricted', {
+      method: 'PUT', headers, body: JSON.stringify({ ...POSTURE, definition: 'New.' }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).definition).toBe('New.');
   });
 
   it('returns 404 for a record that does not exist rather than creating it', async () => {

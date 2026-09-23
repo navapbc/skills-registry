@@ -83,6 +83,9 @@ export function validateRecord(entityType, body) {
   }
   // An empty step renders as a blank instruction in guidance a team follows.
   if (!isTextList(body.steps)) return 'every step must be a non-empty string';
+  if (body.definition !== undefined && typeof body.definition !== 'string') {
+    return 'definition must be a string';
+  }
   return null;
 }
 
@@ -106,5 +109,13 @@ export function normalizeRecord(entityType, body, { id } = {}) {
     };
   }
 
-  return { ...base, position: body.position, steps: body.steps };
+  // `definition` is the one-sentence meaning the Contract Explorer's rulings list
+  // shows beside the badge. Stored as '' when absent, never omitted, matching the
+  // archetype description.
+  return {
+    ...base,
+    position: body.position,
+    steps: body.steps,
+    definition: (body.definition ?? '').trim(),
+  };
 }

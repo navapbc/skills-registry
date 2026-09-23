@@ -71,10 +71,14 @@ AI-posture policy guidance shown in the Contract Explorer.
 ```typescript
 {
   ...common;
-  position: number;    // integer, display order only — carries no severity semantics
-  steps:    string[];  // non-empty; every entry a non-empty string
+  position:   number;    // integer, display order only — carries no severity semantics
+  steps:      string[];  // non-empty; every entry a non-empty string
+  definition: string;    // one sentence shown beside the badge in the Contract
+                         //   Explorer's rulings list; "" when unset
 }
 ```
+
+`label`, `color`, `steps`, and `definition` are edited on the Policy Guidance tab of `/projects-admin`. The Contract Explorer reads all four, so an edit there reaches it with no deploy.
 
 | `id` | `label` | `color` | `position` | `steps` |
 |---|---|---|---|---|

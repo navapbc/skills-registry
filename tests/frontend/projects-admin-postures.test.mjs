@@ -126,6 +126,15 @@ describe('renderPostureList', () => {
     expect(html).toContain('0 steps');
   });
 
+  it('shows each posture definition, escaped', () => {
+    const html = renderPostureList([P('x', 1, { definition: 'You <b>cannot</b> use AI.' })]);
+    expect(html).toContain('You &lt;b&gt;cannot&lt;/b&gt; use AI.');
+  });
+
+  it('says so when a posture has no definition yet', () => {
+    expect(renderPostureList([P('x', 1)])).toContain('No definition yet.');
+  });
+
   it('offers Edit only — deletion is not exposed anywhere', () => {
     const html = renderPostureList(SEEDED);
     expect(html).toContain('edit-posture-btn');
@@ -134,6 +143,16 @@ describe('renderPostureList', () => {
 });
 
 describe('renderPostureForm', () => {
+  it('offers the definition for editing, prefilled and escaped', () => {
+    const html = renderPostureForm(P('restricted', 2, { definition: 'Rules <apply>.' }));
+    expect(html).toMatch(/<textarea id="posture-definition"[^>]*>Rules &lt;apply&gt;\.<\/textarea>/);
+    expect(html).toContain('for="posture-definition"');
+  });
+
+  it('starts a new posture with an empty definition', () => {
+    expect(renderPostureForm()).toMatch(/<textarea id="posture-definition"[^>]*><\/textarea>/);
+  });
+
   // Position is set by moving the row, never by typing an integer — a raw field
   // would invite the position collisions sortPostures has to defend against.
   it('exposes no position input', () => {

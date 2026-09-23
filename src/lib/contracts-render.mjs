@@ -15,36 +15,16 @@ const BLURB_LIMIT = 180;
 /**
  * The five AI rulings, in the order the rulings list shows them.
  *
- * Authored copy, identical on every contract. The ids match AI_RULINGS in
- * functions/api/lib/contracts.mjs, and a test holds the two lists equal. Colours
- * are not authored here: rulingsFromPostures takes them from the posture records.
+ * The ids match AI_RULINGS in functions/api/lib/contracts.mjs, and a test holds
+ * the two lists equal. Colours, definitions, and guidance are not authored here:
+ * rulingsFromPostures takes them from the posture records.
  */
 export const RULINGS = [
-  {
-    id: 'allowed',
-    name: 'Allowed',
-    definition: 'This means the contract allows us to use AI. See below for more information and practical guidance.',
-  },
-  {
-    id: 'restricted',
-    name: 'Restricted',
-    definition: 'This means the contract allows us to use AI, but the contract or client has stated restrictions the team must observe.',
-  },
-  {
-    id: 'silent',
-    name: 'Silent',
-    definition: "This means the contract doesn't give any guidance on how we use AI. See below for how.",
-  },
-  {
-    id: 'prohibited',
-    name: 'Prohibited',
-    definition: 'You cannot use AI on this contract.',
-  },
-  {
-    id: 'conditional',
-    name: 'Conditional',
-    definition: 'This means permission to use AI likely depends on the contract vehicle or clause within the contract, such as the relevant task order.',
-  },
+  { id: 'allowed', name: 'Allowed' },
+  { id: 'restricted', name: 'Restricted' },
+  { id: 'silent', name: 'Silent' },
+  { id: 'prohibited', name: 'Prohibited' },
+  { id: 'conditional', name: 'Conditional' },
 ];
 
 // The badge text colour the Policy Guidance tab previews every posture colour
@@ -366,11 +346,16 @@ function renderPostureGuidance(contract, rulings) {
   </section>`;
 }
 
-/** Every ruling with its definition — the target of the "See all" link. */
+/**
+ * Every ruling with its definition — the target of the "See all" link.
+ *
+ * The definition comes from the posture record, edited on the Policy Guidance tab.
+ * A ruling with no record, or a record with no definition, shows "None listed".
+ */
 function renderRulingsList(rulings) {
   const rows = rulings.map((r) => `<div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
       <dt class="shrink-0 sm:w-28">${rulingBadge(r, r.name, 'text-sm')}</dt>
-      <dd class="text-sm text-gray-800 m-0">${escapeHtml(r.definition)}</dd>
+      <dd class="text-sm text-gray-800 m-0">${plain(r.posture?.definition)}</dd>
     </div>`).join('');
   return `<section id="ai-rulings" aria-labelledby="ai-rulings-heading" class="scroll-mt-6">
     <h2 id="ai-rulings-heading" class="text-base font-semibold text-gray-900 m-0">
