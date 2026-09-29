@@ -447,6 +447,16 @@ describe('renderContractDetail', () => {
     });
   });
 
+  it('links to the feedback form after the rulings list and before the capture note', () => {
+    const html = renderContractDetail(contract(), rulings);
+    const at = html.indexOf('href="https://forms.gle/dmmSLFzEyzQjPdxj6"');
+    const link = html.slice(at, html.indexOf('</a>', at) + 4);
+    expect(link).toContain('target="_blank"');
+    expect(link).toContain('>Submit feedback to help us improve.</a>');
+    expect(html.indexOf('id="ai-rulings"')).toBeLessThan(at);
+    expect(at).toBeLessThan(html.indexOf('Data captured from the AI-use survey'));
+  });
+
   it('orders the sections as the design does', () => {
     const html = renderContractDetail(contract(), rulings);
     const order = [

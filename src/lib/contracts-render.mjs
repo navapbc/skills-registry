@@ -203,6 +203,7 @@ const isBlank = (value) => !value || !String(value).trim();
 const plain = (value) => (isBlank(value) ? NONE_LISTED : escapeHtml(String(value).trim()));
 
 const CONFLUENCE_SPACES = 'https://navasage.atlassian.net/wiki/spaces/';
+const FEEDBACK_FORM = 'https://forms.gle/dmmSLFzEyzQjPdxj6';
 
 /**
  * The link to the project's index on Sage, or '' when the space key is unknown.
@@ -433,6 +434,9 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
 
       ${renderRulingsList(rulings)}
     </div>
+
+    <a href="${FEEDBACK_FORM}" target="_blank" rel="noopener noreferrer"
+      class="block mt-4 text-sm text-plum-700 underline">Submit feedback to help us improve.</a>
 
     <p class="text-xs text-gray-600 mt-10 m-0">
       Data captured from the AI-use survey on ${escapeHtml(formatCapturedAt(capturedAt))}.
