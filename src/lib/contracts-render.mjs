@@ -299,6 +299,8 @@ const CLIENT_ASK_SCRIPT = `<section aria-label="Scripted responses to client que
  * confirmed is worse than one that never claimed to remember.
  */
 const PRE_USE_CHECKLIST_ITEMS = [
+  'Never input PII, PHI, client datasets, production data, or any agency-sensitive '
+    + 'information into AI tools.',
   "Check whether a client AI policy exists for this contract (see 'client policy' field). "
     + "If yes, you must follow it in addition to Nava's playbook.",
   'All AI outputs must be reviewed, validated, and owned by a team member before inclusion '

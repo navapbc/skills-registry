@@ -313,6 +313,7 @@ describe('renderContractDetail', () => {
 
   describe('the pre-use checklist', () => {
     const ITEMS = [
+      'Never input PII, PHI, client datasets, production data, or any agency-sensitive information into AI tools.',
       "Check whether a client AI policy exists for this contract (see 'client policy' field). If yes, you must follow it in addition to Nava's playbook.",
       'All AI outputs must be reviewed, validated, and owned by a team member before inclusion in any deliverable.',
       'If you want to expand AI use or introduce a new tool, check with your Program Manager first. Some clients (MN, MA, AK) have formal approval processes that must be followed.',
@@ -321,7 +322,7 @@ describe('renderContractDetail', () => {
     const itemsOf = (html) => [...sectionOf(html, 'Pre-use checklist').matchAll(/<li[^>]*>([^<]*)<\/li>/g)]
       .map((m) => m[1]);
 
-    it('lists exactly the four authored items, in order', () => {
+    it('lists exactly the five authored items, in order', () => {
       expect(itemsOf(renderContractDetail(contract(), rulings))).toEqual(ITEMS);
     });
 
