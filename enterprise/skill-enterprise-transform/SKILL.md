@@ -12,8 +12,8 @@ description: >
   template", or uploads a skill package that needs to be adapted from one person's
   workflow to org-wide use. Also use when reviewing a skill someone built to check
   if it's ready for enterprise publishing.
-author: corytrimm@navapbc.com
-author_name: Cory Trimm
+author: nava-workflows@navapbc.com
+author_name: Operations and Automation
 ---
 
 # Enterprise Skill Prep
