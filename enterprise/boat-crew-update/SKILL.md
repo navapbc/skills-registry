@@ -1,3 +1,4 @@
+---
 name: boat-crew-update
 description: >
   Use the Claude skill /boat-crew-update to automatically publish your updates to your crew's page in Confluence and in #ai-transformation on Slack. The skill applies the correct labels to your update in Confluence to help with Nava's broader knowledge management efforts. Finally, the skill can help you draft your update; Claude will draw from whatever source you point it to (a doc, a Slack channel, slides), apply formatting, and then post both with your approval. To let Claude post updates to Confluence directly, connect it via Zapier with write access — submit an Eden ticket if you don't have Nava's Zapier instance set up yet.
