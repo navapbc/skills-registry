@@ -220,6 +220,18 @@ async function main(args) {
       (report.skippedBlankRows ? `\n  ${String(report.skippedBlankRows).padStart(4)} blank rows skipped` : ''),
   );
 
+  // Printed under --summary-only too: a header names a column, never a contract.
+  if (report.unknownHeaders.length > 0) {
+    const names = report.unknownHeaders.map((h) => `"${h}"`).join(', ');
+    const message =
+      `The sheet has columns this sync does not know, so they were not stored: ${names}. ` +
+      'Add each to COLUMN_ATTRIBUTES in scripts/lib/sync-contracts.mjs to store it, ' +
+      'or to EXCLUDED_HEADERS to silence this warning.';
+    console.warn(`\n  WARNING: ${message}`);
+    // An annotation shows on the run page, so a green run does not hide the warning.
+    if (process.env.GITHUB_ACTIONS === 'true') console.log(`::warning title=Unknown sheet columns::${message}`);
+  }
+
   if (report.deletedIds.length > 0 && !args.summaryOnly) {
     console.log(`\n  deleting: ${report.deletedIds.join(', ')}`);
   }

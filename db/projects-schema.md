@@ -325,7 +325,7 @@ Attribute names are snake_case, consistent with every other table here. Every at
 }
 ```
 
-The source is the "Compliance" tab of the Contract Performance AI Survey workbook. Every cell is stored as written, and nothing is derived from another column. Five source columns are deliberately not stored: "Contracts Team Member" (a named individual) and the four compliance-tracking columns ("Nava steps for compliance", "Nava Compliance Status", "Needed for compliance", "Notes"). The workbook is attorney-client privileged, so a header in neither the carried map nor the excluded list fails the population run.
+The source is the "Compliance" tab of the Contract Performance AI Survey workbook. Every cell is stored as written, and nothing is derived from another column. Five source columns are deliberately not stored: "Contracts Team Member" (a named individual) and the four compliance-tracking columns ("Nava steps for compliance", "Nava Compliance Status", "Needed for compliance", "Notes"). The workbook is attorney-client privileged, so a header in neither the carried map nor the excluded list is not stored. The population run warns with the header's name and continues. A carried header missing from the sheet fails the run, because a renamed column would otherwise be dropped from every stored contract.
 
 Every row is stored whatever its `publish` flag says. `GET /api/contracts`, the initiative related-contracts join, and the `projects-admin` drift findings all skip a contract whose `publish` is not `Yes`.
 

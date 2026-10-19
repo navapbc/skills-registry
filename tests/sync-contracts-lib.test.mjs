@@ -162,17 +162,32 @@ describe('shapeContracts', () => {
     expect(() => shapeContracts(grid)).toThrow(/Publish to Project Indices/);
   });
 
+  it('fails when an optional column is renamed, rather than storing every contract without it', () => {
+    // A rename reads as one unknown header plus one absent attribute. Continuing
+    // would replace every stored item with one missing `tools`.
+    const grid = gridOf(rowOf(SEC));
+    grid[HEADER_ROW] = grid[HEADER_ROW].map((h) => (h === header('tools') ? 'AI Tools' : h));
+    expect(() => shapeContracts(grid)).toThrow(/AI Tools Used in Contract Performance/);
+  });
+
   it('names the expected header row in the failure, since a shift looks plausible', () => {
     const grid = gridOf(rowOf(SEC));
     grid[HEADER_ROW] = [];
     expect(() => shapeContracts(grid)).toThrow(new RegExp(`row ${HEADER_ROW + 1}`));
   });
 
-  it('fails on a header in neither the map nor the exclusions', () => {
+  it('reports a header in neither the map nor the exclusions, and does not store it', () => {
     // A new or reworded column is carried only once someone decides it should be.
     const grid = gridOf(rowOf(SEC));
-    grid[HEADER_ROW] = [...grid[HEADER_ROW], 'Something New'];
-    expect(() => shapeContracts(grid)).toThrow(/"Something New"/);
+    grid[HEADER_ROW] = [...grid[HEADER_ROW], 'Something New', 'Something  New'];
+    grid[HEADER_ROW + 1] = [...grid[HEADER_ROW + 1], 'new value', 'new value'];
+    const { contracts, unknownHeaders } = shapeContracts(grid);
+    expect(unknownHeaders).toEqual(['Something New']);
+    expect(Object.values(contracts['fedciv-sec-enterprise-websites'])).not.toContain('new value');
+  });
+
+  it('reports no unknown headers for the real tab', () => {
+    expect(shapeContracts(gridOf(rowOf(SEC))).unknownHeaders).toEqual([]);
   });
 
   it('fails on two columns with the same header', () => {
@@ -215,13 +230,11 @@ describe('shapeContracts', () => {
   };
 
   it('marks header-row failures as headerOnly, since they name no contract', () => {
-    const unknown = gridOf(rowOf(SEC));
-    unknown[HEADER_ROW] = [...unknown[HEADER_ROW], 'Something New'];
     const duplicate = gridOf(rowOf(SEC));
     duplicate[HEADER_ROW] = [...duplicate[HEADER_ROW], header('tools')];
     const missing = gridOf(rowOf(SEC));
     missing[HEADER_ROW] = [];
-    for (const grid of [unknown, duplicate, missing]) {
+    for (const grid of [duplicate, missing]) {
       expect(thrownBy(grid).headerOnly).toBe(true);
     }
   });

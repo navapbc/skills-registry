@@ -13,6 +13,7 @@ import {
   SEED_NEVER,
 } from '../functions/api/lib/contracts.mjs';
 import { RECORD_PROJECT } from '../functions/api/lib/projects.mjs';
+import { COLUMN_ATTRIBUTES } from '../scripts/lib/sync-contracts.mjs';
 
 const NOW = '2026-08-07T12:00:00.000Z';
 const EARLIER = '2026-01-01T00:00:00.000Z';
@@ -27,16 +28,14 @@ const DeleteCommand = function (params) { return { type: 'Delete', params }; };
 const GetCommand = function (params) { return { type: 'Get', params }; };
 const QueryCommand = function (params) { return { type: 'Query', params }; };
 
-const HEADERS = [
-  'Contracts Team Member', 'PORTFOLIO', 'PROJECT', 'AGREEMENT TYPE', 'CONTRACT NUMBER',
-  'Contract AI Use Terms (i.e., allowed, restricted, silent, prohibited)',
-  'AI Tools Used in Contract Performance (list tools)', 'Notes',
-  'Publish to Project Indices and Contract Explorer (Yes/No)?',
-];
-const ATTRIBUTES = [
-  '', 'portfolio', 'project', 'agreement_type', 'contract_num', 'ai_use_terms', 'tools',
-  'Notes', 'publish',
-];
+// Every mapped header plus two excluded ones, since the shaping requires every
+// mapped header.
+const HEADERS = ['Contracts Team Member', ...Object.keys(COLUMN_ATTRIBUTES), 'Notes'];
+const ATTRIBUTES = ['', ...Object.values(COLUMN_ATTRIBUTES), 'Notes'];
+
+// Every carried attribute, blank. A stored record spreads this so it compares
+// equal to a shaped row with the same values.
+const BLANK = Object.fromEntries(Object.values(COLUMN_ATTRIBUTES).map((a) => [a, '']));
 
 function gridOf(...rows) {
   return [[], HEADERS, ...rows];
@@ -59,9 +58,9 @@ function manyRows(count, { from = 0 } = {}) {
 /** The stored form of manyRows, as the table would hold it after a run. */
 function manyStored(count, { from = 0, now = NOW } = {}) {
   return Array.from({ length: count }, (_, i) => ({
+    ...BLANK,
     contract_id: `labs-filler-${from + i}`,
     portfolio: 'LABS', project: `Filler ${from + i}`, tools: `n${from + i}`, publish: 'Yes',
-    agreement_type: '', contract_num: '', ai_use_terms: '',
     first_seen_at: now, last_synced_at: now,
   }));
 }
@@ -182,9 +181,9 @@ describe('populateContracts', () => {
     const ddb = fakeDdb({
       contracts: [
         {
+          ...BLANK,
           contract_id: 'labs-aecf', portfolio: 'LABS', project: 'AECF',
           ai_use_terms: 'Silent', tools: 'OLD', publish: 'Yes',
-          agreement_type: '', contract_num: '',
           first_seen_at: EARLIER, last_synced_at: EARLIER,
         },
         ...manyStored(95),
@@ -201,7 +200,7 @@ describe('populateContracts', () => {
   it('deletes contracts the sheet no longer lists', async () => {
     const ddb = fakeDdb({
       contracts: [
-        { contract_id: 'labs-aecf', portfolio: 'LABS', project: 'AECF', ai_use_terms: 'Silent', tools: 'a', publish: 'Yes', agreement_type: '', contract_num: '' },
+        { ...BLANK, contract_id: 'labs-aecf', portfolio: 'LABS', project: 'AECF', ai_use_terms: 'Silent', tools: 'a', publish: 'Yes' },
         { contract_id: 'labs-gone', portfolio: 'LABS', project: 'Gone' },
       ],
     });
@@ -286,6 +285,17 @@ describe('populateContracts', () => {
     const record = ddb.store.get(`${RECORD_CONTRACT}#labs-aecf`);
     expect(record.tools).toBe('a');
     expect(Object.values(record)).not.toContain('internal');
+  });
+
+  it('writes the contracts and reports an unknown column rather than failing', async () => {
+    const ddb = fakeDdb();
+    const grid = gridOf(rowOf(AECF));
+    grid[1] = [...grid[1], 'Something New'];
+    grid[2] = [...grid[2], 'new value'];
+    const report = await run(ddb, grid);
+    expect(report.unknownHeaders).toEqual(['Something New']);
+    expect(report.applied).toBe(true);
+    expect(Object.values(ddb.store.get(`${RECORD_CONTRACT}#labs-aecf`))).not.toContain('new value');
   });
 });
 

@@ -40,7 +40,7 @@ export const normalizeHeader = (header) => String(header ?? '').replace(/\s+/g, 
 // reasons. A prose header slugs to an unreadable attribute name. This workbook is
 // also attorney-client privileged and carries compliance-internal columns, so a
 // column must be carried on purpose. A header in neither this map nor
-// EXCLUDED_HEADERS fails the run.
+// EXCLUDED_HEADERS is not stored, and the run warns with its name.
 export const COLUMN_ATTRIBUTES = {
   'PORTFOLIO': 'portfolio',
   'PROJECT': 'project',
@@ -80,16 +80,6 @@ export const EXCLUDED_HEADERS = [
 // The contracts team's publish flag. It is stored like any other column, and the
 // API serves only the contracts whose flag reads "Yes".
 export const PUBLISH_ATTR = 'publish';
-
-// Attributes the shaping refuses to proceed without. Their absence means the
-// header row shifted or a header was reworded.
-export const REQUIRED_ATTRIBUTES = [
-  'portfolio',
-  'project',
-  'contract_num',
-  'ai_use_terms',
-  PUBLISH_ATTR,
-];
 
 // The two attributes the contract id is built from. Both are populated on every
 // row today, which is the property that makes the id stable: an id drawn from a
@@ -153,7 +143,7 @@ export function shapeContracts(cells) {
   );
   const excluded = new Set(EXCLUDED_HEADERS.map(normalizeHeader));
 
-  const unknown = headers.filter((h) => h !== '' && !attributeOf[h] && !excluded.has(h));
+  const unknown = [...new Set(headers.filter((h) => h !== '' && !attributeOf[h] && !excluded.has(h)))];
   const carried = [];
   const byAttribute = new Map();
   headers.forEach((header, index) => {
@@ -173,25 +163,20 @@ export function shapeContracts(cells) {
     carried.push({ index, header, attribute });
   });
 
-  const missing = REQUIRED_ATTRIBUTES.filter((a) => !byAttribute.has(a));
+  // Every mapped header is required, not only the id and publish columns. A
+  // renamed column otherwise reads as one unknown header (a warning) and one
+  // absent attribute, and each Put replaces the whole item, so every contract
+  // would lose that attribute. The safety gate counts rows, so it would not stop
+  // that run.
+  const missing = Object.entries(COLUMN_ATTRIBUTES)
+    .filter(([, attribute]) => !byAttribute.has(attribute))
+    .map(([header]) => header);
   if (missing.length > 0) {
-    const expected = missing.map((a) => Object.keys(COLUMN_ATTRIBUTES).find((h) => COLUMN_ATTRIBUTES[h] === a));
     throw new SyncContractsError(
-      `The header row is missing: ${expected.map((h) => `"${h}"`).join(', ')}. ` +
+      `The header row is missing: ${missing.map((h) => `"${h}"`).join(', ')}. ` +
         `Expected prose headers at grid index ${HEADER_ROW} (sheet row ${HEADER_ROW + 1}); ` +
         `found: ${headers.filter((h) => h !== '').join(' | ') || '(empty row)'}. ` +
-        'A shifted or reworded header row otherwise produces a plausible-looking result, ' +
-        'so this is checked before any shaping.',
-      { headerOnly: true },
-    );
-  }
-
-  // Checked after the required headers, so a shifted header row gets the message
-  // that names the expected row rather than a list of every header as unknown.
-  if (unknown.length > 0) {
-    throw new SyncContractsError(
-      `The header row has columns this sync does not know: ${unknown.map((h) => `"${h}"`).join(', ')}. ` +
-        'Add each to COLUMN_ATTRIBUTES to store it, or to EXCLUDED_HEADERS to leave it out.',
+        'If a column was renamed or deleted in the sheet, update COLUMN_ATTRIBUTES to match.',
       { headerOnly: true },
     );
   }
@@ -245,6 +230,8 @@ export function shapeContracts(cells) {
   return {
     contracts,
     headers: [...headers],
+    // Not stored. The caller warns, so a new sheet column does not halt population.
+    unknownHeaders: unknown,
     skippedBlankRows,
   };
 }

@@ -133,6 +133,7 @@ export async function populateContracts({
     deleted: diff.deletes.length,
     deletedIds: diff.deletes,
     skippedBlankRows: shaped.skippedBlankRows,
+    unknownHeaders: shaped.unknownHeaders,
     previousState: meta.state,
     refusal,
     applied: false,
