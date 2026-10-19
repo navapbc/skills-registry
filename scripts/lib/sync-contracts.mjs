@@ -12,9 +12,12 @@
  */
 
 export class SyncContractsError extends Error {
-  constructor(message) {
+  // headerOnly marks a message that quotes only header-row cells. A header names
+  // a column, never a contract, so --summary-only can print the message.
+  constructor(message, { headerOnly = false } = {}) {
     super(message);
     this.name = 'SyncContractsError';
+    this.headerOnly = headerOnly;
   }
 }
 
@@ -162,6 +165,7 @@ export function shapeContracts(cells) {
       throw new SyncContractsError(
         `Two columns are headed "${header}". Rename one in the sheet — keeping both ` +
           'would silently drop one column.',
+        { headerOnly: true },
       );
     }
     byAttribute.set(attribute, header);
@@ -177,6 +181,7 @@ export function shapeContracts(cells) {
         `found: ${headers.filter((h) => h !== '').join(' | ') || '(empty row)'}. ` +
         'A shifted or reworded header row otherwise produces a plausible-looking result, ' +
         'so this is checked before any shaping.',
+      { headerOnly: true },
     );
   }
 
@@ -186,6 +191,7 @@ export function shapeContracts(cells) {
     throw new SyncContractsError(
       `The header row has columns this sync does not know: ${unknown.map((h) => `"${h}"`).join(', ')}. ` +
         'Add each to COLUMN_ATTRIBUTES to store it, or to EXCLUDED_HEADERS to leave it out.',
+      { headerOnly: true },
     );
   }
 

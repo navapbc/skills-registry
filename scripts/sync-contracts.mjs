@@ -29,7 +29,8 @@
  *   --reference-table <n>  PROJECT_REFERENCE_TABLE   default skills-registry-project-reference-<env>
  *   --dry-run              report the diff and the gate verdict, write nothing
  *   --force                waive the gate's overridable conditions
- *   --summary-only         print counts only, never a contract id or sheet value
+ *   --summary-only         print counts and header-row errors, never a contract id
+ *                          or a data-row value
  *
  * --summary-only exists for CI. The repository is public, so its Actions logs
  * are public, and the workbook is attorney-client privileged. Without the flag
@@ -259,9 +260,10 @@ async function main(args) {
 const args = parseArgs(process.argv.slice(2));
 
 main(args).catch((err) => {
-  // A shaping error can name a contract id, which is a slug of the PROJECT value.
-  // Sheets errors name only the workbook id and the service account.
-  if (err instanceof SyncContractsError && args.summaryOnly) {
+  // A row error can name a contract id, which is a slug of the PROJECT value.
+  // A header error names only columns. Sheets errors name only the workbook id
+  // and the service account.
+  if (err instanceof SyncContractsError && args.summaryOnly && !err.headerOnly) {
     fail(
       'Shaping the sheet failed. The reason can name a contract, so --summary-only withholds it.\n' +
         '  Run `node scripts/sync-contracts.mjs --env <env> --dry-run` locally to see it.',

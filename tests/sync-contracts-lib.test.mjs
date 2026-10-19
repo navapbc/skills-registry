@@ -205,6 +205,35 @@ describe('shapeContracts', () => {
     const grid = gridOf(rowOf({ ai_use_terms: 'Silent', tools: 'orphan' }));
     expect(() => shapeContracts(grid)).toThrow(SyncContractsError);
   });
+
+  // --summary-only prints a headerOnly message and withholds every other one.
+  const thrownBy = (grid) => {
+    try { shapeContracts(grid); } catch (err) { return err; }
+    throw new Error('expected shapeContracts to throw');
+  };
+
+  it('marks header-row failures as headerOnly, since they name no contract', () => {
+    const unknown = gridOf(rowOf(SEC));
+    unknown[HEADER_ROW] = [...unknown[HEADER_ROW], 'Something New'];
+    const duplicate = gridOf(rowOf(SEC));
+    duplicate[HEADER_ROW] = [...duplicate[HEADER_ROW], header('tools')];
+    const missing = gridOf(rowOf(SEC));
+    missing[HEADER_ROW] = [];
+    for (const grid of [unknown, duplicate, missing]) {
+      expect(thrownBy(grid).headerOnly).toBe(true);
+    }
+  });
+
+  it('does not mark row failures as headerOnly, since they can name a contract', () => {
+    const collision = gridOf(
+      rowOf({ portfolio: 'LABS', project: 'AECF' }),
+      rowOf({ portfolio: 'labs', project: 'aecf', publish: 'No' }),
+    );
+    const unkeyed = gridOf(rowOf({ ai_use_terms: 'Silent', tools: 'orphan' }));
+    for (const grid of [collision, unkeyed]) {
+      expect(thrownBy(grid).headerOnly).toBe(false);
+    }
+  });
 });
 
 describe('reconcile', () => {
