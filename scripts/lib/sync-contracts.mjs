@@ -61,6 +61,7 @@ export const COLUMN_ATTRIBUTES = {
   'Description of How AI is Used in Contract Performance (brief narrative)': 'usage',
   'agency AI approval requirements': 'review_process',
   'Publish to Project Indices and Contract Explorer (Yes/No)?': 'publish',
+  'Permitted AI usage': 'permitted_ai_usage',
 };
 
 // Headers read from the sheet and deliberately NOT stored.

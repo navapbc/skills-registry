@@ -23,6 +23,7 @@ const HEADERS = [
   'Needed for compliance',
   'Notes',
   'Publish to Project Indices and Contract Explorer (Yes/No)?',
+  'Permitted AI usage',
 ];
 
 const header = (attribute) => Object.keys(COLUMN_ATTRIBUTES).find((h) => COLUMN_ATTRIBUTES[h] === attribute);
@@ -55,8 +56,9 @@ const SEC = {
 
 describe('the header map', () => {
   it('maps every carried header of the real tab, in its column order', () => {
-    expect(HEADERS).toHaveLength(24);
-    expect(HEADERS.at(-1)).toBe(header('publish'));
+    expect(HEADERS).toHaveLength(25);
+    expect(HEADERS.at(-2)).toBe(header('publish'));
+    expect(HEADERS.at(-1)).toBe(header('permitted_ai_usage'));
   });
 
   it('reads the prose header row, sheet row 2', () => {

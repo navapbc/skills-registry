@@ -308,6 +308,7 @@ Attribute names are snake_case, consistent with every other table here. Every at
   // --- AI terms (column L and column M) ---
   ai_use_terms:          string;  // free text, as written — see Joins below
   ai_use_terms_language: string;  // verbatim contract clause text, multi-paragraph
+  permitted_ai_usage:    string;  // the sheet's "Permitted AI usage"; stored, not served
 
   // --- Policy ---
   client_policy: string;  // is there a client AI-use policy? narrative
