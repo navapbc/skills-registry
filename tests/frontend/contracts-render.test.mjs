@@ -28,6 +28,7 @@ const contract = (over = {}) => ({
   project: 'SEC ENTERPRISE WEBSITES',
   contract_num: '47QTCA18D008M',
   customer: 'SEC',
+  nava_project_mgr: 'Morgan Demo',
   nava_program_mgr: 'Crystal Cody',
   ai_use_terms: 'Conditional, TO Silent, BPA Restricted',
   ai_use_terms_language: 'SEC BPA modification 4 incorporates AI-related clauses.',
@@ -191,7 +192,7 @@ describe('renderContractGrid', () => {
 
 describe('renderContractDetail', () => {
   describe('the header', () => {
-    it('names the portfolio, the contract, the agency, and the program manager', () => {
+    it('names the portfolio, contract, agency, program manager, and contract manager', () => {
       const html = renderContractDetail(contract(), rulings);
       expect(html).toMatch(/contract details/i);
       expect(html).toContain('FEDCIV');
@@ -199,6 +200,8 @@ describe('renderContractDetail', () => {
       expect(html).toContain('SEC ENTERPRISE WEBSITES');
       expect(html).toContain('Agency: <strong class="text-gray-900">SEC</strong>');
       expect(html).toContain('Crystal Cody');
+      expect(html).toContain('Contract manager: <strong class="text-gray-900">Morgan Demo</strong>');
+      expect(html.indexOf('Program manager:')).toBeLessThan(html.indexOf('Contract manager:'));
     });
 
     it('links the project index on Sage when the project has a space key', () => {
@@ -215,9 +218,10 @@ describe('renderContractDetail', () => {
       expect(keyless).not.toContain('wiki/spaces/');
     });
 
-    it('marks a blank agency or program manager as unlisted', () => {
-      const html = renderContractDetail(contract({ customer: '', nava_program_mgr: '' }), rulings);
-      expect(html.match(/None listed/g).length).toBeGreaterThanOrEqual(2);
+    it('marks a blank agency or manager as unlisted', () => {
+      const html = renderContractDetail(
+        contract({ customer: '', nava_program_mgr: '', nava_project_mgr: '' }), rulings);
+      expect(html.match(/None listed/g).length).toBeGreaterThanOrEqual(3);
     });
   });
 

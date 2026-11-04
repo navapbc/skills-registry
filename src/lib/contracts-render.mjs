@@ -383,6 +383,7 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
       <div class="text-sm sm:text-right">
         <p class="text-gray-900 m-0">Agency: <strong class="text-gray-900">${plain(contract.customer)}</strong></p>
         <p class="text-gray-600 mt-1 mb-0">Program manager: <strong class="text-gray-900">${plain(contract.nava_program_mgr)}</strong></p>
+        <p class="text-gray-600 mt-1 mb-0">Contract manager: <strong class="text-gray-900">${plain(contract.nava_project_mgr)}</strong></p>
         ${renderSageLink(contract.resolved_project)}
       </div>
     </header>
