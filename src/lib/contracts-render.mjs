@@ -133,7 +133,14 @@ export function describePopulationNotice(population) {
 
 /** Distinct portfolios, in a stable order, for the filter control. */
 export function portfoliosOf(contracts) {
-  return [...new Set((contracts ?? []).map((c) => c.portfolio).filter(Boolean))].sort();
+  // The BEAM portfolio should not come up as the first item in the portfolio list.
+  const EXCEPTION = 'BEAM';
+  const result = [...new Set((contracts ?? []).map((c) => c.portfolio).filter(Boolean))]
+  .sort((a, b) => {
+    if (a === EXCEPTION) return 1;  // If the given item matches the exception, move it down
+    return a.localeCompare(b);      // Otherwise, sort alphabetically
+  });
+  return result;
 }
 
 export function formatCapturedAt(iso) {
