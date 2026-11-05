@@ -391,7 +391,7 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
 
     <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-10">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wider text-gray-600 m-0">Contract details</p>
+        <p class="font-sans text-sm font-semibold leading-[21px] tracking-[0.28px] uppercase text-gray-600 m-0">Contracts & AI Explorer</p>
         <span class="inline-block mt-2 px-2 py-0.5 text-sm rounded bg-gray-600 text-white">${escapeHtml(contract.portfolio ?? '')}</span>
         <h1 class="text-xl font-bold text-gray-900 mt-3 mb-0">${escapeHtml(contract.project || contract.contract_id)}</h1>
       </div>
