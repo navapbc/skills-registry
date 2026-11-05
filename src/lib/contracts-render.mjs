@@ -404,8 +404,8 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
     </header>
 
     <div class="space-y-12">
-      <section aria-label="What the contract says about AI">
-        ${sectionHeading('What the Contract says about AI')}
+      <section aria-label="What's in the contract?">
+        ${sectionHeading('What\'s in the contract?')}
         <h3 class="text-base font-semibold text-gray-900 mt-6 mb-3">AI use on this contract is:</h3>
         ${renderAiUseTerms(contract, rulings)}
         <p class="mt-4 mb-0">
