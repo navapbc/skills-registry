@@ -403,6 +403,14 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
       </div>
     </header>
 
+    <section aria-label="Contract Explorer purpose" class="border-y border-gray-300 py-4 mb-12">
+       <p class="font-sans text-base font-medium leading-[25.6px] tracking-[0px] text-gray-600 m-0">
+         This Contracts and AI Explorer helps Nava delivery teams understand how they can use AI on their projects.
+         AI is an emerging technology; policies, stances, and capabilities shift every day.
+         We encourage responsible and informed use and exploration. This tool compiles the most up-to-date information to help you move forward with confidence.
+       </p>
+    </section>
+  
     <div class="space-y-12">
       <section aria-label="What's in the contract?">
         ${sectionHeading('What\'s in the contract?')}
