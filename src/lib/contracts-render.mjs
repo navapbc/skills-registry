@@ -241,7 +241,7 @@ function renderAiUseTerms(contract, rulings) {
   const body = isBlank(contract?.ai_use_terms)
     ? NONE_LISTED
     : highlightTerms(contract.ai_use_terms, 'text-sm', rulings);
-  return `<p class="text-sm text-gray-900 m-0 whitespace-pre-line">${body}</p>`;
+  return `<span class="inline-block text-sm text-gray-900 m-0 whitespace-pre-line">${body}</span>`;
 }
 
 /**
@@ -415,8 +415,15 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
     <div class="space-y-12">
       <section aria-label="What's in the contract?">
         ${sectionHeading('What\'s in the contract?')}
-        <h3 class="text-base font-semibold text-gray-900 mt-6 mb-3">AI use on this contract is:</h3>
-        ${renderAiUseTerms(contract, rulings)}
+        <h3 class="font-sans text-[20px] font-bold leading-[30px] tracking-[0px] text-gray-900 mt-6 mb-3">The contract's AI ruling</h3>
+
+        
+         <div class="rounded-lg border border-gray-200 bg-white p-5">
+           AI use on this contract is ${renderAiUseTerms(contract, rulings)}.
+        </div>
+        
+
+        
         <p class="mt-4 mb-0">
           <a href="#ai-rulings" class="text-sm text-plum-700 underline">
             See all ${rulings.length} potential AI rulings and their definitions.
