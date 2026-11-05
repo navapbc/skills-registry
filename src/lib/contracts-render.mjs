@@ -131,24 +131,11 @@ export function describePopulationNotice(population) {
   </p>`;
 }
 
-/** Distinct portfolios, in a stable order, for the filter control. */
-/*
+/** 
+ * Distinct portfolios, in a stable order, for the filter control. 
+ * Account for recent portfolio sort cases that require exceptions.   
+*/
 export function portfoliosOf(contracts) {
-  // The BEAM portfolio should not come up as the first item in the portfolio list.
-  const EXCEPTION = 'BEAM';
-  const result = [...new Set((contracts ?? []).map((c) => c.portfolio).filter(Boolean))]
-  .sort((a, b) => {
-    if (a === EXCEPTION) return 1;  // If the given item matches the exception, move it down
-    return a.localeCompare(b);      // Otherwise, sort alphabetically
-  });
-  return result;
-}
-*/
-
-/** Distinct portfolios, in a stable order, for the filter control. 
- *  Account for recent portfoliosort cases that require exceptions.   
-*/
-function portfoliosOf(contracts) {
   // Define your array of pinned exceptions
   const SORT_EXCEPTIONS = ['BEAM'];
   
