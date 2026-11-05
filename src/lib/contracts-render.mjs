@@ -392,12 +392,12 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
     <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-10">
       <div>
         <p class="font-sans text-sm font-semibold leading-[21px] tracking-[0.28px] uppercase text-gray-600 m-0">Contracts & AI Explorer</p>
-        <span class="inline-block mt-2 px-2 py-0.5 text-sm rounded bg-gray-600 text-white">${escapeHtml(contract.portfolio ?? '')}</span>
         <h1 class="text-xl font-bold text-gray-900 mt-3 mb-0">${escapeHtml(contract.project || contract.contract_id)}</h1>
       </div>
       <div class="text-sm sm:text-right">
         <p class="font-sans text-sm font-bold leading-[21px] tracking-[0px] uppercase text-gray-600 m-0">Contract Details</p>
         <p class="text-gray-900 m-0">Agency: <strong class="text-gray-900">${plain(contract.customer)}</strong></p>
+        <p class="text-gray-600 mt-1 mb-0">Porfolio:  <span class="inline-block mt-2 px-2 py-0.5 text-sm rounded bg-gray-600 text-white">${escapeHtml(contract.portfolio ?? '')}</span></p>
         <p class="text-gray-600 mt-1 mb-0">Program manager: <strong class="text-gray-900">${plain(contract.nava_program_mgr)}</strong></p>
         <p class="text-gray-600 mt-1 mb-0">Contract manager: <strong class="text-gray-900">${plain(contract.nava_project_mgr)}</strong></p>
         ${renderSageLink(contract.resolved_project)}
