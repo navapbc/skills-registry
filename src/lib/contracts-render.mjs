@@ -356,7 +356,7 @@ function renderPostureGuidance(contract, rulings) {
 function renderRulingsList(rulings) {
   const rows = rulings.map((r) => `<div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
       <dt class="shrink-0 sm:w-28">${rulingBadge(r, r.name)}</dt>
-      <dd class="text-sm text-gray-800 m-0">${plain(r.posture?.definition)}</dd>
+      <dd class="font-sans text-contract-copy text-gray-800 m-0">${plain(r.posture?.definition)}</dd>
     </div>`).join('');
   return `<section id="ai-rulings" aria-labelledby="ai-rulings-heading" class="scroll-mt-6">
     <h2 id="ai-rulings-heading" class="text-base font-semibold text-gray-900 m-0">
