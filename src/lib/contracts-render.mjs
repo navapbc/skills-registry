@@ -391,37 +391,23 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
 
     <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-10">
       <div>
-        <p class="font-sans text-sm font-semibold leading-[21px] tracking-[0.28px] uppercase text-gray-600 m-0">Contracts & AI Explorer</p>
-        <h1 class="text-xl font-bold text-gray-900 mt-3 mb-0">${escapeHtml(contract.project || contract.contract_id)}</h1>
+        <p class="font-sans text-sm font-semibold leading-[21px] tracking-[0.28px] uppercase text-gray-600 m-0">Contract Details</p>
+        <p class="text-gray-600 mt-1 mb-0"><span class="inline-block  px-2 py-0.5 text-sm rounded bg-gray-600 text-white">${escapeHtml(contract.portfolio ?? '')}</span></p>
+        <h1 class="font-sans text-2xl font-extrabold leading-[50px] tracking-normal text-gray-900 mt-3 mb-0">${escapeHtml(contract.project || contract.contract_id)}</h1>
       </div>
       <div class="text-sm sm:text-right">
-        <p class="font-sans text-sm font-bold leading-[21px] tracking-[0px] uppercase text-gray-600 m-0">Contract Details</p>
         <p class="text-gray-900 m-0">Agency: <strong class="text-gray-900">${plain(contract.customer)}</strong></p>
-        <p class="text-gray-600 mt-1 mb-0">Porfolio:  <span class="inline-block  px-2 py-0.5 text-sm rounded bg-gray-600 text-white">${escapeHtml(contract.portfolio ?? '')}</span></p>
         <p class="text-gray-600 mt-1 mb-0">Program manager: <strong class="text-gray-900">${plain(contract.nava_program_mgr)}</strong></p>
         <p class="text-gray-600 mt-1 mb-0">Contract manager: <strong class="text-gray-900">${plain(contract.nava_project_mgr)}</strong></p>
         ${renderSageLink(contract.resolved_project)}
       </div>
     </header>
-
-    <section aria-label="Contract Explorer purpose" class="border-y border-gray-300 py-4 mb-12">
-       <p class="font-sans text-base font-medium leading-[25.6px] tracking-[0px] text-gray-600 m-0">
-         This Contracts and AI Explorer helps Nava delivery teams understand how they can use AI on their projects.
-         AI is an emerging technology; policies, stances, and capabilities shift every day.
-         We encourage responsible and informed use and exploration. This tool compiles the most up-to-date information to help you move forward with confidence.
-       </p>
-    </section>
   
     <div class="space-y-12">
       <section aria-label="What's in the contract?">
-        ${sectionHeading('What\'s in the contract?')}
-        <h3 class="font-sans text-xl font-bold leading-[30px] tracking-normal text-gray-900 mt-6 mb-3">The contract's AI ruling</h3>
-        <div class="rounded-lg border border-gray-200 bg-white p-3">
-           AI use on this contract is ${renderAiUseTerms(contract, rulings)}.
-        </div>
-        
-
-        
+        ${sectionHeading('What the Contract says about AI')}
+        <h3 class="font-sans text-xl font-bold leading-[30px] tracking-normal text-gray-900 mt-6 mb-3">AI use on this contract is</h3>
+        ${renderAiUseTerms(contract, rulings)}
         <p class="mt-4 mb-0">
           <a href="#ai-rulings" class="text-sm text-plum-700 underline">
             See all ${rulings.length} potential AI rulings and their definitions.
