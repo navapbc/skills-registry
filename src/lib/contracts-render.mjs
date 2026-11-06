@@ -436,6 +436,6 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
     </div>
 
     <a href="${FEEDBACK_FORM}" target="_blank" rel="noopener noreferrer"
-      class="block text-sm text-plum-700 underline">Submit feedback to help us improve.</a>
+      class="block font-sans text-contract-copy text-contract-link underline decoration-solid">Submit feedback to help us improve.</a>
     </div>`;
 }
