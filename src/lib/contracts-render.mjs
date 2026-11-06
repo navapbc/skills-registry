@@ -252,15 +252,17 @@ function renderAiUseTerms(contract, rulings) {
  */
 const GUIDANCE_QUESTIONS = [
   ["Does this client have an AI policy that isn't necessarily referenced in the program's contract with Nava?", 'client_policy'],
-  ['Is AI in use on this contract?', 'ai_used'],
+  ['Is AI being used to meet formal program goals or deliverables as stated in the contract?', 'ai_used'],
   ['What AI tools are in use?', 'tools'],
   ['How are people on this program using AI?', 'usage'],
   ['Does the client have a process to review or approve AI use or AI tools?', 'review_process'],
 ];
 
-const questionCard = (question, value) => `<div class="rounded-border-card">
+const questionCard = (question, value, showPolicySummary = false) => `<div class="rounded-border-card">
     <h3 class="font-sans text-base font-bold leading-normal tracking-normal text-gray-900 m-0">${escapeHtml(question)}</h3>
-    <p class="font-sans text-contract-copy text-gray-800 mt-2 mb-0 whitespace-pre-line">${plain(value)}</p>
+  ${showPolicySummary ? '<p class="font-sans text-sm font-semibold leading-normal tracking-policy-summary uppercase text-gray-500 mt-2 mb-1">SUMMARY</p>' : ''}
+  <p class="font-sans text-contract-copy text-gray-800 ${showPolicySummary ? 'mt-0' : 'mt-2'} mb-0 whitespace-pre-line">${plain(value)}</p>
+  ${showPolicySummary ? '<span class="inline-block font-sans text-sm font-semibold leading-normal tracking-normal text-policy-link underline decoration-solid mt-2">Link to policy information</span>' : ''}
   </div>`;
 
 /** Authored client-facing copy, independent of the survey response. */
@@ -418,7 +420,7 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
           Please reach out to your program manager with questions or discussion.
         </p>
         <div class="space-y-3 mt-5">
-          ${GUIDANCE_QUESTIONS.map(([question, key]) => questionCard(question, contract[key])).join('')}
+          ${GUIDANCE_QUESTIONS.map(([question, key]) => questionCard(question, contract[key], key === 'client_policy')).join('')}
         </div>
       </section>
 

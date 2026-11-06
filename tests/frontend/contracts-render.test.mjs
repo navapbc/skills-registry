@@ -300,8 +300,11 @@ describe('renderContractDetail', () => {
   describe('practical guidance', () => {
     it('asks each survey question with its answer as written', () => {
       const html = sectionOf(renderContractDetail(contract(), rulings), 'Practical guidance and more information');
-      expect(html).toContain('Does this client have an AI policy');
+      expect(html).toContain("Does this client have an AI policy that isn't necessarily referenced in the program's contract with Nava?");
+      expect(html).toContain('>SUMMARY</p>');
       expect(html).toContain('Yes. SEC requests training features be turned off.');
+      expect(html).toContain('Link to policy information</span>');
+      expect(html).not.toMatch(/<a[^>]*>Link to policy information/);
       expect(html).toContain('Is AI in use on this contract?');
       expect(html).toContain('What AI tools are in use?');
       expect(html).toContain('N/A');

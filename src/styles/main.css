@@ -78,7 +78,9 @@
   --text-contract-copy--line-height: 1.5;
   --text-contract-copy--letter-spacing: 0em;
   --text-contract-copy--font-weight: 400;
+  --tracking-policy-summary: 0.56px;
   --color-contract-link: #0000ff;
+  --color-policy-link: #322ef1;
   --color-portfolio-badge: #919191;
 
   --color-plum-50:  var(--plum-50);
