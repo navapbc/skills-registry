@@ -415,10 +415,8 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
     <div class="space-y-12">
       <section aria-label="What's in the contract?">
         ${sectionHeading('What\'s in the contract?')}
-        <h3 class="font-sans text-[20px] font-bold leading-[30px] tracking-[0px] text-gray-900 mt-6 mb-3">The contract's AI ruling</h3>
-
-        
-         <div class="rounded-lg border border-gray-200 bg-white p-5">
+        <h3 class="font-sans text-xl font-bold leading-[30px] tracking-normal text-gray-900 mt-6 mb-3">The contract's AI ruling</h3>
+        <div class="rounded-lg border border-gray-200 bg-white p-3">
            AI use on this contract is ${renderAiUseTerms(contract, rulings)}.
         </div>
         
@@ -429,8 +427,7 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
             See all ${rulings.length} potential AI rulings and their definitions.
           </a>
         </p>
-
-        <h3 class="text-base font-semibold text-gray-900 mt-8 mb-2">Contract language</h3>
+        <h3 class="font-sans text-xl font-bold leading-[30px] tracking-normal text-gray-900 mt-6 mb-3">Contract language</h3>
         <p class="text-sm text-gray-600 m-0">
           Read the most up-to-date contract language. Nava&rsquo;s contract teams are working
           with program managers on a &ldquo;path to yes&rdquo; for all Nava programs so that all
