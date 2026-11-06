@@ -435,10 +435,5 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
 
     <a href="${FEEDBACK_FORM}" target="_blank" rel="noopener noreferrer"
       class="block text-sm text-plum-700 underline">Submit feedback to help us improve.</a>
-
-    <p class="text-xs text-gray-600 m-0">
-      Data captured from the AI-use survey on ${escapeHtml(formatCapturedAt(capturedAt))}.
-      It is not live — re-run the population script to refresh it.
-    </p>
     </div>`;
 }
