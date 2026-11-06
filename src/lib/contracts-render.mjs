@@ -419,7 +419,7 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
           with program managers on a &ldquo;path to yes&rdquo; for all Nava programs so that all
           delivery teams can use AI when appropriate or necessary.
         </p>
-        <div class="mt-4 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 whitespace-pre-line">${plain(contract.ai_use_terms_language)}</div>
+        <div class="contract-language mt-4 text-sm text-gray-800 whitespace-pre-line">${plain(contract.ai_use_terms_language)}</div>
         <p class="text-sm font-semibold text-gray-600 mt-6 mb-0">
           Regardless of a contract&rsquo;s AI ruling, keep reading to understand any nuance
           that may apply to this program when it comes to using AI.

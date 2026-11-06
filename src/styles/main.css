@@ -120,6 +120,16 @@ code, pre {
   font-family: var(--font-mono);
 }
 
+.contract-language {
+  width: 100%;
+  max-width: 630px;
+  min-height: 57px;
+  padding: 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #f5f5f5;
+}
+
 /* ── Collapsible sidebar ──────────────────────────────────────────────
    Rail (icon-only) is the default. At md+ the sidebar expands to its full
    labeled width unless the user collapsed it (data-sidebar-collapsed on
