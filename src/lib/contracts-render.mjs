@@ -258,9 +258,9 @@ const GUIDANCE_QUESTIONS = [
   ['Does the client have a process to review or approve AI use or AI tools?', 'review_process'],
 ];
 
-const questionCard = (question, value) => `<div class="rounded-lg border border-gray-200 bg-white p-5">
-    <h3 class="text-sm font-semibold text-gray-900 m-0">${escapeHtml(question)}</h3>
-    <p class="text-sm text-gray-800 mt-2 mb-0 whitespace-pre-line">${plain(value)}</p>
+const questionCard = (question, value) => `<div class="rounded-border-card">
+    <h3 class="font-sans text-base font-bold leading-normal tracking-normal text-gray-900 m-0">${escapeHtml(question)}</h3>
+    <p class="font-sans text-contract-copy text-gray-800 mt-2 mb-0 whitespace-pre-line">${plain(value)}</p>
   </div>`;
 
 /**
@@ -415,14 +415,14 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
             See all ${rulings.length} potential AI rulings and their definitions.
           </a>
         </p>
-        <h3 class="font-sans text-xl font-bold leading-[30px] tracking-normal text-gray-900 mt-6 mb-3">Contract language</h3>
+        <h3 class="font-sans text-base font-bold leading-normal tracking-normal text-gray-900 mt-6 mb-3">Contract language</h3>
         <p class="font-sans text-contract-copy text-gray-600 m-0">
           Read the most up-to-contract language. Nava's contract teams are working with program managers on a "path to yes" for all Nava programs so that all delivery teams to can use AI when appropriate or necessary.
         </p>
         <p class="font-sans text-contract-copy text-gray-600 m-0 mt-4">
           Program managers or a program’s contract manager are always available to answer questions about expectations for AI use. 
         </p>
-        <div class="contract-language mt-4 text-sm text-gray-800 whitespace-pre-line">${plain(contract.ai_use_terms_language)}</div>
+        <div class="rounded-border-card rounded-border-card--narrow mt-4 font-sans text-contract-copy text-gray-800 whitespace-pre-line">${plain(contract.ai_use_terms_language)}</div>
         <p class="text-sm font-semibold text-gray-600 mt-6 mb-0">
           Regardless of a contract&rsquo;s AI ruling, keep reading to understand any nuance
           that may apply to this program when it comes to using AI.
