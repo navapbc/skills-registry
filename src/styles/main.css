@@ -74,6 +74,10 @@
   --text-section-heading--line-height: 1.5;
   --text-section-heading--letter-spacing: 0em;
   --text-section-heading--font-weight: 800;
+  --text-contract-copy: 0.9375rem;
+  --text-contract-copy--line-height: 1.5;
+  --text-contract-copy--letter-spacing: 0em;
+  --text-contract-copy--font-weight: 400;
 
   --color-plum-50:  var(--plum-50);
   --color-plum-100: var(--plum-100);
@@ -120,6 +124,20 @@ code, pre {
   font-family: var(--font-mono);
 }
 
+body.contract-detail-page #main-content > div {
+  width: 100%;
+  max-width: 1059px;
+  min-height: 772px;
+  padding: 64px 120px 80px;
+  background: #fff;
+}
+
+.contract-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 35px;
+}
+
 .contract-language {
   width: 100%;
   max-width: 630px;
@@ -151,4 +169,16 @@ code, pre {
 /* ── Admin: wide data tables scroll horizontally on small screens ────── */
 @media (max-width: 767px) {
   .admin-table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+
+@media (max-width: 1023px) {
+  body.contract-detail-page #main-content > div {
+    padding: 48px;
+  }
+}
+
+@media (max-width: 639px) {
+  body.contract-detail-page #main-content > div {
+    padding: 32px 24px 48px;
+  }
 }

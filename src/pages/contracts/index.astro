@@ -47,6 +47,10 @@ try {
   contractId = rawContractId;
 }
 
+if (contractId) {
+  document.body.classList.add('contract-detail-page');
+}
+
 function errorHtml(message: string) {
   return `<div class="max-w-xl">
     <h1 class="text-2xl font-bold text-gray-900 m-0">Contracts could not be loaded</h1>

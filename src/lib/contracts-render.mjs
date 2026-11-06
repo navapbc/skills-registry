@@ -387,9 +387,10 @@ const sectionHeading = (text) => `<h2 class="font-sans text-section-heading text
 
 export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt = null) {
   return `
-    <a href="/contracts" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">&larr; All contracts</a>
+    <div class="contract-detail-content">
+    <a href="/contracts" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline transition-colors">&larr; All contracts</a>
 
-    <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-10">
+    <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
       <div>
         <p class="font-sans text-sm font-semibold leading-[21px] tracking-[0.28px] uppercase text-gray-600 m-0">Contract Details</p>
         <p class="text-gray-600 mt-1 mb-0"><span class="inline-block  px-2 py-0.5 text-sm rounded bg-gray-600 text-white">${escapeHtml(contract.portfolio ?? '')}</span></p>
@@ -414,10 +415,11 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
           </a>
         </p>
         <h3 class="font-sans text-xl font-bold leading-[30px] tracking-normal text-gray-900 mt-6 mb-3">Contract language</h3>
-        <p class="text-sm text-gray-600 m-0">
-          Read the most up-to-date contract language. Nava&rsquo;s contract teams are working
-          with program managers on a &ldquo;path to yes&rdquo; for all Nava programs so that all
-          delivery teams can use AI when appropriate or necessary.
+        <p class="font-sans text-contract-copy text-gray-600 m-0">
+          Read the most up-to-contract language. Nava's contract teams are working with program managers on a "path to yes" for all Nava programs so that all delivery teams to can use AI when appropriate or necessary.
+        </p>
+        <p class="font-sans text-contract-copy text-gray-600 m-0 mt-4">
+          Program managers or a program’s contract manager are always available to answer questions about expectations for AI use. 
         </p>
         <div class="contract-language mt-4 text-sm text-gray-800 whitespace-pre-line">${plain(contract.ai_use_terms_language)}</div>
         <p class="text-sm font-semibold text-gray-600 mt-6 mb-0">
@@ -453,10 +455,11 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
     </div>
 
     <a href="${FEEDBACK_FORM}" target="_blank" rel="noopener noreferrer"
-      class="block mt-4 text-sm text-plum-700 underline">Submit feedback to help us improve.</a>
+      class="block text-sm text-plum-700 underline">Submit feedback to help us improve.</a>
 
-    <p class="text-xs text-gray-600 mt-10 m-0">
+    <p class="text-xs text-gray-600 m-0">
       Data captured from the AI-use survey on ${escapeHtml(formatCapturedAt(capturedAt))}.
       It is not live — re-run the population script to refresh it.
-    </p>`;
+    </p>
+    </div>`;
 }
