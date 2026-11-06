@@ -391,7 +391,7 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
         <h3 class="font-sans text-xl font-bold leading-[30px] tracking-normal text-gray-900 mt-6 mb-3">AI use on this contract is</h3>
         ${renderAiUseTerms(contract, rulings)}
         <p class="mt-4 mb-0">
-          <a href="#ai-rulings" class="text-sm text-plum-700 underline">
+          <a href="#ai-rulings" class="font-sans text-contract-copy text-contract-link underline decoration-solid">
             See all ${rulings.length} potential AI rulings and their definitions.
           </a>
         </p>

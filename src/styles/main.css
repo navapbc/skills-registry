@@ -78,6 +78,7 @@
   --text-contract-copy--line-height: 1.5;
   --text-contract-copy--letter-spacing: 0em;
   --text-contract-copy--font-weight: 400;
+  --color-contract-link: #0000ff;
 
   --color-plum-50:  var(--plum-50);
   --color-plum-100: var(--plum-100);
