@@ -388,14 +388,14 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
     <div class="space-y-12">
       <section aria-label="What's in the contract?">
         ${sectionHeading('What the Contract says about AI')}
-        <h3 class="font-sans text-xl font-bold leading-[30px] tracking-normal text-gray-900 mt-6 mb-3">AI use on this contract is</h3>
+        <h3 class="font-sans text-xl font-bold leading-normal tracking-normal text-gray-900 mt-6 mb-3">AI use on this contract is</h3>
         ${renderAiUseTerms(contract, rulings)}
         <p class="mt-4 mb-0">
           <a href="#ai-rulings" class="font-sans text-contract-copy text-contract-link underline decoration-solid">
             See all ${rulings.length} potential AI rulings and their definitions.
           </a>
         </p>
-        <h3 class="font-sans text-base font-bold leading-normal tracking-normal text-gray-900 mt-6 mb-3">Contract language</h3>
+        <h3 class="font-sans text-xl font-bold leading-normal tracking-normal text-gray-900 mt-6 mb-3">Contract language</h3>
         <p class="font-sans text-contract-copy text-gray-600 m-0">
           Read the most up-to-contract language. Nava's contract teams are working with program managers on a "path to yes" for all Nava programs so that all delivery teams to can use AI when appropriate or necessary.
         </p>
