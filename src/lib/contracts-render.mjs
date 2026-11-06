@@ -450,8 +450,6 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
         </div>
       </section>
 
-      ${renderPostureGuidance(contract, rulings)}
-
       ${renderRulingsList(rulings)}
     </div>
 
