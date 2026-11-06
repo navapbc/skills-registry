@@ -327,18 +327,18 @@ const PRE_USE_CHECKLIST_ITEMS = [
 ];
 
 const PRE_USE_CHECKLIST = `<section aria-label="Pre-use checklist" class="rounded-lg border border-gray-200 bg-white p-5">
-  <h3 class="text-sm font-semibold text-gray-900 m-0">Pre-use checklist</h3>
-  <p class="text-sm text-gray-800 mt-3 mb-0">
+  <h3 class="font-sans text-base font-bold leading-normal tracking-normal text-gray-900 m-0">Pre-use checklist</h3>
+  <p class="font-sans text-contract-copy text-gray-800 mt-3 mb-0">
     Before using AI on this contract, review this checklist to ensure you&rsquo;re
     following the right steps and meeting any applicable requirements.
   </p>
   <div class="flex gap-4 mt-5">
     <div class="w-1 rounded shrink-0 bg-info-bg" aria-hidden="true"></div>
     <div class="flex-1 min-w-0">
-      <h4 class="text-lg font-semibold text-gray-900 m-0">Pre-use checklist</h4>
-      <ul class="list-disc mt-2 mb-0 pl-5 space-y-1.5 marker:text-gray-500">
-        ${PRE_USE_CHECKLIST_ITEMS.map((item) => `<li class="text-sm text-gray-800">${item}</li>`).join('')}
-      </ul>
+      <h4 class="font-sans text-contract-copy text-gray-900 m-0">Checklist:</h4>
+      <ol class="list-decimal mt-2 mb-0 pl-5 space-y-1.5 marker:text-gray-500">
+        ${PRE_USE_CHECKLIST_ITEMS.map((item) => `<li class="font-sans text-contract-copy text-gray-800">${item}</li>`).join('')}
+      </ol>
     </div>
   </div>
 </section>`;
