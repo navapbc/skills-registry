@@ -9,6 +9,7 @@ import {
   assertValid,
   ICON_MAP,
   POSTURE_COLORS,
+  POSTURE_TEXT_COLORS,
   contrastRatio,
   SeedError,
 } from '../scripts/lib/seed-project-reference.mjs';
@@ -147,6 +148,7 @@ describe('posturesFromSource', () => {
     for (const posture of posturesFromSource(POLICY_SOURCE)) {
       expect(posture.color).toBe(POSTURE_COLORS[posture.id]);
       expect(posture.color).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(posture.text_color).toBe(POSTURE_TEXT_COLORS[posture.id]);
     }
   });
 
@@ -179,53 +181,48 @@ describe('posturesFromSource', () => {
   });
 });
 
-/**
- * The Contract Explorer draws hardcoded dark text on the posture color, so a dark
- * color would render the guidance steps unreadable. Nothing downstream can catch
- * that — an inline background-color has no class to adapt — so the seed is the
- * only boundary where a bad color can be stopped.
- */
 describe('posture color legibility', () => {
-  // Substituting a color is the only way to reach the branch: the shipped map is
-  // all light tints, which is exactly what the first test below asserts.
-  const withPostureColor = (id, color, fn) => {
-    const original = POSTURE_COLORS[id];
+  const withPosturePair = (id, color, textColor, fn) => {
+    const originalColor = POSTURE_COLORS[id];
+    const originalTextColor = POSTURE_TEXT_COLORS[id];
     POSTURE_COLORS[id] = color;
+    POSTURE_TEXT_COLORS[id] = textColor;
     try {
       fn();
     } finally {
-      POSTURE_COLORS[id] = original;
+      POSTURE_COLORS[id] = originalColor;
+      POSTURE_TEXT_COLORS[id] = originalTextColor;
     }
   };
 
-  it('every shipped posture color clears WCAG AA against the text drawn on it', () => {
+  it('every shipped background and text pair clears WCAG AA', () => {
     for (const [id, color] of Object.entries(POSTURE_COLORS)) {
-      expect(contrastRatio(color, '#1f2937'), id).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(color, POSTURE_TEXT_COLORS[id]), id).toBeGreaterThanOrEqual(4.5);
     }
   });
 
-  it('rejects a posture color too dark for the text drawn on it', () => {
-    withPostureColor('allowed', '#651a94', () => {
+  it('rejects a background and text pair with insufficient contrast', () => {
+    withPosturePair('allowed', '#004C31', '#1b1b1b', () => {
       expect(() => posturesFromSource(POLICY_SOURCE)).toThrow(/allowed.*4\.5:1 WCAG AA floor/s);
     });
   });
 
   it('names the measured ratio so the fix is obvious', () => {
-    withPostureColor('allowed', '#4b5563', () => {
-      expect(() => posturesFromSource(POLICY_SOURCE)).toThrow(/1\.\d\d:1 against/);
+    withPosturePair('allowed', '#4b5563', '#1b1b1b', () => {
+      expect(() => posturesFromSource(POLICY_SOURCE)).toThrow(/\d+\.\d+:1 contrast/);
     });
   });
 
   it('rejects a malformed hex rather than reading NaN as compliant', () => {
     for (const bad of ['#fff', 'e0f5f0', 'rebeccapurple', '#e0f5fz']) {
-      withPostureColor('allowed', bad, () => {
-        expect(() => posturesFromSource(POLICY_SOURCE)).toThrow(/not a six-digit hex color/);
+      withPosturePair('allowed', bad, '#FFFFFF', () => {
+        expect(() => posturesFromSource(POLICY_SOURCE)).toThrow(/not a six-digit hex value/);
       });
     }
   });
 
-  it('accepts a light tint at the boundary', () => {
-    withPostureColor('allowed', '#8a9099', () => {
+  it('accepts a readable pair at the boundary', () => {
+    withPosturePair('allowed', '#8a9099', '#1b1b1b', () => {
       expect(() => posturesFromSource(POLICY_SOURCE)).not.toThrow();
     });
   });
@@ -287,42 +284,33 @@ describe('buildRecords', () => {
 // Without that variable the checks skip rather than fail — no developer's local
 // directory layout is baked into the repo.
 describe('postureColorUpdates', () => {
-  it('carries every posture color and nothing else', () => {
+  it('carries every posture color pair and nothing else', () => {
     const updates = postureColorUpdates();
     expect(updates.map((u) => u.id).sort()).toEqual(Object.keys(POSTURE_COLORS).sort());
     for (const u of updates) {
       expect(u.color).toBe(POSTURE_COLORS[u.id]);
+      expect(u.text_color).toBe(POSTURE_TEXT_COLORS[u.id]);
       // Only the key and the one attribute being written. A label or a steps
       // array reaching this path would mean the update could clobber an admin's
       // edits, which is the thing the mode exists to avoid.
-      expect(Object.keys(u).sort()).toEqual(['color', 'entity_type', 'id']);
+      expect(Object.keys(u).sort()).toEqual(['color', 'entity_type', 'id', 'text_color']);
       expect(u.entity_type).toBe('posture');
     }
   });
 
-  it('holds a color arriving this way to the same legibility bar as a full seed', () => {
-    // The looser path would be the dangerous one: a color pushed by --update-colors
-    // lands in the same inline style and is read by the same hardcoded gray-800.
+  it('holds a color pair arriving this way to the same legibility bar as a full seed', () => {
     const id = 'restricted';
-    const original = POSTURE_COLORS[id];
-    POSTURE_COLORS[id] = '#3d2f00';
-    try {
+    withPosturePair(id, '#3d2f00', '#fdf3d6', () => {
       expect(() => postureColorUpdates()).toThrow(SeedError);
       expect(() => postureColorUpdates()).toThrow(/under the 4.5:1 WCAG AA floor/);
-    } finally {
-      POSTURE_COLORS[id] = original;
-    }
+    });
   });
 
   it('rejects a malformed hex rather than writing a background that renders nothing', () => {
     const id = 'silent';
-    const original = POSTURE_COLORS[id];
-    POSTURE_COLORS[id] = 'f3f4f6';
-    try {
+    withPosturePair(id, 'f3f4f6', '#FFFFFF', () => {
       expect(() => postureColorUpdates()).toThrow(/not a six-digit hex color/);
-    } finally {
-      POSTURE_COLORS[id] = original;
-    }
+    });
   });
 });
 

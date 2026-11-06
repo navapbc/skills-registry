@@ -15,9 +15,9 @@ import {
 // The posture records as staging and prod hold them. No record carries
 // `conditional` yet, so that ruling renders uncoloured.
 const POSTURES = [
-  { id: 'allowed', color: '#e7f1e0', definition: 'This means the contract allows us to use AI.' },
-  { id: 'restricted', color: '#fdf3d6' },
-  { id: 'silent', color: '#f3f4f6', label: 'AI SILENT — how to proceed', steps: ['Check the terms.', 'Ask your PM.'] },
+  { id: 'allowed', color: '#004C31', text_color: '#FFFFFF', definition: 'This means the contract allows us to use AI.' },
+  { id: 'restricted', color: '#FFBE2E', text_color: '#0A0539' },
+  { id: 'silent', color: '#0A0539', text_color: '#FFFFFF', label: 'AI SILENT — how to proceed', steps: ['Check the terms.', 'Ask your PM.'] },
   { id: 'prohibited', color: '#fcdcd6', definition: 'You cannot use AI on this contract.' },
 ];
 const rulings = rulingsFromPostures(POSTURES);
@@ -58,7 +58,10 @@ describe('rulingsFromPostures', () => {
   it('takes each ruling colour from the posture record with the same id', () => {
     const byId = Object.fromEntries(rulings.map((r) => [r.id, r.fill]));
     expect(byId).toMatchObject({
-      allowed: '#e7f1e0', restricted: '#fdf3d6', silent: '#f3f4f6', prohibited: '#fcdcd6',
+      allowed: '#004C31', restricted: '#FFBE2E', silent: '#0A0539', prohibited: '#fcdcd6',
+    });
+    expect(Object.fromEntries(rulings.map((r) => [r.id, r.textColor]))).toMatchObject({
+      allowed: '#FFFFFF', restricted: '#0A0539', silent: '#FFFFFF',
     });
   });
 
@@ -153,7 +156,7 @@ describe('renderContractCard', () => {
 
   it('highlights a cell that is exactly a ruling name, once', () => {
     const html = card({ ai_use_terms: 'Allowed' });
-    expect(html).toContain('background-color: #e7f1e0');
+    expect(html).toContain('background-color: #004C31; color: #FFFFFF');
     expect(html.match(/>Allowed<\/span>/g)).toHaveLength(1);
   });
 
@@ -234,7 +237,7 @@ describe('renderContractDetail', () => {
     it('highlights a leading ruling name and keeps the rest as written', () => {
       const html = termsOf('Restricted, learning/development restrictions');
       expect(html).toContain('AI use on this contract is:');
-      expect(html).toContain('background-color: #fdf3d6');
+      expect(html).toContain('background-color: #FFBE2E; color: #0A0539');
       expect(html).toContain('>Restricted</span>, learning/development restrictions');
     });
 
@@ -246,7 +249,7 @@ describe('renderContractDetail', () => {
 
     it('highlights the word as the sheet spells it, whatever its case', () => {
       const html = termsOf('silent on use terms');
-      expect(html).toContain('background-color: #f3f4f6');
+      expect(html).toContain('background-color: #0A0539; color: #FFFFFF');
       expect(html).toContain('>silent</span> on use terms');
     });
 
@@ -385,7 +388,7 @@ describe('renderContractDetail', () => {
     it('shows the posture named by the first word of the AI use terms', () => {
       const html = guidanceOf('Silent on use terms, no explicit AI terms');
       expect(html).toContain('AI SILENT — how to proceed');
-      expect(html).toContain('background-color: #f3f4f6');
+      expect(html).toContain('background-color: #0A0539; color: #FFFFFF');
     });
 
     it('numbers the steps in their stored order', () => {

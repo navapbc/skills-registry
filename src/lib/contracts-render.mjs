@@ -43,7 +43,7 @@ export function rulingsFromPostures(postures) {
   const byId = new Map((postures ?? []).map((p) => [p.id, p]));
   return RULINGS.map((r) => {
     const posture = byId.get(r.id) ?? null;
-    return { ...r, posture, fill: posture?.color ?? null };
+    return { ...r, posture, fill: posture?.color ?? null, textColor: posture?.text_color ?? null };
   });
 }
 
@@ -62,13 +62,13 @@ export function leadingRuling(text, rulings = NO_POSTURES) {
  * are generated at build time from source text, so a class name assembled at
  * runtime emits no CSS.
  */
-function rulingBadge(ruling, label, size = 'text-xs') {
-  const base = `inline-flex items-center px-2 py-0.5 rounded ${size} font-medium`;
+function rulingBadge(ruling, label) {
+  const base = 'inline-flex items-center align-middle gap-2 rounded-lg p-2 font-sans text-contract-copy font-normal leading-none tracking-normal';
   if (!ruling.fill) {
     return `<span class="${base} border border-gray-300 bg-white text-gray-900">${escapeHtml(label)}</span>`;
   }
   return `<span class="${base}"
-    style="background-color: ${escapeHtml(ruling.fill)}; color: ${BADGE_FOREGROUND}"
+    style="background-color: ${escapeHtml(ruling.fill)}; color: ${escapeHtml(ruling.textColor ?? BADGE_FOREGROUND)}"
   >${escapeHtml(label)}</span>`;
 }
 
@@ -80,12 +80,12 @@ function rulingBadge(ruling, label, size = 'text-xs') {
  * marks a word the contracts team wrote; it does not replace or summarise the cell.
  * The word keeps the sheet's own spelling and case.
  */
-function highlightTerms(text, size, rulings) {
+function highlightTerms(text, rulings) {
   const value = String(text ?? '').trim();
   const ruling = leadingRuling(value, rulings);
   if (!ruling) return escapeHtml(value);
   const word = value.slice(0, ruling.id.length);
-  return `${rulingBadge(ruling, word, size)}${escapeHtml(value.slice(word.length))}`;
+  return `${rulingBadge(ruling, word)}${escapeHtml(value.slice(word.length))}`;
 }
 
 /**
@@ -189,7 +189,7 @@ export function renderContractCard(contract, rulings = NO_POSTURES) {
     </h3>
     ${parent}
     <p class="text-xs text-gray-600 mt-2 mb-0 line-clamp-3 flex-1">
-      ${highlightTerms(truncate(String(contract.ai_use_terms ?? '').trim(), BLURB_LIMIT), 'text-xs', rulings)}
+      ${highlightTerms(truncate(String(contract.ai_use_terms ?? '').trim(), BLURB_LIMIT), rulings)}
     </p>
   </a>`;
 }
@@ -240,7 +240,7 @@ function renderSageLink(project) {
 function renderAiUseTerms(contract, rulings) {
   const body = isBlank(contract?.ai_use_terms)
     ? NONE_LISTED
-    : highlightTerms(contract.ai_use_terms, 'text-sm', rulings);
+    : highlightTerms(contract.ai_use_terms, rulings);
   return `<span class="inline-block text-sm text-gray-900 m-0 whitespace-pre-line">${body}</span>`;
 }
 
@@ -355,12 +355,13 @@ const PRE_USE_CHECKLIST = `<section aria-label="Pre-use checklist" class="rounde
 function renderPostureGuidance(contract, rulings) {
   const posture = leadingRuling(contract?.ai_use_terms, rulings)?.posture;
   if (!posture) return '';
+  const textColor = posture.text_color ?? BADGE_FOREGROUND;
   const steps = (posture.steps ?? [])
-    .map((step) => `<li class="text-sm text-gray-800">${escapeHtml(step)}</li>`).join('');
+    .map((step) => `<li class="text-sm">${escapeHtml(step)}</li>`).join('');
   return `<section aria-label="AI posture guidance" class="rounded-lg p-4 border border-gray-200"
-    style="background-color: ${escapeHtml(posture.color)}">
-    <h3 class="text-sm font-semibold text-gray-900 m-0">${escapeHtml(posture.label)}</h3>
-    ${steps ? `<ol class="list-decimal mt-3 mb-0 pl-5 space-y-1.5 marker:text-gray-500">${steps}</ol>` : ''}
+    style="background-color: ${escapeHtml(posture.color)}; color: ${escapeHtml(textColor)}">
+    <h3 class="text-sm font-normal m-0">${escapeHtml(posture.label)}</h3>
+    ${steps ? `<ol class="list-decimal mt-3 mb-0 pl-5 space-y-1.5">${steps}</ol>` : ''}
   </section>`;
 }
 
@@ -372,7 +373,7 @@ function renderPostureGuidance(contract, rulings) {
  */
 function renderRulingsList(rulings) {
   const rows = rulings.map((r) => `<div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
-      <dt class="shrink-0 sm:w-28">${rulingBadge(r, r.name, 'text-sm')}</dt>
+      <dt class="shrink-0 sm:w-28">${rulingBadge(r, r.name)}</dt>
       <dd class="text-sm text-gray-800 m-0">${plain(r.posture?.definition)}</dd>
     </div>`).join('');
   return `<section id="ai-rulings" aria-labelledby="ai-rulings-heading" class="scroll-mt-6">

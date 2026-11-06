@@ -32,6 +32,8 @@ export const ARCHETYPE_ICON_NAMES = [
 ];
 
 export const STATUSES = ['active', 'inactive'];
+const DEFAULT_POSTURE_TEXT_COLOR = '#1b1b1b';
+const MIN_TEXT_CONTRAST = 4.5;
 
 // Ids double as DOM and style keys in the Contract Explorer, so they must be
 // slug-safe. Colors are applied as inline styles — interpolated utility classes
@@ -41,6 +43,18 @@ const HEX = /^#[0-9a-fA-F]{6}$/;
 
 const isText = (v) => typeof v === 'string' && v.trim() !== '';
 const isTextList = (v) => Array.isArray(v) && v.every(isText);
+
+function relativeLuminance(hex) {
+  const linear = [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+export function contrastRatio(a, b) {
+  const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
 
 /**
  * Validates a reference record. Returns an error message, or null when valid.
@@ -78,6 +92,13 @@ export function validateRecord(entityType, body) {
 
   // Posture. Position carries display order only — no severity semantics.
   if (!Number.isInteger(body.position)) return 'position must be an integer';
+  if (body.text_color !== undefined && (!isText(body.text_color) || !HEX.test(body.text_color))) {
+    return 'text_color must be a six-digit hex value, e.g. #FFFFFF';
+  }
+  const textColor = body.text_color ?? DEFAULT_POSTURE_TEXT_COLOR;
+  if (contrastRatio(body.color, textColor) < MIN_TEXT_CONTRAST) {
+    return `color and text_color must meet the ${MIN_TEXT_CONTRAST}:1 WCAG AA contrast minimum`;
+  }
   if (!Array.isArray(body.steps) || body.steps.length === 0) {
     return 'steps must be a non-empty list';
   }
@@ -114,6 +135,7 @@ export function normalizeRecord(entityType, body, { id } = {}) {
   // archetype description.
   return {
     ...base,
+    text_color: body.text_color ?? DEFAULT_POSTURE_TEXT_COLOR,
     position: body.position,
     steps: body.steps,
     definition: (body.definition ?? '').trim(),

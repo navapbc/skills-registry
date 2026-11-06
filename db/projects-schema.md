@@ -71,6 +71,7 @@ AI-posture policy guidance shown in the Contract Explorer.
 ```typescript
 {
   ...common;
+  text_color: string; // six-digit hex foreground paired with color; WCAG AA contrast is validated
   position:   number;    // integer, display order only — carries no severity semantics
   steps:      string[];  // non-empty; every entry a non-empty string
   definition: string;    // one sentence shown beside the badge in the Contract
@@ -78,14 +79,15 @@ AI-posture policy guidance shown in the Contract Explorer.
 }
 ```
 
-`label`, `color`, `steps`, and `definition` are edited on the Policy Guidance tab of `/projects-admin`. The Contract Explorer reads all four, so an edit there reaches it with no deploy. The seed carries no definitions, so a newly seeded environment takes the edited postures from another one with `node scripts/copy-postures.mjs --from staging --to <env> --apply`.
+`label`, `color`, `text_color`, `steps`, and `definition` are edited on the Policy Guidance tab of `/projects-admin`. The Contract Explorer reads these fields, so edits there reach it with no deploy. Legacy records without `text_color` use the existing dark foreground until updated. The seed carries no definitions, so a newly seeded environment takes the edited postures from another one with `node scripts/copy-postures.mjs --from staging --to <env> --apply`.
 
 | `id` | `label` | `color` | `position` | `steps` |
 |---|---|---|---|---|
-| `allowed` | AI ALLOWED — how to proceed | `#e0f5f0` | 1 | 6 |
-| `restricted` | AI RESTRICTED — how to proceed | `#fff8e1` | 2 | 7 |
-| `silent` | AI SILENT — how to proceed | `#faf0f7` | 3 | 8 |
-| `prohibited` | AI PROHIBITED — hard stop | `#fce8e8` | 4 | 5 |
+| `id` | `label` | `color` | `text_color` | `position` | `steps` |
+| `allowed` | AI ALLOWED — how to proceed | `#004C31` | `#FFFFFF` | 1 | 6 |
+| `restricted` | AI RESTRICTED — how to proceed | `#FFBE2E` | `#0A0539` | 2 | 7 |
+| `silent` | AI SILENT — how to proceed | `#0A0539` | `#FFFFFF` | 3 | 8 |
+| `prohibited` | AI PROHIBITED — hard stop | `#fce8e8` | `#1b1b1b` | 4 | 5 |
 
 Postures store no `icon`, `description`, `characteristics`, or `ai_opportunities`; archetypes store no `position` or `steps`. `normalizeRecord` writes only the fields for the given entity type, so absent-vs-empty is meaningful: a missing key means "not applicable to this type", not "unset".
 

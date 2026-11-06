@@ -86,6 +86,11 @@ describe('renderPostureBadge', () => {
     }
   });
 
+  it('uses the stored text color when one is present', () => {
+    const html = renderPostureBadge(P('allowed', 1, { color: '#004C31', text_color: '#FFFFFF' }));
+    expect(html).toContain('background:#004C31;color:#FFFFFF');
+  });
+
   it('escapes the label', () => {
     const html = renderPostureBadge({ ...P('x', 1), label: '<script>alert(1)</script>' });
     expect(html).not.toContain('<script>');
@@ -162,7 +167,10 @@ describe('renderPostureForm', () => {
   });
 
   it('renders a live badge preview so the author sees the contrast they create', () => {
-    expect(renderPostureForm(P('restricted', 2))).toContain('posture-badge-preview');
+    const html = renderPostureForm(P('restricted', 2));
+    expect(html).toContain('posture-badge-preview');
+    expect(html).toContain('id="posture-text-color"');
+    expect(html).toContain('id="posture-text-color-value"');
   });
 
   it('locks the id when editing', () => {

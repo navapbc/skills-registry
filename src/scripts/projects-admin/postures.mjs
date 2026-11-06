@@ -14,10 +14,8 @@ import { renderUsageCell, renderOrphanNotice, renderUsageUnavailableNotice } fro
 const ENDPOINT = '/project-reference/posture';
 
 // A posture's color is its badge *background*, not a hue to blend. The seeded
-// values are pale severity tints (#fdf3d6 and friends — see POSTURE_COLORS in
-// scripts/lib/seed-project-reference.mjs), so the archetype treatment — which
-// alpha-blends a saturated color over white — would produce a near-white badge
-// with unreadable text. Pair the stored background with a fixed dark foreground.
+// Posture background and foreground colors are stored together so the badge and
+// guidance panel can use the authored contrast pair.
 export const BADGE_FOREGROUND = '#1b1b1b';
 
 /**
@@ -40,8 +38,8 @@ export function repositioned(postures) {
 }
 
 export function renderPostureBadge(posture) {
-  return `<span class="inline-block text-xs font-semibold px-2 py-0.5 rounded"
-    style="background:${escapeHtml(posture.color)};color:${BADGE_FOREGROUND}">${escapeHtml(posture.label)}</span>`;
+  return `<span class="inline-block text-xs font-normal px-2 py-0.5 rounded"
+    style="background:${escapeHtml(posture.color)};color:${escapeHtml(posture.text_color ?? BADGE_FOREGROUND)}">${escapeHtml(posture.label)}</span>`;
 }
 
 export function renderPostureRow(posture, index, total, usage) {
@@ -93,6 +91,7 @@ export function renderPostureForm(p = {}) {
   // Neutral, not a severity tint: a posture being added has no severity yet, and
   // defaulting to the "allowed" green pre-answers that on the author's behalf.
   const color = p.color ?? '#f3f4f6';
+  const textColor = p.text_color ?? BADGE_FOREGROUND;
   return `
     <h3 class="text-sm font-semibold text-gray-700 mb-3">${p.id ? 'Edit Posture' : 'Add Posture'}</h3>
     <input type="hidden" id="posture-edit-id" value="${escapeHtml(p.id ?? '')}" />
@@ -116,11 +115,19 @@ export function renderPostureForm(p = {}) {
         <input id="posture-color" type="color" value="${escapeHtml(color)}"
           class="h-8 w-12 border border-gray-200 rounded p-0.5" />
         <span class="text-xs font-mono text-gray-500" id="posture-color-value">${escapeHtml(color)}</span>
-        <span class="text-xs text-gray-400">Preview:</span>
-        <span id="posture-badge-preview">${renderPostureBadge({ ...p, color, label: p.label || 'Posture label' })}</span>
       </div>
-      <p class="text-xs text-gray-400 mt-1">
-        This is the badge background. Text is always dark, so pick a light color.
+    </div>
+    <div class="mb-3">
+      <label class="text-xs text-gray-600 block mb-1">Badge text color *</label>
+      <div class="flex items-center gap-3">
+        <input id="posture-text-color" type="color" value="${escapeHtml(textColor)}"
+          class="h-8 w-12 border border-gray-200 rounded p-0.5" />
+        <span class="text-xs font-mono text-gray-500" id="posture-text-color-value">${escapeHtml(textColor)}</span>
+        <span class="text-xs text-gray-400">Preview:</span>
+        <span id="posture-badge-preview">${renderPostureBadge({ ...p, color, text_color: textColor, label: p.label || 'Posture label' })}</span>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">
+        Choose a text color with at least 4.5:1 contrast against the badge background.
       </p>
     </div>
     <div class="mb-3">
@@ -245,13 +252,19 @@ export async function load(panel, ctx) {
     });
 
     const color = formEl.querySelector('#posture-color');
-    color?.addEventListener('input', () => {
+    const textColor = formEl.querySelector('#posture-text-color');
+    const updateBadgePreview = () => {
       formEl.querySelector('#posture-color-value').textContent = color.value;
+      formEl.querySelector('#posture-text-color-value').textContent = textColor.value;
       formEl.querySelector('#posture-badge-preview').innerHTML = renderPostureBadge({
         color: color.value,
+        text_color: textColor.value,
         label: formEl.querySelector('#posture-label').value || 'Posture label',
       });
-    });
+    };
+    color?.addEventListener('input', updateBadgePreview);
+    textColor?.addEventListener('input', updateBadgePreview);
+    formEl.querySelector('#posture-label')?.addEventListener('input', updateBadgePreview);
 
     formEl.querySelector('#posture-cancel')?.addEventListener('click', closeForm);
     formEl.querySelector('#posture-save')?.addEventListener('click', save);
@@ -267,6 +280,7 @@ export async function load(panel, ctx) {
       id,
       label: formEl.querySelector('#posture-label').value,
       color: formEl.querySelector('#posture-color').value,
+      text_color: formEl.querySelector('#posture-text-color').value,
       definition: formEl.querySelector('#posture-definition').value,
       steps: compact(readListEditor(formEl.querySelector('[data-le-root="steps"]'))),
       // A new posture goes last; existing records keep the position they have.

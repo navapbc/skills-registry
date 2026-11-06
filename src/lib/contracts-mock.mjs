@@ -1,7 +1,8 @@
 const postures = [
   {
     id: 'allowed',
-    color: '#e7f1e0',
+    color: '#004C31',
+    text_color: '#FFFFFF',
     label: 'Allowed',
     definition: 'Example posture for local UI development. This is not policy guidance.',
     steps: ['Demo guidance only.'],
@@ -9,7 +10,8 @@ const postures = [
   },
   {
     id: 'restricted',
-    color: '#fdf3d6',
+    color: '#FFBE2E',
+    text_color: '#0A0539',
     label: 'Restricted',
     definition: 'Example posture for local UI development. This is not policy guidance.',
     steps: ['Demo guidance only.'],
@@ -17,7 +19,8 @@ const postures = [
   },
   {
     id: 'silent',
-    color: '#f3f4f6',
+    color: '#0A0539',
+    text_color: '#FFFFFF',
     label: 'Silent',
     definition: 'Example posture for local UI development. This is not policy guidance.',
     steps: ['Demo guidance only.'],

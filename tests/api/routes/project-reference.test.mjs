@@ -62,7 +62,8 @@ const ARCHETYPE = {
 const POSTURE = {
   id: 'restricted',
   label: 'AI RESTRICTED — how to proceed',
-  color: '#fff8e1',
+  color: '#FFBE2E',
+  text_color: '#0A0539',
   position: 2,
   steps: ['Read the contract terms.', 'Never input PII.'],
 };
@@ -198,7 +199,9 @@ describe('POST /api/project-reference/:entityType', () => {
       method: 'POST', headers, body: JSON.stringify(POSTURE),
     });
     expect(res.status).toBe(201);
-    expect((await res.json()).steps).toEqual(POSTURE.steps);
+    const body = await res.json();
+    expect(body.steps).toEqual(POSTURE.steps);
+    expect(body.text_color).toBe(POSTURE.text_color);
   });
 
   it('admins can create too', async () => {
@@ -299,6 +302,24 @@ describe('POST /api/project-reference/:entityType', () => {
       body: JSON.stringify({ ...POSTURE, color: 'goldenrod' }),
     });
     expect(res.status).toBe(400);
+  });
+
+  it('rejects a posture text color that is not a hex value', async () => {
+    const res = await app.request('/api/project-reference/posture', {
+      method: 'POST', headers: as('projects-admin'),
+      body: JSON.stringify({ ...POSTURE, text_color: 'white' }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/text_color.*hex/i);
+  });
+
+  it('rejects a posture color pair below WCAG AA contrast', async () => {
+    const res = await app.request('/api/project-reference/posture', {
+      method: 'POST', headers: as('projects-admin'),
+      body: JSON.stringify({ ...POSTURE, color: '#004C31', text_color: '#1b1b1b' }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/4\.5:1 WCAG AA/);
   });
 
   it('rejects a missing required field', async () => {

@@ -17,13 +17,13 @@
  * made through the admin tabs. The check is a condition on the write rather than
  * a read-then-write, which would race.
  *
- * That safety is also a limitation: a changed value in POSTURE_COLORS can never
+ * That safety is also a limitation: changed values in the posture color maps can never
  * reach a posture that already exists. For that one case there is a second mode:
  *
  *   node scripts/seed-project-reference.mjs --env staging --update-colors
  *
- * It rewrites the `color` attribute of the four posture records from
- * POSTURE_COLORS and touches nothing else — not labels, not steps, not
+ * It rewrites the `color` and `text_color` attributes of the posture records from
+ * POSTURE_COLORS and POSTURE_TEXT_COLORS and touches nothing else — not labels, not steps, not
  * archetypes — so an admin's edits to the guidance survive a restyle. It needs
  * neither source file, because a posture color lives in this repo rather than in
  * the policy export. Combine it with --dry-run to see the before/after first.
@@ -121,7 +121,7 @@ async function connect() {
 }
 
 /**
- * Rewrite the posture `color` attribute, and only that attribute.
+ * Rewrite posture background and foreground colors, and only those attributes.
  *
  * A targeted UpdateExpression rather than a Put: a Put would need the whole item,
  * so it would overwrite the label and steps an admin may have edited with whatever
@@ -140,7 +140,9 @@ async function updateColors(args, table) {
 
   if (args.dryRun) {
     console.log('\n--dry-run: nothing written.\n');
-    for (const u of updates) console.log(`  would set ${u.entity_type}/${u.id} color = ${u.color}`);
+    for (const u of updates) {
+      console.log(`  would set ${u.entity_type}/${u.id} background = ${u.color}, text = ${u.text_color}`);
+    }
     console.log();
     return;
   }
@@ -152,30 +154,30 @@ async function updateColors(args, table) {
   let missing = 0;
 
   console.log();
-  for (const { entity_type, id, color } of updates) {
+  for (const { entity_type, id, color, text_color } of updates) {
     try {
       const res = await ddb.send(
         new UpdateCommand({
           TableName: table,
           Key: { entity_type, id },
-          UpdateExpression: 'SET #color = :color, updated_at = :now',
+          UpdateExpression: 'SET #color = :color, #text_color = :text_color, updated_at = :now',
           // `color` is a DynamoDB reserved word and has to go through a name
           // placeholder; an inline `color = :color` is rejected at request time.
-          ExpressionAttributeNames: { '#color': 'color' },
-          ExpressionAttributeValues: { ':color': color, ':now': now },
+          ExpressionAttributeNames: { '#color': 'color', '#text_color': 'text_color' },
+          ExpressionAttributeValues: { ':color': color, ':text_color': text_color, ':now': now },
           ConditionExpression: 'attribute_exists(id)',
           // The previous value, so the run log says what actually moved rather
           // than reporting four updates when nothing changed.
           ReturnValues: 'UPDATED_OLD',
         })
       );
-      const before = res.Attributes?.color;
-      if (before === color) {
+      const before = res.Attributes ?? {};
+      if (before.color === color && before.text_color === text_color) {
         same++;
-        console.log(`  same     ${entity_type}/${id} already ${color}`);
+        console.log(`  same     ${entity_type}/${id} already ${color} / ${text_color}`);
       } else {
         changed++;
-        console.log(`  updated  ${entity_type}/${id} ${before ?? '(unset)'} -> ${color}`);
+        console.log(`  updated  ${entity_type}/${id} background ${before.color ?? '(unset)'} -> ${color}; text ${before.text_color ?? '(unset)'} -> ${text_color}`);
       }
     } catch (err) {
       if (err.name === 'ConditionalCheckFailedException') {
