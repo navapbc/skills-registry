@@ -383,7 +383,7 @@ function renderRulingsList(rulings) {
   </section>`;
 }
 
-const sectionHeading = (text) => `<h2 class="font-sans text-[32px] font-extrabold leading-[48px] tracking-[0px] text-gray-900 m-0">${escapeHtml(text)}</h2>`;
+const sectionHeading = (text) => `<h2 class="font-sans text-section-heading text-gray-900 m-0">${escapeHtml(text)}</h2>`;
 
 export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt = null) {
   return `

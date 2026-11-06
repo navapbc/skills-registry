@@ -70,6 +70,10 @@
 @theme inline {
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
+  --text-section-heading: 2rem;
+  --text-section-heading--line-height: 1.5;
+  --text-section-heading--letter-spacing: 0em;
+  --text-section-heading--font-weight: 800;
 
   --color-plum-50:  var(--plum-50);
   --color-plum-100: var(--plum-100);
