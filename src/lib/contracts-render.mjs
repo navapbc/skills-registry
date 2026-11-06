@@ -263,37 +263,18 @@ const questionCard = (question, value) => `<div class="rounded-border-card">
     <p class="font-sans text-contract-copy text-gray-800 mt-2 mb-0 whitespace-pre-line">${plain(value)}</p>
   </div>`;
 
-/**
- * The words to say when a client asks whether Nava uses AI.
- *
- * Authored copy, identical on every contract — nothing here comes from the survey.
- * It reads as a script rather than as guidance because that is the point: someone
- * on a client call needs a sentence they can say, not a policy to interpret.
- *
- * Styled as an INFORMATIONAL alert, following the structure USWDS and the CMS
- * Design System use: a solid left bar, a pale fill, and a heading naming the
- * block in words. Info rather than warning because this content is reassurance
- * to relay, not a risk to weigh.
- *
- * This replaced a solid gray-900 panel. The dark fill separated the block from the
- * surveyed fields around it, which is worth keeping, so the separation now comes
- * from the tinted fill and the bar instead — same job, at the weight the rest of
- * the page is built at. The heading is what actually classifies the block; colour
- * only reinforces it, which is why the bar is allowed to sit below 3:1 (see the
- * --info trio in src/styles/main.css).
- */
+/** Authored client-facing copy, independent of the survey response. */
 const CLIENT_ASK_SCRIPT = `<section aria-label="Scripted responses to client questions about AI"
-  class="rounded-lg p-6 bg-info-bg flex gap-4">
-  <div class="w-1 rounded shrink-0 bg-info" aria-hidden="true"></div>
+  class="rounded-lg px-6 py-3 flex gap-4">
   <div class="flex-1 min-w-0">
-    <h3 class="text-xl font-bold text-gray-900 m-0">
+    <h3 class="font-sans text-base font-bold leading-normal tracking-normal text-gray-900 m-0">
       Scripted responses to client questions about AI
     </h3>
-    <p class="text-sm text-gray-800 mt-2 mb-4">
+    <p class="font-sans text-contract-copy text-gray-800 mt-2 mb-2">
       If a client asks about Nava&rsquo;s AI use, use these pre-approved talking points to
       respond confidently and consistently.
     </p>
-    <blockquote class="border-l-2 border-info pl-4 m-0">
+    <blockquote class="pl-4 m-0">
       <p class="text-lg text-gray-900 leading-relaxed m-0">
         &ldquo;Yes, Nava uses AI-assisted tools in a controlled manner to support internal
         development and drafting workflows. These tools are not used with agency or
@@ -333,7 +314,6 @@ const PRE_USE_CHECKLIST = `<section aria-label="Pre-use checklist" class="rounde
     following the right steps and meeting any applicable requirements.
   </p>
   <div class="flex gap-4 mt-5">
-    <div class="w-1 rounded shrink-0 bg-info-bg" aria-hidden="true"></div>
     <div class="flex-1 min-w-0">
       <h4 class="font-sans text-contract-copy text-gray-900 m-0">Checklist:</h4>
       <ol class="list-decimal mt-2 mb-0 pl-5 space-y-1.5 marker:text-gray-500">
