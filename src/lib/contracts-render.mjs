@@ -253,8 +253,8 @@ function renderAiUseTerms(contract, rulings) {
 const GUIDANCE_QUESTIONS = [
   ["Does this client have an AI policy that isn't necessarily referenced in the program's contract with Nava?", 'client_policy'],
   ['Is AI being used to meet formal program goals or deliverables as stated in the contract?', 'ai_used'],
-  ['What AI tools are in use?', 'tools'],
-  ['How are people on this program using AI?', 'usage'],
+  ['What tools are in use to complete work on this contract?', 'tools'],
+  ['How are people on this program using AI now?', 'usage'],
   ['Does the client have a process to review or approve AI use or AI tools?', 'review_process'],
 ];
 
