@@ -359,10 +359,12 @@ function renderRulingsList(rulings) {
       <dd class="font-sans text-contract-copy text-gray-800 m-0">${plain(r.posture?.definition)}</dd>
     </div>`).join('');
   return `<section id="ai-rulings" aria-labelledby="ai-rulings-heading" class="scroll-mt-6">
-    <h2 id="ai-rulings-heading" class="text-base font-semibold text-gray-900 m-0">
-      ${rulings.length} AI Rulings and Definitions
-    </h2>
-    <dl class="rulings-list mt-3 mb-0 rounded-lg border border-gray-200 bg-white">${rows}</dl>
+    <div class="pl-6">
+      <h2 id="ai-rulings-heading" class="text-base font-semibold text-gray-900 m-0">
+        ${rulings.length} AI Rulings and Definitions
+      </h2>
+      <dl class="rulings-list mt-3 mb-0 rounded-lg border border-gray-200 bg-white">${rows}</dl>
+    </div>
   </section>`;
 }
 

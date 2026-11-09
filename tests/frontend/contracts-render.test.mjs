@@ -447,6 +447,7 @@ describe('renderContractDetail', () => {
       const list = html.slice(html.indexOf('id="ai-rulings"'));
       const rowClasses = [...list.matchAll(/<div class="([^"]*)">\s*<dt/g)].map(([, classes]) => classes);
       expect(rowClasses).toHaveLength(rulings.length);
+      expect(list).toContain('<div class="pl-6">');
       expect(list).toContain('<dl class="rulings-list');
       expect(rowClasses.every((classes) => classes.includes('pb-2'))).toBe(true);
       expect(rowClasses[0]).not.toContain('border-t');
