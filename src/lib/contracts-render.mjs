@@ -267,7 +267,7 @@ const questionCard = (question, value, showPolicySummary = false) => `<div class
 
 /** Authored client-facing copy, independent of the survey response. */
 const CLIENT_ASK_SCRIPT = `<section aria-label="Scripted responses to client questions about AI"
-  class="rounded-lg px-6 py-3 flex gap-4">
+  class="rounded-lg border border-gray-200 bg-white px-6 py-3 flex gap-4">
   <div class="flex-1 min-w-0">
     <h3 class="font-sans text-base font-bold leading-normal tracking-normal text-gray-900 m-0">
       Scripted responses to client questions about AI
