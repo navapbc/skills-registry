@@ -405,7 +405,7 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
           Program managers or a program’s contract manager are always available to answer questions about expectations for AI use. 
         </p>
         <div class="rounded-border-card rounded-border-card--narrow mt-4 font-sans text-contract-copy text-gray-800 whitespace-pre-line">${plain(contract.ai_use_terms_language)}</div>
-        <p class="text-sm font-semibold text-gray-600 mt-6 mb-0">
+        <p class="font-sans text-contract-copy-bold text-gray-500 mt-6 mb-0">
           Regardless of a contract&rsquo;s AI ruling, keep reading to understand any nuance
           that may apply to this program when it comes to using AI.
         </p>
@@ -413,11 +413,9 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
 
       <section aria-label="Practical guidance and more information">
         ${sectionHeading('Practical guidance and more information')}
-        <p class="text-sm text-gray-600 mt-4 mb-0">
-          This section provides context and expectations for AI use on this program or contract.
-          This information comes from a survey that Program Managers completed to help delivery teams understand their client's AI posture.
-          The goal is for Nava employees to feel confident when using and exploring AI possibilities.
-          Please reach out to your program manager with questions or discussion.
+        <p class="font-sans text-contract-copy leading-6 tracking-normal text-gray-600 mt-4 mb-0">
+          This section provides background and context on AI use and expectations for this program or contract. 
+          The information below comes from an AI-use survey we asked Program Managers to complete to help delivery teams understand a given client's AI posture and confidently explore AI capabilities when possible
         </p>
         <div class="space-y-3 mt-5">
           ${GUIDANCE_QUESTIONS.map(([question, key]) => questionCard(question, contract[key], key === 'client_policy')).join('')}
