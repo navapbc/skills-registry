@@ -442,6 +442,15 @@ describe('renderContractDetail', () => {
       expect(list).toContain('This means the contract allows us to use AI.');
     });
 
+    it('uses the dl border above Allowed and separates later rows with full-width borders', () => {
+      const html = renderContractDetail(contract(), rulings);
+      const list = html.slice(html.indexOf('id="ai-rulings"'));
+      const rowClasses = [...list.matchAll(/<div class="([^"]*)">\s*<dt/g)].map(([, classes]) => classes);
+      expect(rowClasses).toHaveLength(rulings.length);
+      expect(rowClasses[0]).not.toContain('border-t');
+      expect(rowClasses.slice(1).every((classes) => classes.includes('border-t border-gray-200 pt-4'))).toBe(true);
+    });
+
     it('takes each definition from its posture record, and says when there is none', () => {
       const html = renderContractDetail(contract(), rulings);
       const list = html.slice(html.indexOf('id="ai-rulings"'));

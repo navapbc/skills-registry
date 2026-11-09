@@ -354,7 +354,7 @@ function renderPostureGuidance(contract, rulings) {
  * A ruling with no record, or a record with no definition, shows "None listed".
  */
 function renderRulingsList(rulings) {
-  const rows = rulings.map((r) => `<div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+  const rows = rulings.map((r, index) => `<div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 -mx-5 px-5 ${index > 0 ? 'border-t border-gray-200 pt-4' : ''}">
       <dt class="shrink-0 sm:w-28">${rulingBadge(r, r.name)}</dt>
       <dd class="font-sans text-contract-copy text-gray-800 m-0">${plain(r.posture?.definition)}</dd>
     </div>`).join('');
@@ -362,7 +362,7 @@ function renderRulingsList(rulings) {
     <h2 id="ai-rulings-heading" class="text-base font-semibold text-gray-900 m-0">
       ${rulings.length} AI Rulings and Definitions
     </h2>
-    <dl class="mt-3 mb-0 rounded-lg border border-gray-200 bg-white p-5 space-y-4">${rows}</dl>
+    <dl class="mt-3 mb-0 rounded-lg border border-gray-200 bg-white p-5">${rows}</dl>
   </section>`;
 }
 
