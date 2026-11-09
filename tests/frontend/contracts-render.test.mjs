@@ -448,8 +448,8 @@ describe('renderContractDetail', () => {
       const rowClasses = [...list.matchAll(/<div class="([^"]*)">\s*<dt/g)].map(([, classes]) => classes);
       expect(rowClasses).toHaveLength(rulings.length);
       expect(list).toContain('<div class="pl-6">');
-      expect(list).toContain('<dl class="rulings-list');
-      expect(rowClasses.every((classes) => classes.includes('ruling-definition-row'))).toBe(true);
+      expect(list).toContain('<dl class="w-full max-w-3xl pt-1 px-5 mt-5');
+      expect(rowClasses.every((classes) => classes.includes('py-3'))).toBe(true);
       expect(rowClasses[0]).not.toContain('border-t');
       expect(rowClasses.slice(1).every((classes) => classes.includes('border-t border-gray-200'))).toBe(true);
     });
