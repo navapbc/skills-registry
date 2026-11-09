@@ -3,7 +3,7 @@ import { fetchApi } from '../../src/lib/api.mjs';
 import { mockContractsResponse } from '../../src/lib/contracts-mock.mjs';
 
 describe('local contracts mock', () => {
-  it('serves synthetic contract data in development without calling the API', async () => {
+  it('serves mockup contract data in development without calling the API', async () => {
     const fetch = vi.fn();
     vi.stubGlobal('fetch', fetch);
 
