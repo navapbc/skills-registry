@@ -417,7 +417,7 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
         ${sectionHeading('Practical guidance and more information')}
         <p class="font-sans text-contract-copy leading-6 tracking-normal text-gray-600 mt-4 mb-0">
           This section provides background and context on AI use and expectations for this program or contract. 
-          The information below comes from an AI-use survey we asked Program Managers to complete to help delivery teams understand a given client's AI posture and confidently explore AI capabilities when possible
+          The information below comes from an AI-use survey we asked Program Managers to complete to help delivery teams understand a given client's AI posture and confidently explore AI capabilities when possible.
         </p>
         <div class="space-y-3 mt-5">
           ${GUIDANCE_QUESTIONS.map(([question, key]) => questionCard(question, contract[key], key === 'client_policy')).join('')}
