@@ -1,5 +1,3 @@
-import { mockContractsResponse } from './contracts-mock.mjs';
-
 /**
  * Fetches from the API, forwarding the session cookie automatically
  * (same-origin request — CloudFront routes /api/* to API Gateway).
@@ -9,10 +7,6 @@ import { mockContractsResponse } from './contracts-mock.mjs';
  * @throws {Error} with status code on non-2xx response
  */
 export async function fetchApi(path) {
-  if (import.meta.env.DEV && path === '/contracts') {
-    return mockContractsResponse;
-  }
-
   const res = await fetch(`/api${path}`, { credentials: 'include' });
   if (res.status === 401) {
     window.location.href = '/login?return_to=' + encodeURIComponent(window.location.pathname);
