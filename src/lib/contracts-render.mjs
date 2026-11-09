@@ -354,7 +354,7 @@ function renderPostureGuidance(contract, rulings) {
  * A ruling with no record, or a record with no definition, shows "None listed".
  */
 function renderRulingsList(rulings) {
-  const rows = rulings.map((r, index) => `<div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 -mx-5 px-5 pb-2 ${index > 0 ? 'border-t border-gray-200 pt-2' : ''}">
+  const rows = rulings.map((r, index) => `<div class="ruling-definition-row flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 -mx-5 px-5 ${index > 0 ? 'border-t border-gray-200' : ''}">
       <dt class="shrink-0 sm:w-28">${rulingBadge(r, r.name)}</dt>
       <dd class="font-sans text-contract-copy text-gray-800 m-0">${plain(r.posture?.definition)}</dd>
     </div>`).join('');

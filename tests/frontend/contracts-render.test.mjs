@@ -449,9 +449,9 @@ describe('renderContractDetail', () => {
       expect(rowClasses).toHaveLength(rulings.length);
       expect(list).toContain('<div class="pl-6">');
       expect(list).toContain('<dl class="rulings-list');
-      expect(rowClasses.every((classes) => classes.includes('pb-2'))).toBe(true);
+      expect(rowClasses.every((classes) => classes.includes('ruling-definition-row'))).toBe(true);
       expect(rowClasses[0]).not.toContain('border-t');
-      expect(rowClasses.slice(1).every((classes) => classes.includes('border-t border-gray-200 pt-2'))).toBe(true);
+      expect(rowClasses.slice(1).every((classes) => classes.includes('border-t border-gray-200'))).toBe(true);
     });
 
     it('takes each definition from its posture record, and says when there is none', () => {

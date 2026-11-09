@@ -165,6 +165,10 @@ body.contract-detail-page #main-content > div {
   padding: 4px 20px 0;
 }
 
+.ruling-definition-row {
+  padding-block: 11px;
+}
+
 /* ── Collapsible sidebar ──────────────────────────────────────────────
    Rail (icon-only) is the default. At md+ the sidebar expands to its full
    labeled width unless the user collapsed it (data-sidebar-collapsed on
