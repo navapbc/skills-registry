@@ -231,7 +231,7 @@ describe('renderContractDetail', () => {
   describe('what the contract says about AI', () => {
     const termsOf = (terms) => sectionOf(
       renderContractDetail(contract({ ai_use_terms: terms }), rulings),
-      'What the contract says about AI',
+      'What the Contract says about AI',
     );
 
     it('highlights a leading ruling name and keeps the rest as written', () => {
