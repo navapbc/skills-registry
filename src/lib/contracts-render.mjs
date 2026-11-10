@@ -23,6 +23,8 @@ export const RULINGS = [
   { id: 'allowed', name: 'Allowed' },
   { id: 'restricted', name: 'Restricted' },
   { id: 'silent', name: 'Silent' },
+  { id: 'prohibited', name: 'Prohibited' },
+  { id: 'conditional', name: 'Conditional' },
 ];
 
 // The badge text colour the Policy Guidance tab previews every posture colour
