@@ -81,6 +81,19 @@ const POLICY_SOURCE = {
   hardLimits: ['Never input PII into any AI tool.'],
 };
 
+const withPosturePair = (id, color, textColor, fn) => {
+  const originalColor = POSTURE_COLORS[id];
+  const originalTextColor = POSTURE_TEXT_COLORS[id];
+  POSTURE_COLORS[id] = color;
+  POSTURE_TEXT_COLORS[id] = textColor;
+  try {
+    fn();
+  } finally {
+    POSTURE_COLORS[id] = originalColor;
+    POSTURE_TEXT_COLORS[id] = originalTextColor;
+  }
+};
+
 describe('archetypesFromSource', () => {
   it('produces one record per source archetype', () => {
     expect(archetypesFromSource(ARCHETYPES_SOURCE)).toHaveLength(5);
@@ -182,19 +195,6 @@ describe('posturesFromSource', () => {
 });
 
 describe('posture color legibility', () => {
-  const withPosturePair = (id, color, textColor, fn) => {
-    const originalColor = POSTURE_COLORS[id];
-    const originalTextColor = POSTURE_TEXT_COLORS[id];
-    POSTURE_COLORS[id] = color;
-    POSTURE_TEXT_COLORS[id] = textColor;
-    try {
-      fn();
-    } finally {
-      POSTURE_COLORS[id] = originalColor;
-      POSTURE_TEXT_COLORS[id] = originalTextColor;
-    }
-  };
-
   it('every shipped background and text pair clears WCAG AA', () => {
     for (const [id, color] of Object.entries(POSTURE_COLORS)) {
       expect(contrastRatio(color, POSTURE_TEXT_COLORS[id]), id).toBeGreaterThanOrEqual(4.5);
@@ -300,7 +300,7 @@ describe('postureColorUpdates', () => {
 
   it('holds a color pair arriving this way to the same legibility bar as a full seed', () => {
     const id = 'restricted';
-    withPosturePair(id, '#3d2f00', '#fdf3d6', () => {
+    withPosturePair(id, '#004C31', '#1b1b1b', () => {
       expect(() => postureColorUpdates()).toThrow(SeedError);
       expect(() => postureColorUpdates()).toThrow(/under the 4.5:1 WCAG AA floor/);
     });
@@ -309,7 +309,7 @@ describe('postureColorUpdates', () => {
   it('rejects a malformed hex rather than writing a background that renders nothing', () => {
     const id = 'silent';
     withPosturePair(id, 'f3f4f6', '#FFFFFF', () => {
-      expect(() => postureColorUpdates()).toThrow(/not a six-digit hex color/);
+      expect(() => postureColorUpdates()).toThrow(/not a six-digit hex value/);
     });
   });
 });
