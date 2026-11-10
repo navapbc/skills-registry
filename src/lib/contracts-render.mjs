@@ -13,18 +13,13 @@ import { escapeHtml, truncate } from './render.mjs';
 const BLURB_LIMIT = 180;
 
 /**
- * The five AI rulings, in the order the rulings list shows them.
- *
- * The ids match AI_RULINGS in functions/api/lib/contracts.mjs, and a test holds
- * the two lists equal. Colours, definitions, and guidance are not authored here:
- * rulingsFromPostures takes them from the posture records.
+ * The three pill-style rulings shown in the Contract Explorer. Prohibited and
+ * Conditional remain API classifications but render as source text here.
  */
 export const RULINGS = [
   { id: 'allowed', name: 'Allowed' },
   { id: 'restricted', name: 'Restricted' },
   { id: 'silent', name: 'Silent' },
-  { id: 'prohibited', name: 'Prohibited' },
-  { id: 'conditional', name: 'Conditional' },
 ];
 
 // The badge text colour the Policy Guidance tab previews every posture colour
