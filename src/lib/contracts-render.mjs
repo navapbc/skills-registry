@@ -376,7 +376,7 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
       <div>
         <p class="font-sans text-sm font-semibold leading-[21px] tracking-[0.28px] uppercase text-gray-600 m-0">Contract Details</p>
         <p class="text-gray-600 mt-1 mb-0"><span class="inline-block px-2 py-0.5 text-sm rounded bg-portfolio-badge text-white">${escapeHtml(contract.portfolio ?? '')}</span></p>
-        <h1 class="font-sans text-2xl font-extrabold leading-[50px] tracking-normal text-gray-900 mt-3 mb-0">${escapeHtml(contract.project || contract.contract_id)}</h1>
+        <h1 class="font-sans text-2xl font-extrabold leading-tight tracking-normal text-gray-900 mt-3 mb-0">${escapeHtml(contract.project || contract.contract_id)}</h1>
       </div>
       <div class="text-sm sm:text-right">
         <p class="text-gray-900 m-0">Agency: <strong class="text-gray-900">${plain(contract.customer)}</strong></p>
