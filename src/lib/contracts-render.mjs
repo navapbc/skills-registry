@@ -177,7 +177,7 @@ export function renderContractCard(contract, rulings = NO_POSTURES) {
     class="contract-card flex flex-col h-full bg-white border border-gray-200 rounded-lg p-4 no-underline hover:border-plum-300 transition-colors"
   >
     <div class="mb-2">
-      <span class="px-1.5 py-0.5 text-xs font-medium bg-portfolio-badge text-white rounded-lg">
+      <span class="px-1.5 py-0.5 text-xs font-medium bg-portfolio-badge text-white rounded">
         ${escapeHtml(contract.portfolio ?? '')}
       </span>
     </div>
@@ -230,7 +230,7 @@ function renderSageLink(project) {
   if (isBlank(key)) return '';
   const href = CONFLUENCE_SPACES + encodeURIComponent(key.trim());
   return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"
-    class="block mt-2 font-sans text-contract-copy text-contract-link underline decoration-solid">For full program details, check out the project index on Sage.</a>`;
+    class="block mt-2 whitespace-nowrap font-sans text-contract-copy text-contract-link underline decoration-solid">For full program details, check out the project index on Sage.</a>`;
 }
 
 /** What the contract says about AI use, from column L, or "None listed" when blank. */
