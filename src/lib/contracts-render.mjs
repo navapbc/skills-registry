@@ -230,7 +230,7 @@ function renderSageLink(project) {
   if (isBlank(key)) return '';
   const href = CONFLUENCE_SPACES + encodeURIComponent(key.trim());
   return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"
-    class="block mt-2 text-xs font-semibold text-plum-700 underline">For full program details, check out the project index on Sage.</a>`;
+    class="block mt-2 font-sans text-contract-copy text-contract-link underline decoration-solid">For full program details, check out the project index on Sage.</a>`;
 }
 
 /** What the contract says about AI use, from column L, or "None listed" when blank. */
