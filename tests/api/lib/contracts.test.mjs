@@ -35,16 +35,15 @@ describe('record type constants', () => {
 });
 
 describe('AI_RULINGS', () => {
-  it('keeps API classifications broader than the renderer pill list', () => {
-    expect(AI_RULINGS).toEqual(['allowed', 'restricted', 'silent', 'prohibited', 'conditional']);
-    expect(RULINGS.map((r) => r.id)).toEqual(AI_RULINGS.slice(0, 3));
+  it('names the same rulings, in the same order, as the renderer', () => {
+    expect(AI_RULINGS).toEqual(RULINGS.map((r) => r.id));
   });
 });
 
 describe('isPublished', () => {
   it('publishes only an explicit Yes, whatever its case and spacing', () => {
     expect(isPublished(contract({ publish: 'Yes' }))).toBe(true);
-    expect(isPublished(contract({ publish: ' yes ' }))).toBe(true);
+    expect(isPublishgited(contract({ publish: ' yes ' }))).toBe(true);
     expect(isPublished(contract({ publish: 'No' }))).toBe(false);
     expect(isPublished(contract({ publish: '' }))).toBe(false);
     expect(isPublished({ contract_id: 'x' })).toBe(false);
