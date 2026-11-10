@@ -177,7 +177,7 @@ export function renderContractCard(contract, rulings = NO_POSTURES) {
     class="contract-card flex flex-col h-full bg-white border border-gray-200 rounded-lg p-4 no-underline hover:border-plum-300 transition-colors"
   >
     <div class="mb-2">
-      <span class="px-1.5 py-0.5 text-xs font-medium bg-portfolio-badge text-white rounded">
+      <span class="px-1.5 py-0.5 text-xs font-medium bg-portfolio-badge text-white rounded-lg">
         ${escapeHtml(contract.portfolio ?? '')}
       </span>
     </div>
@@ -375,7 +375,7 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
     <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
       <div>
         <p class="font-sans text-sm font-semibold leading-[21px] tracking-[0.28px] uppercase text-gray-600 m-0">Contract Details</p>
-        <p class="text-gray-600 mt-1 mb-0"><span class="inline-flex h-8 items-center px-2 text-sm rounded bg-portfolio-badge text-white">${escapeHtml(contract.portfolio ?? '')}</span></p>
+        <p class="text-gray-600 mt-1 mb-0"><span class="inline-flex h-8 items-center px-2 text-sm rounded-lg bg-portfolio-badge text-white">${escapeHtml(contract.portfolio ?? '')}</span></p>
         <h1 class="font-sans text-2xl font-extrabold leading-tight tracking-normal text-gray-900 mt-3 mb-0">${escapeHtml(contract.project || contract.contract_id)}</h1>
       </div>
       <div class="text-sm sm:text-right">
