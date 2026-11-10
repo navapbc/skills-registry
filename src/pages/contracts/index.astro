@@ -102,11 +102,17 @@ if (data) {
     // ── Grid view ────────────────────────────────────────────────────────
     document.title = 'Contract Explorer · Skills Hub';
 
+    const portfolios = portfoliosOf(contracts);
+    const portfolioOrder = new Map(portfolios.map((name, index) => [name, index]));
+    const orderedContracts = [...contracts].sort((first, second) =>
+      (portfolioOrder.get(first.portfolio) ?? portfolios.length)
+      - (portfolioOrder.get(second.portfolio) ?? portfolios.length)
+    );
     let portfolio = 'all';
     let query = '';
 
-    const portfolioOptions = portfoliosOf(contracts)
-      .map((p) => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`)
+    const portfolioOptions = portfolios
+      .map((p) => `<option value="${escapeHtml(p)}"${p === portfolio ? ' selected' : ''}>${escapeHtml(p)}</option>`)
       .join('');
 
     const selectClass = 'text-xs px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-plum-300';
@@ -128,7 +134,7 @@ if (data) {
             class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-plum-300 focus:border-plum-400 placeholder:text-gray-600" />
         </div>
         <select id="contracts-portfolio" aria-label="Filter by portfolio" class="${selectClass}">
-          <option value="all">All portfolios</option>${portfolioOptions}
+          <option value="all"${portfolio === 'all' ? ' selected' : ''}>All portfolios</option>${portfolioOptions}
         </select>
       </div>
 
@@ -140,7 +146,7 @@ if (data) {
     const countEl = document.getElementById('contracts-count')!;
 
     function render() {
-      const visible = filterContracts(contracts, { portfolio, query });
+      const visible = filterContracts(orderedContracts, { portfolio, query });
       countEl.textContent = `${visible.length} of ${contracts.length} record${contracts.length === 1 ? '' : 's'}`;
       gridEl.innerHTML = renderContractGrid(visible, rulings);
     }
