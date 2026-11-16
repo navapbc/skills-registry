@@ -23,6 +23,7 @@ const HEADERS = [
   'Needed for compliance',
   'Notes',
   'Publish to Project Indices and Contract Explorer (Yes/No)?',
+  '[Old] Contract AI Use Terms (i.e., allowed, restricted, silent, prohibited)',
   'Permitted AI usage',
 ];
 
@@ -56,7 +57,7 @@ const SEC = {
 
 describe('the header map', () => {
   it('maps every carried header of the real tab, in its column order', () => {
-    expect(HEADERS).toHaveLength(25);
+    expect(HEADERS).toHaveLength(26);
     expect(HEADERS.at(-2)).toBe(header('publish'));
     expect(HEADERS.at(-1)).toBe(header('permitted_ai_usage'));
   });
@@ -100,6 +101,16 @@ describe('shapeContracts', () => {
     expect(record).not.toHaveProperty('ai_posture');
   });
 
+  it('uses the current AI-terms column and ignores the archived column', () => {
+    const archivedHeader = '[Old] Contract AI Use Terms (i.e., allowed, restricted, silent, prohibited)';
+    const record = shapeContracts(gridOf(rowOf({
+      ...SEC,
+      [archivedHeader]: 'stale archived value',
+    }))).contracts['fedciv-sec-enterprise-websites'];
+    expect(record.ai_use_terms).toBe(SEC.ai_use_terms);
+    expect(Object.values(record)).not.toContain('stale archived value');
+  });
+
   it('carries every attribute as a string, empty when the cell is blank', () => {
     const { contracts } = shapeContracts(gridOf(rowOf({ portfolio: 'LABS', project: 'AECF' })));
     const record = contracts['labs-aecf'];
@@ -130,6 +141,7 @@ describe('shapeContracts', () => {
     expect(EXCLUDED_HEADERS).toEqual(expect.arrayContaining([
       'Contracts Team Member', 'Nava steps for compliance', 'Nava Compliance Status',
       'Needed for compliance', 'Notes',
+      '[Old] Contract AI Use Terms (i.e., allowed, restricted, silent, prohibited)',
     ]));
   });
 

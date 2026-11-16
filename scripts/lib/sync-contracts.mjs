@@ -52,7 +52,7 @@ export const COLUMN_ATTRIBUTES = {
   'PROJECT MANAGER (Nava)': 'nava_project_mgr',
   'PROGRAM MANAGER (Nava)': 'nava_program_mgr',
   'SUBCONTRACTORS': 'subcontractors',
-  'Contract AI Use Terms (i.e., allowed, restricted, silent, prohibited)': 'ai_use_terms',
+  'Contract AI Use Terms (i.e., allowed, restricted, silent)': 'ai_use_terms',
   'AI Use Terms Language': 'ai_use_terms_language',
   'Is there a Client AI Use Policy (outside of the contract)? (Yes/No; if yes, provide brief narrative and link to policy)': 'client_policy',
   'Is there a Nava Program-Specific AI Use Policy? (Yes/No; if yes, provide brief narrative and link to policy)': 'nava_policy',
@@ -75,6 +75,7 @@ export const EXCLUDED_HEADERS = [
   'Nava Compliance Status',
   'Needed for compliance',
   'Notes',
+  '[Old] Contract AI Use Terms (i.e., allowed, restricted, silent, prohibited)',
 ];
 
 // The contracts team's publish flag. It is stored like any other column, and the
