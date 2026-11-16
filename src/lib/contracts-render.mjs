@@ -427,7 +427,9 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
         </div>
       </section>
 
-      ${renderPostureGuidance(contract, rulings)}
+      ${/* 11/03 Figma omits the separate posture guidance panel.
+        renderPostureGuidance(contract, rulings)
+      */ ''}
 
       ${renderRulingsList(rulings)}
     </div>

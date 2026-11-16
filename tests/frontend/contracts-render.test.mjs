@@ -387,45 +387,9 @@ describe('renderContractDetail', () => {
     });
   });
 
-  describe('the posture guidance', () => {
-    const guidanceOf = (terms, list = rulings) =>
-      renderContractDetail(contract({ ai_use_terms: terms }), list).match(
-        /<section aria-label="AI posture guidance"[\s\S]*?<\/section>/,
-      )?.[0] ?? null;
-
-    it('shows the posture named by the first word of the AI use terms', () => {
-      const html = guidanceOf('Silent on use terms, no explicit AI terms');
-      expect(html).toContain('AI SILENT — how to proceed');
-      expect(html).toContain('background-color: #f3f4f6');
-    });
-
-    it('numbers the steps in their stored order', () => {
-      const html = guidanceOf('silent');
-      expect(html).toContain('list-decimal');
-      expect(html.indexOf('Check the terms.')).toBeLessThan(html.indexOf('Ask your PM.'));
-    });
-
-    it('is left out when the first word names no ruling', () => {
-      expect(guidanceOf('no language regarding AI')).toBeNull();
-    });
-
-    it('is left out when the ruling has no posture record yet', () => {
-      expect(guidanceOf('Conditional, TO Silent')).toBeNull();
-    });
-
-    it('sits directly before the rulings list', () => {
-      const html = renderContractDetail(contract({ ai_use_terms: 'Silent' }), rulings);
-      const at = html.indexOf('aria-label="AI posture guidance"');
-      expect(html.indexOf('Scripted responses to client questions about AI')).toBeLessThan(at);
-      expect(at).toBeLessThan(html.indexOf('id="ai-rulings"'));
-    });
-
-    it('escapes the posture label and steps, which are stored records', () => {
-      const list = rulingsFromPostures([{ id: 'silent', color: '#f3f4f6', label: '<b>L</b>', steps: ['<i>s</i>'] }]);
-      const html = guidanceOf('Silent', list);
-      expect(html).not.toContain('<b>L</b>');
-      expect(html).not.toContain('<i>s</i>');
-    });
+  it('does not render a separate posture guidance panel', () => {
+    const html = renderContractDetail(contract({ ai_use_terms: 'Allowed' }), rulings);
+    expect(html).not.toContain('aria-label="AI posture guidance"');
   });
 
   describe('the rulings list', () => {
