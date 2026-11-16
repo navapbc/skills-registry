@@ -58,8 +58,11 @@ const SEC = {
 describe('the header map', () => {
   it('maps every carried header of the real tab, in its column order', () => {
     expect(HEADERS).toHaveLength(26);
-    expect(HEADERS.at(-2)).toBe(header('publish'));
-    expect(HEADERS.at(-1)).toBe(header('permitted_ai_usage'));
+    expect(HEADERS.slice(-3)).toEqual([
+      header('publish'),
+      '[Old] Contract AI Use Terms (i.e., allowed, restricted, silent, prohibited)',
+      header('permitted_ai_usage'),
+    ]);
   });
 
   it('reads the prose header row, sheet row 2', () => {
