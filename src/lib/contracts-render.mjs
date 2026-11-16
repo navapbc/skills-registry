@@ -130,7 +130,13 @@ export function describePopulationNotice(population) {
 
 /** Distinct portfolios, in a stable order, for the filter control. */
 export function portfoliosOf(contracts) {
-  return [...new Set((contracts ?? []).map((c) => c.portfolio).filter(Boolean))].sort();
+  const sortExceptions = ['BEAM'];
+  const uniquePortfolios = [...new Set((contracts ?? []).map((c) => c.portfolio).filter(Boolean))];
+  const standard = uniquePortfolios.filter((portfolio) => !sortExceptions.includes(portfolio));
+  const pinnedToBack = uniquePortfolios.filter((portfolio) => sortExceptions.includes(portfolio));
+
+  standard.sort((a, b) => a.localeCompare(b));
+  return [...standard, ...pinnedToBack];
 }
 
 export function formatCapturedAt(iso) {

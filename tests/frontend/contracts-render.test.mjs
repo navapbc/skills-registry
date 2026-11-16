@@ -127,6 +127,13 @@ describe('portfoliosOf', () => {
       contract({ portfolio: 'STATES' }), contract({ portfolio: 'FEDCIV' }), contract({ portfolio: 'STATES' }),
     ])).toEqual(['FEDCIV', 'STATES']);
   });
+
+  it('pins BEAM after the alphabetized portfolios', () => {
+    expect(portfoliosOf([
+      contract({ portfolio: 'STATES' }), contract({ portfolio: 'BEAM' }),
+      contract({ portfolio: 'FEDCIV' }), contract({ portfolio: 'BEAM' }),
+    ])).toEqual(['FEDCIV', 'STATES', 'BEAM']);
+  });
 });
 
 describe('formatCapturedAt', () => {
