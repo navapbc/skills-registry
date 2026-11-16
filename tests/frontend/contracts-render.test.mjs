@@ -307,7 +307,7 @@ describe('renderContractDetail', () => {
       expect(html).toContain('Does this client have an AI policy');
       expect(html).toContain('Yes. SEC requests training features be turned off.');
       expect(html).toContain('SUMMARY');
-      expect(html).toContain('Link to policy information');
+      expect(html).toContain('<a class="text-sm text-plum-700 underline">Link to policy information</a>');
       expect(html).toContain('Is AI being used to meet formal program goals or deliverables as stated in the contract?');
       expect(html).toContain('What tools are in use to complete work on this contract?');
       expect(html).toContain('N/A');

@@ -242,7 +242,7 @@ const questionCard = (question, value, showPolicySummary = false) => `<div class
     <h3 class="text-sm font-semibold text-gray-900 m-0">${escapeHtml(question)}</h3>
   ${showPolicySummary ? '<p>SUMMARY</p>' : ''}
     <p class="text-sm text-gray-800 mt-2 mb-0 whitespace-pre-line">${plain(value)}</p>
-  ${showPolicySummary ? '<span>Link to policy information</span>' : ''}
+  ${showPolicySummary ? '<a class="text-sm text-plum-700 underline">Link to policy information</a>' : ''}
   </div>`;
 
 /**
