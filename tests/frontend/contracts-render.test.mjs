@@ -29,6 +29,7 @@ const contract = (over = {}) => ({
   contract_num: '47QTCA18D008M',
   customer: 'SEC',
   nava_program_mgr: 'Crystal Cody',
+  nava_project_mgr: 'Morgan Demo',
   ai_use_terms: 'Conditional, TO Silent, BPA Restricted',
   ai_use_terms_language: 'SEC BPA modification 4 incorporates AI-related clauses.',
   client_policy: 'Yes. SEC requests training features be turned off.',
@@ -48,8 +49,8 @@ const sectionOf = (html, label) =>
   html.match(new RegExp(`<section aria-label="${label}"[\\s\\S]*?</section>`))[0];
 
 describe('RULINGS', () => {
-  it('defines the five rulings in the design order', () => {
-    expect(RULINGS.map((r) => r.name)).toEqual(['Allowed', 'Restricted', 'Silent', 'Prohibited', 'Conditional']);
+  it('defines only the three pill rulings in the design order', () => {
+    expect(RULINGS.map((r) => r.name)).toEqual(['Allowed', 'Restricted', 'Silent']);
   });
 });
 
@@ -57,18 +58,22 @@ describe('rulingsFromPostures', () => {
   it('takes each ruling colour from the posture record with the same id', () => {
     const byId = Object.fromEntries(rulings.map((r) => [r.id, r.fill]));
     expect(byId).toMatchObject({
-      allowed: '#e7f1e0', restricted: '#fdf3d6', silent: '#f3f4f6', prohibited: '#fcdcd6',
+      allowed: '#e7f1e0', restricted: '#fdf3d6', silent: '#f3f4f6',
     });
   });
 
   it('leaves a ruling with no posture record uncoloured', () => {
-    expect(rulings.find((r) => r.id === 'conditional').fill).toBeNull();
+    expect(rulings.find((r) => r.id === 'conditional')).toBeUndefined();
+    expect(rulings.find((r) => r.id === 'prohibited')).toBeUndefined();
     expect(rulingsFromPostures(undefined).every((r) => r.fill === null)).toBe(true);
   });
 
   it('picks up a posture added later, with no code change', () => {
-    const later = rulingsFromPostures([...POSTURES, { id: 'conditional', color: '#ece3f5' }]);
-    expect(later.find((r) => r.id === 'conditional').fill).toBe('#ece3f5');
+    const later = rulingsFromPostures([
+      ...POSTURES.filter((p) => p.id !== 'allowed'),
+      { id: 'allowed', color: '#ece3f5' },
+    ]);
+    expect(later.find((r) => r.id === 'allowed').fill).toBe('#ece3f5');
   });
 
   it('keeps the authored order, whatever order the records arrive in', () => {
@@ -80,7 +85,8 @@ describe('leadingRuling', () => {
   it('names the ruling the first word spells, whatever its case', () => {
     expect(leadingRuling('Allowed').id).toBe('allowed');
     expect(leadingRuling('  silent on use terms').id).toBe('silent');
-    expect(leadingRuling('Conditional, TO Silent').id).toBe('conditional');
+    expect(leadingRuling('Conditional, TO Silent')).toBeNull();
+    expect(leadingRuling('Prohibited')).toBeNull();
   });
 
   it('names nothing when the first word is not a ruling name', () => {
@@ -144,10 +150,10 @@ describe('renderContractCard', () => {
     expect(html).not.toContain('background-color');
   });
 
-  it('highlights a leading ruling word the same way the detail page does', () => {
+  it('leaves a non-pill ruling as source text', () => {
     const html = card({ ai_use_terms: 'Prohibited, no exceptions' });
-    expect(html).toContain('background-color: #fcdcd6; color: #1b1b1b');
-    expect(html).toContain('>Prohibited</span>, no exceptions');
+    expect(html).not.toContain('background-color');
+    expect(html).toContain('Prohibited, no exceptions');
   });
 
   it('highlights a cell that is exactly a ruling name, once', () => {
@@ -191,14 +197,16 @@ describe('renderContractGrid', () => {
 
 describe('renderContractDetail', () => {
   describe('the header', () => {
-    it('names the portfolio, the contract, the agency, and the program manager', () => {
+    it('names the portfolio, contract, agency, program manager, and contract manager', () => {
       const html = renderContractDetail(contract(), rulings);
       expect(html).toMatch(/contract details/i);
+      expect(html).toContain('>Contract Details</p>');
       expect(html).toContain('FEDCIV');
       expect(html).toContain('<h1');
       expect(html).toContain('SEC ENTERPRISE WEBSITES');
       expect(html).toContain('Agency: <strong class="text-gray-900">SEC</strong>');
       expect(html).toContain('Crystal Cody');
+      expect(html).toContain('Contract manager: <strong class="text-gray-900">Morgan Demo</strong>');
     });
 
     it('links the project index on Sage when the project has a space key', () => {
@@ -216,15 +224,15 @@ describe('renderContractDetail', () => {
     });
 
     it('marks a blank agency or program manager as unlisted', () => {
-      const html = renderContractDetail(contract({ customer: '', nava_program_mgr: '' }), rulings);
-      expect(html.match(/None listed/g).length).toBeGreaterThanOrEqual(2);
+      const html = renderContractDetail(contract({ customer: '', nava_program_mgr: '', nava_project_mgr: '' }), rulings);
+      expect(html.match(/None listed/g).length).toBeGreaterThanOrEqual(3);
     });
   });
 
   describe('what the contract says about AI', () => {
     const termsOf = (terms) => sectionOf(
       renderContractDetail(contract({ ai_use_terms: terms }), rulings),
-      'What the contract says about AI',
+      'What the Contract says about AI',
     );
 
     it('highlights a leading ruling name and keeps the rest as written', () => {
@@ -234,10 +242,10 @@ describe('renderContractDetail', () => {
       expect(html).toContain('>Restricted</span>, learning/development restrictions');
     });
 
-    it('outlines a leading ruling that has no posture record yet', () => {
+    it('leaves a non-pill ruling as source text', () => {
       const html = termsOf('Conditional, TO Silent, BPA Restricted');
       expect(html).not.toContain('background-color');
-      expect(html).toContain('border border-gray-300 bg-white text-gray-900">Conditional</span>, TO Silent');
+      expect(html).toContain('Conditional, TO Silent, BPA Restricted');
     });
 
     it('highlights the word as the sheet spells it, whatever its case', () => {
@@ -246,10 +254,10 @@ describe('renderContractDetail', () => {
       expect(html).toContain('>silent</span> on use terms');
     });
 
-    it('highlights a cell that is exactly a ruling name', () => {
+    it('leaves a ruling outside the pill list as source text', () => {
       const html = termsOf('Prohibited');
-      expect(html).toContain('background-color: #fcdcd6');
-      expect(html).toContain('>Prohibited</span>');
+      expect(html).not.toContain('background-color');
+      expect(html).toContain('Prohibited');
     });
 
     it('highlights nothing when the first word is not a ruling name', () => {
@@ -274,13 +282,15 @@ describe('renderContractDetail', () => {
     it('links to the rulings list at the bottom of the page', () => {
       const html = renderContractDetail(contract(), rulings);
       expect(html).toContain('href="#ai-rulings"');
-      expect(html).toContain('See all 5 potential AI rulings and their definitions.');
+      expect(html).toContain('See all 3 potential AI rulings and their definitions.');
       expect(html).toContain('id="ai-rulings"');
     });
 
     it('shows the contract language as written', () => {
       const html = renderContractDetail(contract(), rulings);
       expect(html).toContain('Contract language');
+      expect(html).toContain('Read the most up-to-contract language.');
+      expect(html).toContain('Program managers or a program’s contract manager are always available to answer questions about expectations for AI use.');
       expect(html).toContain('SEC BPA modification 4 incorporates AI-related clauses.');
     });
 
@@ -293,12 +303,15 @@ describe('renderContractDetail', () => {
   describe('practical guidance', () => {
     it('asks each survey question with its answer as written', () => {
       const html = sectionOf(renderContractDetail(contract(), rulings), 'Practical guidance and more information');
+      expect(html).toContain('This section provides background and context on AI use and expectations for this program or contract.');
       expect(html).toContain('Does this client have an AI policy');
       expect(html).toContain('Yes. SEC requests training features be turned off.');
-      expect(html).toContain('Is AI in use on this contract?');
-      expect(html).toContain('What AI tools are in use?');
+      expect(html).toContain('SUMMARY');
+      expect(html).toContain('Link to policy information');
+      expect(html).toContain('Is AI being used to meet formal program goals or deliverables as stated in the contract?');
+      expect(html).toContain('What tools are in use to complete work on this contract?');
       expect(html).toContain('N/A');
-      expect(html).toContain('How are people on this program using AI?');
+      expect(html).toContain('How are people on this program using AI now?');
       expect(html).toContain('Does the client have a process to review or approve AI use or AI tools?');
       expect(html).toContain('The CAIO has an AI Use Case Inventory submission form.');
     });
@@ -323,7 +336,9 @@ describe('renderContractDetail', () => {
       .map((m) => m[1]);
 
     it('lists exactly the five authored items, in order', () => {
-      expect(itemsOf(renderContractDetail(contract(), rulings))).toEqual(ITEMS);
+      const html = renderContractDetail(contract(), rulings);
+      expect(html).toContain('Checklist:</h4>');
+      expect(itemsOf(html)).toEqual(ITEMS);
     });
 
     it('lists the same items whatever posture the contract resolves to', () => {
@@ -419,16 +434,16 @@ describe('renderContractDetail', () => {
       expect(html.indexOf('Scripted responses to client questions about AI')).toBeLessThan(html.indexOf('id="ai-rulings"'));
     });
 
-    it('lists every ruling with its colour and definition', () => {
+    it('lists only the three pill rulings with their colour and definition', () => {
       const html = renderContractDetail(contract(), rulings);
       const list = html.slice(html.indexOf('id="ai-rulings"'));
-      expect(list).toContain('5 AI Rulings and Definitions');
+      expect(list).toContain('3 AI Rulings and Definitions');
       for (const r of rulings) {
         if (r.fill) expect(list).toContain(`background-color: ${r.fill}`);
         expect(list).toContain(`>${r.name}</span>`);
       }
-      expect(list).toContain('border border-gray-300 bg-white text-gray-900">Conditional</span>');
-      expect(list).toContain('You cannot use AI on this contract.');
+      expect(list).not.toContain('Prohibited');
+      expect(list).not.toContain('Conditional');
       expect(list).toContain('This means the contract allows us to use AI.');
     });
 
@@ -436,10 +451,9 @@ describe('renderContractDetail', () => {
       const html = renderContractDetail(contract(), rulings);
       const list = html.slice(html.indexOf('id="ai-rulings"'));
       const rowOf = (name) => list.slice(list.indexOf(`>${name}</span>`)).split('</div>')[0];
-      expect(rowOf('Prohibited')).toContain('You cannot use AI on this contract.');
-      // A record with no definition, and a ruling with no record at all.
+      // The record with no definition remains visible as an empty-value placeholder.
       expect(rowOf('Restricted')).toContain('None listed');
-      expect(rowOf('Conditional')).toContain('None listed');
+      expect(rowOf('Silent')).toContain('None listed');
     });
 
     it('escapes a definition, which an admin typed', () => {

@@ -35,8 +35,9 @@ describe('record type constants', () => {
 });
 
 describe('AI_RULINGS', () => {
-  it('names the same rulings, in the same order, as the renderer', () => {
-    expect(AI_RULINGS).toEqual(RULINGS.map((r) => r.id));
+  it('keeps API classifications broader than the renderer pill list', () => {
+    expect(AI_RULINGS).toEqual(['allowed', 'restricted', 'silent', 'prohibited', 'conditional']);
+    expect(RULINGS.map((r) => r.id)).toEqual(AI_RULINGS.slice(0, 3));
   });
 });
 

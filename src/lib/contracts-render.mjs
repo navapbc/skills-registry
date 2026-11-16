@@ -13,18 +13,13 @@ import { escapeHtml, truncate } from './render.mjs';
 const BLURB_LIMIT = 180;
 
 /**
- * The five AI rulings, in the order the rulings list shows them.
- *
- * The ids match AI_RULINGS in functions/api/lib/contracts.mjs, and a test holds
- * the two lists equal. Colours, definitions, and guidance are not authored here:
- * rulingsFromPostures takes them from the posture records.
+ * The three pill-style rulings shown by the Contract Explorer. Prohibited and
+ * Conditional remain API classifications but render as source text here.
  */
 export const RULINGS = [
   { id: 'allowed', name: 'Allowed' },
   { id: 'restricted', name: 'Restricted' },
   { id: 'silent', name: 'Silent' },
-  { id: 'prohibited', name: 'Prohibited' },
-  { id: 'conditional', name: 'Conditional' },
 ];
 
 // The badge text colour the Policy Guidance tab previews every posture colour
@@ -237,15 +232,17 @@ function renderAiUseTerms(contract, rulings) {
  */
 const GUIDANCE_QUESTIONS = [
   ["Does this client have an AI policy that isn't necessarily referenced in the program's contract with Nava?", 'client_policy'],
-  ['Is AI in use on this contract?', 'ai_used'],
-  ['What AI tools are in use?', 'tools'],
-  ['How are people on this program using AI?', 'usage'],
+  ['Is AI being used to meet formal program goals or deliverables as stated in the contract?', 'ai_used'],
+  ['What tools are in use to complete work on this contract?', 'tools'],
+  ['How are people on this program using AI now?', 'usage'],
   ['Does the client have a process to review or approve AI use or AI tools?', 'review_process'],
 ];
 
-const questionCard = (question, value) => `<div class="rounded-lg border border-gray-200 bg-white p-5">
+const questionCard = (question, value, showPolicySummary = false) => `<div class="rounded-lg border border-gray-200 bg-white p-5">
     <h3 class="text-sm font-semibold text-gray-900 m-0">${escapeHtml(question)}</h3>
+  ${showPolicySummary ? '<p>SUMMARY</p>' : ''}
     <p class="text-sm text-gray-800 mt-2 mb-0 whitespace-pre-line">${plain(value)}</p>
+  ${showPolicySummary ? '<span>Link to policy information</span>' : ''}
   </div>`;
 
 /**
@@ -320,7 +317,7 @@ const PRE_USE_CHECKLIST = `<section aria-label="Pre-use checklist" class="rounde
   <div class="flex gap-4 mt-5">
     <div class="w-1 rounded shrink-0 bg-info-bg" aria-hidden="true"></div>
     <div class="flex-1 min-w-0">
-      <h4 class="text-lg font-semibold text-gray-900 m-0">Pre-use checklist</h4>
+      <h4 class="text-lg font-semibold text-gray-900 m-0">Checklist:</h4>
       <ul class="list-disc mt-2 mb-0 pl-5 space-y-1.5 marker:text-gray-500">
         ${PRE_USE_CHECKLIST_ITEMS.map((item) => `<li class="text-sm text-gray-800">${item}</li>`).join('')}
       </ul>
@@ -376,19 +373,19 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
 
     <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-10">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wider text-gray-600 m-0">Contract details</p>
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-600 m-0">Contract Details</p>
         <span class="inline-block mt-2 px-2 py-0.5 text-sm rounded bg-gray-600 text-white">${escapeHtml(contract.portfolio ?? '')}</span>
         <h1 class="text-xl font-bold text-gray-900 mt-3 mb-0">${escapeHtml(contract.project || contract.contract_id)}</h1>
       </div>
       <div class="text-sm sm:text-right">
         <p class="text-gray-900 m-0">Agency: <strong class="text-gray-900">${plain(contract.customer)}</strong></p>
-        <p class="text-gray-600 mt-1 mb-0">Program manager: <strong class="text-gray-900">${plain(contract.nava_program_mgr)}</strong></p>
+        <p class="text-gray-600 mt-1 mb-0">Program manager: <strong class="text-gray-900">${plain(contract.nava_program_mgr)}</strong>; Contract manager: <strong class="text-gray-900">${plain(contract.nava_project_mgr)}</strong></p>
         ${renderSageLink(contract.resolved_project)}
       </div>
     </header>
 
     <div class="space-y-12">
-      <section aria-label="What the contract says about AI">
+      <section aria-label="What the Contract says about AI">
         ${sectionHeading('What the Contract says about AI')}
         <h3 class="text-base font-semibold text-gray-900 mt-6 mb-3">AI use on this contract is:</h3>
         ${renderAiUseTerms(contract, rulings)}
@@ -400,9 +397,8 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
 
         <h3 class="text-base font-semibold text-gray-900 mt-8 mb-2">Contract language</h3>
         <p class="text-sm text-gray-600 m-0">
-          Read the most up-to-date contract language. Nava&rsquo;s contract teams are working
-          with program managers on a &ldquo;path to yes&rdquo; for all Nava programs so that all
-          delivery teams can use AI when appropriate or necessary.
+          Read the most up-to-contract language. Nava's contract teams are working with program managers on a "path to yes" for all Nava programs so that all delivery teams to can use AI when appropriate or necessary.
+          Program managers or a program’s contract manager are always available to answer questions about expectations for AI use.
         </p>
         <div class="mt-4 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-800 whitespace-pre-line">${plain(contract.ai_use_terms_language)}</div>
         <p class="text-sm font-semibold text-gray-600 mt-6 mb-0">
@@ -414,13 +410,11 @@ export function renderContractDetail(contract, rulings = NO_POSTURES, capturedAt
       <section aria-label="Practical guidance and more information">
         ${sectionHeading('Practical guidance and more information')}
         <p class="text-sm text-gray-600 mt-4 mb-0">
-          This section provides context and expectations for AI use on this program or contract.
-          This information comes from a survey that Program Managers completed to help delivery teams understand their client's AI posture.
-          The goal is for Nava employees to feel confident when using and exploring AI possibilities.
-          Please reach out to your program manager with questions or discussion.
+          This section provides background and context on AI use and expectations for this program or contract.
+          The information below comes from an AI-use survey we asked Program Managers to complete to help delivery teams understand a given client's AI posture and confidently explore AI capabilities when possible.
         </p>
         <div class="space-y-3 mt-5">
-          ${GUIDANCE_QUESTIONS.map(([question, key]) => questionCard(question, contract[key])).join('')}
+          ${GUIDANCE_QUESTIONS.map(([question, key]) => questionCard(question, contract[key], key === 'client_policy')).join('')}
         </div>
       </section>
 
