@@ -413,6 +413,15 @@ describe('renderInitiativeGrid', () => {
 });
 
 describe('renderProjectSection', () => {
+  it('associates the visible heading with the section in each project state', () => {
+    for (const project of [initiative(), initiative({ resolved_project: null, project: '' }),
+      initiative({ resolved_project: null, project: 'Unknown project' })]) {
+      const html = renderProjectSection(project);
+      expect(html).toContain('aria-labelledby="initiative-project-heading"');
+      expect(html).toMatch(/<h2 id="initiative-project-heading"[^>]*>/);
+    }
+  });
+
   it('renders every projected field label for a resolved project', () => {
     const html = renderProjectSection(initiative());
     for (const label of [
@@ -619,7 +628,7 @@ describe('renderRelatedContractsSection', () => {
     // contracts" would be false on most empty results. The copy claims only that no
     // contract NAMES the project.
     const html = renderRelatedContractsSection(initiative({ related_contracts: [] }));
-    expect(html).toContain('aria-label="Contracts"');
+    expect(html).toContain('aria-labelledby="initiative-contracts-heading"');
     expect(html).toContain('No contract on file names this project.');
     expect(html).not.toMatch(/no contracts (associated|on file for)/i);
   });
@@ -629,7 +638,7 @@ describe('renderRelatedContractsSection', () => {
     // absence the failed read never established — during an incident, when someone is
     // most likely to act on it.
     const html = renderRelatedContractsSection(initiative({ related_contracts: null }));
-    expect(html).toContain('aria-label="Contracts"');
+    expect(html).toContain('aria-labelledby="initiative-contracts-heading"');
     expect(html).toContain('Contracts could not be loaded.');
     expect(html).not.toContain('No contract on file names');
   });
@@ -691,6 +700,18 @@ describe('renderRelatedContractsSection', () => {
 });
 
 describe('renderInitiativeDetail', () => {
+  it('groups the initiative identity in a header and labels sections by their headings', () => {
+    const html = renderInitiativeDetail(initiative({ related_contracts: [] }), null);
+    expect(html).toMatch(/<header[^>]*>[\s\S]*?<h1[^>]*>Benefits navigator prototype<\/h1>[\s\S]*?<\/header>/);
+    for (const id of ['initiative-details-heading', 'initiative-about-heading',
+      'initiative-project-heading', 'initiative-contracts-heading']) {
+      expect(html).toContain(`aria-labelledby="${id}"`);
+      expect(html).toContain(`<h2 id="${id}"`);
+    }
+    expect(html).toContain('<dt class=');
+    expect(html).toContain('<dd class=');
+  });
+
   it('renders every field label even when every value is blank', () => {
     // The same-shape-every-record assertion: a reader must be able to tell "the
     // sheet has no answer" from "this page does not show that field".
@@ -723,7 +744,7 @@ describe('renderInitiativeDetail', () => {
   });
 
   it('includes the Project section', () => {
-    expect(renderInitiativeDetail(initiative(), null)).toContain('aria-label="Project"');
+    expect(renderInitiativeDetail(initiative(), null)).toContain('aria-labelledby="initiative-project-heading"');
   });
 
   it('places the Contracts section after the Project section', () => {
@@ -731,12 +752,12 @@ describe('renderInitiativeDetail', () => {
       related_contracts: [{ contract_id: 'user-facing-ai', project: 'User-Facing AI' }],
     }), null);
 
-    expect(html.indexOf('aria-label="Contracts"'))
-      .toBeGreaterThan(html.indexOf('aria-label="Project"'));
+    expect(html.indexOf('aria-labelledby="initiative-contracts-heading"'))
+      .toBeGreaterThan(html.indexOf('aria-labelledby="initiative-project-heading"'));
   });
 
   it('emits no Contracts section when the join was not requested', () => {
-    expect(renderInitiativeDetail(initiative(), null)).not.toContain('aria-label="Contracts"');
+    expect(renderInitiativeDetail(initiative(), null)).not.toContain('aria-labelledby="initiative-contracts-heading"');
   });
 
   it('links back to the grid', () => {
