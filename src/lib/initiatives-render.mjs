@@ -381,7 +381,6 @@ export function renderInitiativeCard(initiative) {
   const subtitle = projectName
     ? `<p class="text-xs text-gray-600 m-0 mt-1">${escapeHtml(projectName)}</p>`
     : '';
-
   return `<a
     href="/initiatives/${encodeURIComponent(initiative.initiative_id)}"
     class="initiative-card flex flex-col h-full bg-white border border-gray-200 rounded-lg p-4 no-underline hover:border-plum-300 transition-colors"
@@ -448,16 +447,16 @@ function renderArchetypes(project, column) {
 export function renderProjectSection(initiative) {
   if (!initiative.resolved_project) {
     if (isBlank(initiative.project)) {
-      return `<section aria-label="Project" class="rounded-lg p-4 border border-gray-200 bg-white">
-        <h2 class="text-sm font-semibold text-gray-900 m-0">Not linked to a project</h2>
+      return `<section aria-labelledby="initiative-project-heading" class="rounded-lg p-4 border border-gray-200 bg-white">
+        <h2 id="initiative-project-heading" class="text-sm font-semibold text-gray-900 m-0">Not linked to a project</h2>
         <p class="text-xs text-gray-600 mt-1 m-0">
           This initiative names no project. Plenty are internal, so this is not
           necessarily missing information.
         </p>
       </section>`;
     }
-    return `<section aria-label="Project" class="rounded-lg p-4 border border-amber-200 bg-amber-50">
-      <h2 class="text-sm font-semibold text-amber-900 m-0">Project</h2>
+    return `<section aria-labelledby="initiative-project-heading" class="rounded-lg p-4 border border-amber-200 bg-amber-50">
+      <h2 id="initiative-project-heading" class="text-sm font-semibold text-amber-900 m-0">Project</h2>
       <p class="text-sm text-amber-900 mt-1 m-0">
         ${escapeHtml(initiative.project)}
         <span class="text-xs">${UNREGISTERED_PROJECT_SUFFIX}</span>
@@ -469,8 +468,8 @@ export function renderProjectSection(initiative) {
   }
 
   const p = initiative.resolved_project;
-  return `<section aria-label="Project" class="rounded-lg p-4 border border-gray-200 bg-white">
-    <h2 class="text-sm font-semibold text-gray-900 m-0 mb-3">Project</h2>
+  return `<section aria-labelledby="initiative-project-heading" class="rounded-lg p-4 border border-gray-200 bg-white">
+    <h2 id="initiative-project-heading" class="text-sm font-semibold text-gray-900 m-0 mb-3">Project</h2>
     <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 m-0">
       ${row('Project', p.project_name, (v) => renderProjectNameLink(v, p.project_index_code))}
       ${row('Portfolio', p.portfolio)}
@@ -566,8 +565,8 @@ export function renderRelatedContractsSection(initiative) {
       </ul>`;
   }
 
-  return `<section aria-label="Contracts" class="rounded-lg p-4 border border-gray-200 bg-white">
-    <h2 class="text-sm font-semibold text-gray-900 m-0 mb-2">Contracts on this project</h2>
+  return `<section aria-labelledby="initiative-contracts-heading" class="rounded-lg p-4 border border-gray-200 bg-white">
+    <h2 id="initiative-contracts-heading" class="text-sm font-semibold text-gray-900 m-0 mb-2">Contracts on this project</h2>
     ${body}
   </section>`;
 }
@@ -619,23 +618,23 @@ export function renderInitiativeDetail(initiative, capturedAt) {
   return `
     <a href="/initiatives" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 no-underline mb-5 transition-colors">&larr; All initiatives</a>
 
-    <div class="mb-5">
+    <header class="mb-5">
       <div class="flex items-center flex-wrap gap-2">
         ${renderExposureBadge(initiative.exposure)}
       </div>
       <h1 class="text-2xl font-bold text-gray-900 mt-2 mb-1">${escapeHtml(initiative.title || initiative.initiative_id)}</h1>
-    </div>
+    </header>
 
     <div class="space-y-4">
       <!-- Both sections render unconditionally, and every field in them renders
            blank or not, so every record shows the same shape and the same labels. -->
-      <section aria-label="Details" class="rounded-lg p-4 border border-gray-200 bg-white">
-        <h2 class="text-sm font-semibold text-gray-900 m-0 mb-3">Details</h2>
+      <section aria-labelledby="initiative-details-heading" class="rounded-lg p-4 border border-gray-200 bg-white">
+        <h2 id="initiative-details-heading" class="text-sm font-semibold text-gray-900 m-0 mb-3">Details</h2>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 m-0">${fields}</dl>
       </section>
 
-      <section aria-label="About" class="rounded-lg p-4 border border-gray-200 bg-white">
-        <h2 class="text-sm font-semibold text-gray-900 m-0 mb-1">About</h2>
+      <section aria-labelledby="initiative-about-heading" class="rounded-lg p-4 border border-gray-200 bg-white">
+        <h2 id="initiative-about-heading" class="text-sm font-semibold text-gray-900 m-0 mb-1">About</h2>
         <dl class="divide-y divide-gray-100 m-0">${narrative}</dl>
       </section>
 
