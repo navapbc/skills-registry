@@ -32,4 +32,10 @@ describe('fetchApi call sites', () => {
     );
     expect(total).toBeGreaterThan(5);
   });
+
+  it('loads the initiatives page from the API for grid and detail views', () => {
+    const source = readFileSync('src/pages/initiatives/index.astro', 'utf8');
+    expect(source).toContain('data = await fetchApi(initiativesApiPath(initiativeId));');
+    expect(source).not.toContain('LOCAL_INITIATIVES_DATA');
+  });
 });

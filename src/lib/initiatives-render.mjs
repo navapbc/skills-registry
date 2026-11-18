@@ -8,78 +8,6 @@
 import { escapeHtml, truncate } from './render.mjs';
 import { renderArchetypeBadge } from './archetype-badge.mjs';
 
-/** Local-only examples for rendering the initiatives page in Vite development. */
-export const LOCAL_INITIATIVES_DATA = {
-  initiatives: [
-    {
-      initiative_id: 'local-benefits-navigator',
-      title: 'Benefits Navigator Prototype',
-      summary: 'A prototype to help people find relevant public benefits.',
-      description: 'Explores a guided experience that explains eligibility and next steps in plain language.',
-      practice: 'Delivery',
-      exposure: 'Client',
-      contacts: 'Avery Example; Jordan Sample',
-      link: 'Demo: https://example.com/benefits-navigator',
-      submitted_by: 'Local sample',
-      timestamp: 'Local preview',
-      use_case: 'Delivery prototyping',
-      ai_governance: 'Staff review generated content before it is shared.',
-      tags: 'prototype; client-facing',
-      status: 'In development',
-      project: 'Benefits Access Modernization',
-      resolved_project: {
-        project_code: 'LOCAL001',
-        project_index_code: '',
-        project_name: 'Benefits Access Modernization',
-        portfolio: 'Civic Services',
-        agency: 'Sample Agency',
-        program_manager: 'Sample Program Manager',
-        nava_contract_pp: 'Sample Contracts Manager',
-        archetype_primary: 'Product Team',
-        archetype_additional: '',
-      },
-      related_contracts: [],
-    },
-    {
-      initiative_id: 'local-knowledge-assistant',
-      title: 'Internal Knowledge Assistant',
-      summary: 'A searchable assistant for internal guidance and process documents.',
-      description: 'A small experiment in finding approved internal information more quickly.',
-      practice: 'Operations',
-      exposure: 'Internal',
-      contacts: 'Casey Example',
-      link: 'Project notes: https://example.com/knowledge-assistant',
-      submitted_by: 'Local sample',
-      timestamp: 'Local preview',
-      use_case: 'Knowledge management',
-      ai_governance: 'Uses internal, non-client reference material only.',
-      tags: 'internal; prototype',
-      status: 'Exploration',
-      project: '',
-      resolved_project: null,
-    },
-    {
-      initiative_id: 'local-policy-review',
-      title: 'Policy Review Support',
-      summary: 'A draft workflow for comparing policy requirements across documents.',
-      description: 'Tests how AI can help organize requirements while leaving interpretation to reviewers.',
-      practice: 'Research',
-      exposure: 'Client',
-      contacts: 'Taylor Example; Morgan Sample',
-      link: 'Overview: https://example.com/policy-review',
-      submitted_by: 'Local sample',
-      timestamp: 'Local preview',
-      use_case: 'Document analysis',
-      ai_governance: 'A reviewer validates every extracted requirement.',
-      tags: 'research; document-analysis',
-      status: 'Pilot',
-      project: 'Sample Policy Modernization',
-      resolved_project: null,
-    },
-  ],
-  population: { state: 'local_placeholder', captured_at: null, row_count: 3 },
-};
-
 // The sheet's multi-value separator is `;`. Measured: `contacts` and `link` both
 // use it, and no cell uses a comma as a separator. A comma is accepted anyway
 // because a hand-edited sheet will eventually contain one, and written as a
@@ -197,11 +125,6 @@ export function formatCapturedAt(iso) {
  */
 export function describePopulationNotice(population) {
   const state = population?.state;
-  if (state === 'local_placeholder') {
-    return `<p class="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded px-2 py-1 mt-2 m-0">
-      Local Vite preview data; this content is not loaded from the initiatives API.
-    </p>`;
-  }
   if (state === 'never_populated') {
     return `<p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2 m-0">
       No initiatives have been synced for this environment yet.
@@ -453,17 +376,13 @@ const cardBlurb = (initiative) =>
  * Titles run to 91 characters, so the heading gets its own line clamp rather than
  * assuming two lines will always do.
  */
-export function renderInitiativeCard(initiative, { localPreview = false } = {}) {
+export function renderInitiativeCard(initiative) {
   const projectName = initiative.resolved_project?.project_name || initiative.project || '';
   const subtitle = projectName
     ? `<p class="text-xs text-gray-600 m-0 mt-1">${escapeHtml(projectName)}</p>`
     : '';
-  const href = localPreview
-    ? `/initiatives?id=${encodeURIComponent(initiative.initiative_id)}`
-    : `/initiatives/${encodeURIComponent(initiative.initiative_id)}`;
-
   return `<a
-    href="${href}"
+    href="/initiatives/${encodeURIComponent(initiative.initiative_id)}"
     class="initiative-card flex flex-col h-full bg-white border border-gray-200 rounded-lg p-4 no-underline hover:border-plum-300 transition-colors"
   >
     <div class="flex items-start justify-end gap-2 mb-2">
@@ -479,12 +398,12 @@ export function renderInitiativeCard(initiative, { localPreview = false } = {}) 
   </a>`;
 }
 
-export function renderInitiativeGrid(initiatives, options) {
+export function renderInitiativeGrid(initiatives) {
   if (!initiatives?.length) {
     return '<p class="text-sm text-gray-600 italic">No initiatives matched.</p>';
   }
   return `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-    ${initiatives.map((i) => `<div class="h-full">${renderInitiativeCard(i, options)}</div>`).join('')}
+    ${initiatives.map((i) => `<div class="h-full">${renderInitiativeCard(i)}</div>`).join('')}
   </div>`;
 }
 
@@ -690,7 +609,7 @@ const NARRATIVE_FIELDS = [
   ['Links', 'link', renderLinks],
 ];
 
-export function renderInitiativeDetail(initiative, capturedAt, localPlaceholder = false) {
+export function renderInitiativeDetail(initiative, capturedAt) {
   const fields = DETAIL_FIELDS
     .map(([label, key, render]) => row(label, initiative[key], render)).join('');
   const narrative = NARRATIVE_FIELDS
@@ -728,9 +647,7 @@ export function renderInitiativeDetail(initiative, capturedAt, localPlaceholder 
     </div>
 
     <p class="text-xs text-gray-600 mt-6 m-0">
-      ${localPlaceholder
-    ? 'Local Vite preview data. It is not loaded from the initiatives API.'
-    : `Data captured from the initiatives sheet on ${escapeHtml(formatCapturedAt(capturedAt))}.
-      It is not live — re-run the sync workflow to refresh it.`}
+      Data captured from the initiatives sheet on ${escapeHtml(formatCapturedAt(capturedAt))}.
+      It is not live — re-run the sync workflow to refresh it.
     </p>`;
 }

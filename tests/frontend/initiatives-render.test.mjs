@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  LOCAL_INITIATIVES_DATA,
   splitList,
   filterInitiatives,
   useCasesOf,
@@ -393,17 +392,9 @@ describe('renderInitiativeGrid', () => {
     expect(html.match(/initiative-card/g)).toHaveLength(2);
   });
 
-  it('uses the normal detail path outside local preview mode', () => {
+  it('uses the detail path for initiative cards', () => {
     const html = renderInitiativeGrid([initiative({ initiative_id: 'a b' })]);
     expect(html).toContain('href="/initiatives/a%20b"');
-  });
-
-  it('uses the page query route for local preview cards', () => {
-    const html = renderInitiativeGrid(
-      [initiative({ initiative_id: 'a b' })],
-      { localPreview: true },
-    );
-    expect(html).toContain('href="/initiatives?id=a%20b"');
   });
 
   it('says nothing matched rather than rendering empty markup', () => {
@@ -770,12 +761,6 @@ describe('renderInitiativeDetail', () => {
     expect(html).toContain('not live');
   });
 
-  it('labels local placeholder data instead of showing a capture date', () => {
-    const html = renderInitiativeDetail(initiative(), null, true);
-    expect(html).toContain('Local Vite preview data');
-    expect(html).not.toContain('captured from the initiatives sheet');
-  });
-
   it('escapes markup in every rendered field', () => {
     const html = renderInitiativeDetail(initiative({
       title: '<script>a</script>', desc: '<script>b</script>', status: '<script>c</script>',
@@ -796,11 +781,6 @@ describe('formatCapturedAt', () => {
 });
 
 describe('describePopulationNotice', () => {
-  it('identifies local placeholder data', () => {
-    expect(describePopulationNotice(LOCAL_INITIATIVES_DATA.population))
-      .toContain('Local Vite preview data');
-  });
-
   it('distinguishes all three states', () => {
     expect(describePopulationNotice({ state: 'never_populated' }))
       .toContain('No initiatives have been synced');
@@ -812,14 +792,5 @@ describe('describePopulationNotice', () => {
 
   it('says captured unknown rather than throwing on absent metadata', () => {
     expect(describePopulationNotice(undefined)).toContain('unknown');
-  });
-});
-
-describe('local initiatives preview data', () => {
-  it('renders sample records in the grid and supports a sample detail route', () => {
-    const { initiatives } = LOCAL_INITIATIVES_DATA;
-    expect(initiatives).toHaveLength(3);
-    expect(renderInitiativeGrid(initiatives)).toContain('Benefits Navigator Prototype');
-    expect(renderInitiativeDetail(initiatives[0], null, true)).toContain('Benefits Access Modernization');
   });
 });

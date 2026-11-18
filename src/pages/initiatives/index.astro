@@ -29,7 +29,6 @@ import Base from '../../layouts/Base.astro';
 import { fetchApi } from '../../lib/api.mjs';
 import { escapeHtml } from '../../lib/render.mjs';
 import {
-  LOCAL_INITIATIVES_DATA,
   filterInitiatives,
   useCasesOf,
   exposuresOf,
@@ -40,10 +39,7 @@ import {
 } from '../../lib/initiatives-render.mjs';
 
 const container = document.getElementById('initiatives-content')!;
-const queryId = import.meta.env.DEV
-  ? new URLSearchParams(window.location.search).get('id')
-  : null;
-const rawId = queryId ?? window.location.pathname.replace(/^\/initiatives\/?/, '').replace(/\/$/, '');
+const rawId = window.location.pathname.replace(/^\/initiatives\/?/, '').replace(/\/$/, '');
 let initiativeId: string;
 try {
   initiativeId = decodeURIComponent(rawId);
@@ -84,9 +80,7 @@ function notFoundHtml() {
 // not-found branch below renders.
 let data: any = null;
 try {
-  data = import.meta.env.DEV
-    ? LOCAL_INITIATIVES_DATA
-    : await fetchApi(initiativesApiPath(initiativeId));
+  data = await fetchApi(initiativesApiPath(initiativeId));
 } catch (err: any) {
   // fetchApi has already started a redirect to /login for an expired session;
   // rendering an error here flashes a broken screen before the browser navigates.
@@ -108,11 +102,7 @@ if (data) {
       container.innerHTML = notFoundHtml();
     } else {
       document.title = `${initiative.title || initiative.initiative_id} · Initiatives Explorer`;
-      container.innerHTML = renderInitiativeDetail(
-        initiative,
-        capturedAt,
-        data.population?.state === 'local_placeholder',
-      );
+      container.innerHTML = renderInitiativeDetail(initiative, capturedAt);
     }
   } else {
     // ── Grid view ────────────────────────────────────────────────────────
@@ -166,9 +156,7 @@ if (data) {
     function render() {
       const visible = filterInitiatives(initiatives, { useCase, exposure, query });
       countEl.textContent = `${visible.length} of ${initiatives.length} initiative${initiatives.length === 1 ? '' : 's'}`;
-      gridEl.innerHTML = renderInitiativeGrid(visible, {
-        localPreview: data.population?.state === 'local_placeholder',
-      });
+      gridEl.innerHTML = renderInitiativeGrid(visible);
     }
 
     render();
