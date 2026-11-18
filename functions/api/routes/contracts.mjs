@@ -61,6 +61,7 @@ const CONTRACT_FIELDS = [
   'vehicle',
   'task_order',
   'customer',
+  'contracts_team_member',
   'nava_project_mgr',
   'nava_program_mgr',
   'subcontractors',

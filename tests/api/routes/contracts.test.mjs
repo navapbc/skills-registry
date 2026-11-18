@@ -192,6 +192,14 @@ describe('contracts are read-only', () => {
 });
 
 describe('contracts payload', () => {
+  it('serves the contracts team member while withholding compliance notes', async () => {
+    const headers = as('user');
+    queueReads({ contracts: [contract({ contracts_team_member: 'Alex Example', notes: 'Internal only' })] });
+    const body = await (await app.request('/api/contracts', { headers })).json();
+    expect(body.contracts[0].contracts_team_member).toBe('Alex Example');
+    expect(body.contracts[0]).not.toHaveProperty('notes');
+  });
+
   it('returns every contract', async () => {
     const headers = as('user');
     queueReads({ contracts: [contract(), contract({ contract_id: 'labs-aecf', project: 'AECF' })] });

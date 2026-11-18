@@ -42,6 +42,7 @@ export const normalizeHeader = (header) => String(header ?? '').replace(/\s+/g, 
 // column must be carried on purpose. A header in neither this map nor
 // EXCLUDED_HEADERS is not stored, and the run warns with its name.
 export const COLUMN_ATTRIBUTES = {
+  'Contracts Team Member': 'contracts_team_member',
   'PORTFOLIO': 'portfolio',
   'PROJECT': 'project',
   'AGREEMENT TYPE': 'agreement_type',
@@ -66,11 +67,9 @@ export const COLUMN_ATTRIBUTES = {
 
 // Headers read from the sheet and deliberately NOT stored.
 //
-//  - "Contracts Team Member" names an individual on the contracts team.
-//  - The remaining four are the contracts team's compliance tracking. The Contract
-//    Explorer serves every signed-in user, and these columns are not for them.
+// The contracts team's compliance tracking is not for the Contract Explorer,
+// which serves every signed-in user.
 export const EXCLUDED_HEADERS = [
-  'Contracts Team Member',
   'Nava steps for compliance',
   'Nava Compliance Status',
   'Needed for compliance',

@@ -29,7 +29,8 @@ const contract = (over = {}) => ({
   contract_num: '47QTCA18D008M',
   customer: 'SEC',
   nava_program_mgr: 'Crystal Cody',
-  nava_project_mgr: 'Morgan Demo',
+  nava_project_mgr: 'Jordan Project',
+  contracts_team_member: 'Morgan Demo',
   ai_use_terms: 'Conditional, TO Silent, BPA Restricted',
   ai_use_terms_language: 'SEC BPA modification 4 incorporates AI-related clauses.',
   client_policy: 'Yes. SEC requests training features be turned off.',
@@ -214,6 +215,7 @@ describe('renderContractDetail', () => {
       expect(html).toContain('Agency: <strong class="text-gray-900">SEC</strong>');
       expect(html).toContain('Crystal Cody');
       expect(html).toContain('Contract manager: <strong class="text-gray-900">Morgan Demo</strong>');
+      expect(html).not.toContain('Jordan Project');
     });
 
     it('links the project index on Sage when the project has a space key', () => {
@@ -231,7 +233,7 @@ describe('renderContractDetail', () => {
     });
 
     it('marks a blank agency or program manager as unlisted', () => {
-      const html = renderContractDetail(contract({ customer: '', nava_program_mgr: '', nava_project_mgr: '' }), rulings);
+      const html = renderContractDetail(contract({ customer: '', nava_program_mgr: '', contracts_team_member: '' }), rulings);
       expect(html.match(/None listed/g).length).toBeGreaterThanOrEqual(3);
     });
   });

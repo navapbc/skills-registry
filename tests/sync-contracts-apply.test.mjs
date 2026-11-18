@@ -28,10 +28,10 @@ const DeleteCommand = function (params) { return { type: 'Delete', params }; };
 const GetCommand = function (params) { return { type: 'Get', params }; };
 const QueryCommand = function (params) { return { type: 'Query', params }; };
 
-// Every mapped header plus two excluded ones, since the shaping requires every
+// Every mapped header plus an excluded one, since the shaping requires every
 // mapped header.
-const HEADERS = ['Contracts Team Member', ...Object.keys(COLUMN_ATTRIBUTES), 'Notes'];
-const ATTRIBUTES = ['', ...Object.values(COLUMN_ATTRIBUTES), 'Notes'];
+const HEADERS = [...Object.keys(COLUMN_ATTRIBUTES), 'Notes'];
+const ATTRIBUTES = [...Object.values(COLUMN_ATTRIBUTES), 'Notes'];
 
 // Every carried attribute, blank. A stored record spreads this so it compares
 // equal to a shaped row with the same values.

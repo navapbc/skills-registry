@@ -17,7 +17,7 @@ import {
 // headers are the tab's own, in its own column order.
 const HEADERS = [
   'Contracts Team Member',
-  ...Object.keys(COLUMN_ATTRIBUTES).slice(0, 18),
+  ...Object.keys(COLUMN_ATTRIBUTES).slice(1, 19),
   'Nava steps for compliance',
   'Nava Compliance Status',
   'Needed for compliance',
@@ -50,7 +50,7 @@ const SEC = {
   ai_use_terms: 'Conditional, TO Silent, BPA Restricted',
   nava_project_mgr: 'Someone Named',
   publish: 'Yes',
-  'Contracts Team Member': 'Andrew',
+  contracts_team_member: 'Andrew',
   'Nava Compliance Status': 'confirmed',
   'Notes': 'internal note',
 };
@@ -132,17 +132,22 @@ describe('shapeContracts', () => {
     expect(contracts['labs-aecf'].publish).toBe('No');
   });
 
-  it('drops the team member and the compliance columns', () => {
+  it('stores the contracts team member separately from the project manager', () => {
     const record = shapeContracts(gridOf(rowOf(SEC))).contracts['fedciv-sec-enterprise-websites'];
-    expect(Object.values(record)).not.toContain('Andrew');
+    expect(record.contracts_team_member).toBe('Andrew');
+    expect(record.nava_project_mgr).toBe('Someone Named');
+  });
+
+  it('drops the compliance columns', () => {
+    const record = shapeContracts(gridOf(rowOf(SEC))).contracts['fedciv-sec-enterprise-websites'];
     expect(Object.values(record)).not.toContain('confirmed');
     expect(Object.values(record)).not.toContain('internal note');
     expect(record).not.toHaveProperty('notes');
   });
 
-  it('excludes the four compliance columns and the team member by name', () => {
+  it('excludes the compliance columns by name', () => {
     expect(EXCLUDED_HEADERS).toEqual(expect.arrayContaining([
-      'Contracts Team Member', 'Nava steps for compliance', 'Nava Compliance Status',
+      'Nava steps for compliance', 'Nava Compliance Status',
       'Needed for compliance', 'Notes',
       '[Old] Contract AI Use Terms (i.e., allowed, restricted, silent, prohibited)',
     ]));
@@ -218,9 +223,9 @@ describe('shapeContracts', () => {
   });
 
   it('reads columns by header, so a moved column keeps its data', () => {
-    // Column A deleted from the sheet: every column shifts left one place.
-    const grid = gridOf(rowOf(SEC)).map((row) => row.slice(1));
+    const grid = gridOf(rowOf(SEC)).map((row) => [...row.slice(1), row[0]]);
     const record = shapeContracts(grid).contracts['fedciv-sec-enterprise-websites'];
+    expect(record.contracts_team_member).toBe('Andrew');
     expect(record.portfolio).toBe('FEDCIV');
     expect(record.contract_num).toBe('47QTCA18D008M');
   });

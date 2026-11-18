@@ -257,6 +257,7 @@ Everything the Contract Explorer needs in one response — the grid, the detail 
       "contract_num": "47QRAA21D0064",
       "vehicle": "GSA MAS",
       "customer": "Nava Labs",
+      "contracts_team_member": "Example Contracts Team Member",
       "agreement_type": "Task order",
       "ai_use_terms": "Allowed",
       "posture_id": "allowed",
@@ -269,6 +270,8 @@ Everything the Contract Explorer needs in one response — the grid, the detail 
 ```
 
 The served fields are a fixed **allowlist** (`CONTRACT_FIELDS` in `functions/api/routes/contracts.mjs`), for the same reason as Initiatives: the allowlist is the review step that keeps a stored column from reaching every signed-in user unannounced.
+
+`contracts_team_member` comes from the survey's "Contracts Team Member" column and is shown as Contract manager. `nava_project_mgr` remains the separate "PROJECT MANAGER (Nava)" field.
 
 `posture_id` is the posture whose id equals the whole `ai_use_terms` cell, or `null`. `ai_use_terms` is free text, so most contracts carry `null`, which is the survey's state rather than an error. As of 2026-09-23, 7 of 104 published contracts resolve.
 

@@ -301,6 +301,7 @@ Attribute names are snake_case, consistent with every other table here. Every at
   customer:         string;  // shown as the agency on the detail page
 
   // --- People (named individuals) ---
+  contracts_team_member: string;  // sheet's Contracts Team Member; shown as Contract manager
   nava_project_mgr: string;
   nava_program_mgr: string;
   subcontractors:   string;
@@ -325,7 +326,7 @@ Attribute names are snake_case, consistent with every other table here. Every at
 }
 ```
 
-The source is the "Compliance" tab of the Contract Performance AI Survey workbook. Every cell is stored as written, and nothing is derived from another column. Five source columns are deliberately not stored: "Contracts Team Member" (a named individual) and the four compliance-tracking columns ("Nava steps for compliance", "Nava Compliance Status", "Needed for compliance", "Notes"). The workbook is attorney-client privileged, so a header in neither the carried map nor the excluded list is not stored. The population run warns with the header's name and continues. A carried header missing from the sheet fails the run, because a renamed column would otherwise be dropped from every stored contract.
+The source is the "Compliance" tab of the Contract Performance AI Survey workbook. Carried cells are stored as written, and nothing is derived from another column. The compliance-tracking columns ("Nava steps for compliance", "Nava Compliance Status", "Needed for compliance", and "Notes") and the old AI terms column are deliberately not stored. The workbook is attorney-client privileged, so a header in neither the carried map nor the excluded list is not stored. The population run warns with the header's name and continues. A carried header missing from the sheet fails the run, because a renamed column would otherwise be dropped from every stored contract.
 
 Every row is stored whatever its `publish` flag says. `GET /api/contracts`, the initiative related-contracts join, and the `projects-admin` drift findings all skip a contract whose `publish` is not `Yes`.
 
@@ -360,7 +361,7 @@ There is no workflow calling this and the GitHub deploy role has no access to th
 
 ### Sensitivity
 
-Every signed-in Nava user can read this table, which is a wider audience than any other table documented here. It carries named individuals (`nava_project_mgr`, `nava_program_mgr`, and the resolved project's `program_manager` and `nava_contract_pp`), contract and task-order numbers, customer names, and verbatim contract clause language in `ai_use_terms_language`. That exposure is a deliberate decision with a named accountable owner — see the requirements document.
+Every signed-in Nava user can read the API's allowlisted contract fields, which is a wider audience than for other project data documented here. Those fields include named individuals (`contracts_team_member`, `nava_project_mgr`, `nava_program_mgr`, and the resolved project's `program_manager` and `nava_contract_pp`), contract and task-order numbers, customer names, and verbatim contract clause language in `ai_use_terms_language`.
 
 ---
 

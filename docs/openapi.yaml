@@ -1878,9 +1878,9 @@ paths:
                       description: >
                         A fixed allowlist of survey columns (CONTRACT_FIELDS in
                         functions/api/routes/contracts.mjs), plus the two resolved
-                        fields below. The population uses a denylist so new survey
-                        columns reach the table automatically; this allowlist is the
-                        review step that keeps one from reaching every signed-in user.
+                        fields below. Population and the API both use allowlists so
+                        new survey columns do not reach every signed-in user without
+                        an explicit change.
                       properties:
                         contract_id:
                           type: string
@@ -1895,6 +1895,9 @@ paths:
                         agreement_type: { type: string }
                         vehicle_fullname: { type: string }
                         task_order: { type: string }
+                        contracts_team_member:
+                          type: string
+                          description: The survey's Contracts Team Member, shown as Contract manager.
                         nava_project_mgr: { type: string }
                         nava_program_mgr: { type: string }
                         subcontractors: { type: string }
